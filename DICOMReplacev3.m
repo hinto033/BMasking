@@ -217,59 +217,62 @@ I_DCM_Expanded = padarray(I_dicom_orig{j},[250 250],'symmetric','both');
 %% Set areas where i'll do calculations
 maskingmap = I_DCM_Expanded;
 % threshold 
-t = 9000;
-% find values below and above
-ind_below = (maskingmap < t);
-ind_above = (maskingmap >= t);
-% set values below to white and black
-maskingmap(ind_below) = 1;
-maskingmap(ind_above) = 0;
+maskingmap=maskingmap./max(maskingmap(:));
+maskingmap = im2bw(maskingmap,0.6);
+maskingmap = imcomplement(maskingmap);
 [heightExp,widthExp] = size(maskingmap);
-fractionIncluded = length(maskingmap(ind_below)) / (height*width);
-
+fractionIncluded = bwarea(maskingmap) / (heightExp*widthExp);
 %% set parms
 handles.results = zeros(length(handles.thickness), length(handles.diameter));
 maskimage = zeros(size(I_dicom_orig{j}));
 center = [271,271]; %Normally 271,271, but at 250,1050 we hit the nipple (first chance for flipping)
 centerstart = [271,271];
 centerMask = [21,21]; %Normaly at 21, 21
-timePerROI = 0.42;
+timePerROI = 0.5;
 timeSec = round(((height*width*fractionIncluded) / ((2*pixelshift)^2)) * timePerROI);
 timeMin = timeSec / 60
 timeHr = timeMin / 60
 pause(2)
+count = 1;
+dat.center = zeros(1,2,1);
+dat.cdData = zeros(length(handles.diameter),2,1);
+dat.IQF = zeros(1,3,1);
 while center(1) < heightExp && center(2) < widthExp-250 
     if mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))==1 && mean2(maskingmap(center(1),center(2)))==1 
         %Calculation if the entire searched region is within the actual
         %breast area (Including edge of image)
         %% Calculate the test statistic after inserting them in a region
-        tic
         handles.results = calcTestStat4(I_DCM_Expanded,I_DCM_Expanded, center, handles.attenuation, radius, atten_disks);
-        toc
         results = handles.results;
         %% Calculate IQF Based on that
         cutoff = 110000; %For the current calibration
         [cdData, IQF] = calcIQF(results, cutoff, handles.thickness, handles.diameter);
         %% Insert that IQF Value into the masking image
-        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift)= IQF;
+        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift)= IQF(1);
+        dat.center(:,:,count) = [centerMask(1), centerMask(2)];
+        dat.cdData(:,:,count) = cdData;
+        dat.IQF(:,:,count) = IQF;
+        count = count+1;
         %imshow(maskimage, [])
         %drawnow
     elseif mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))~=1 && mean2(maskingmap(center(1),center(2)))==1 
         %search area goes outside the breast but the center is in  breast
         %Essentially along the breast edge
-        tic
         addedBreast = I_DCM_Expanded(center(1)-250:center(1)+250,center(2)-250:center(2)+250);
         minMaskMap = maskingmap(center(1)-250:center(1)+250,center(2)-250:center(2)+250);
         BW = minMaskMap;
         [replaced] = breastEdgeReflect(addedBreast, BW, I_DCM_Expanded, center);
         handles.results = calcTestStat4(replaced,replaced, center, handles.attenuation, radius, atten_disks);
         results = handles.results;
-        toc
         %% Calculate IQF Based on that
         cutoff = 110000; %For the current calibration using only the changing diameter
         [cdData, IQF] = calcIQF(results, cutoff, handles.thickness, handles.diameter);
         %% Insert that IQF Value into the masking image
-        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift)= IQF;
+        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift)= IQF(1);
+        dat.center(:,:,count) = [centerMask(1), centerMask(2)];
+        dat.cdData(:,:,count) = cdData;
+        dat.IQF(:,:,count) = IQF;
+        count = count+1;
         %imshow(maskimage, []) 
         %drawnow
     else %Do nothing if completely out of search area
@@ -298,6 +301,11 @@ A6 = '.mat';
 formatSpec = '%s_%s_%s_%s_%s%s';
 fileForSaving = sprintf(formatSpec,A1,A2, A3, A4, A5, A6)
 save(fileForSaving, 'maskimage')
+
+A4_2 = 'MaskingData';
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_2, A5, A6)
+save(fileForSaving, 'dat')
 % pause
 % fileForSaving = [parts(3),'_',parts(2), '_',FileName_Naming{j},'_MaskingImage_',str,'.mat']
 % %As I continue this, I can include the scan type, details of scan, etc.
