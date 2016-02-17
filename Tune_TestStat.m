@@ -80,7 +80,9 @@ handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287
     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
 
 
-radius = round((handles.diameter.*0.5)./(pixel*magn));
+radius = ((handles.diameter.*0.5)./(pixel*magn));
+dt = round(radius.*2) + 1
+rt = dt./2
 [atten_disks] = circle_roi4(radius);
 % for j = 1:10
 for j = 1:10
@@ -179,7 +181,7 @@ end
 
 %%
 
-%Using the average values
+%Using the average values for all diameters
 rowNum = 3;
 counter = 1;
 for cutoff = 1e3:0.5e3:1e6
@@ -237,7 +239,7 @@ rowNum = 3;
 counter = 0;
 % for cutoff = [210000, 190000, 35000]
 
-for cutoff = [175000]% 128500, 175000, 190000]
+for cutoff = [167000]% 128500, 175000, 190000]
 % cutoff = .05*1e7;
     SumError = 0;
     y_guess = zeros(5,12);
@@ -306,3 +308,129 @@ scatter(xs, y_guess(5,:),'m*')
 end
 
 
+%%
+
+%Using the average values and stopping at frst repeating section
+
+
+rowNum = 3;
+counter = 1;
+for cutoff = 1e3:0.5e3:1e6
+% cutoff = .05*1e7;
+    SumError = 0;
+    counter = counter+1;
+     for DCMNum = [1,2,3,4,5]
+        for diam_test = 1:8    %Number of diameters you want to include in analysis, starting at d = 1 mm and deacreasing from there
+            %***********************************IMPORTANT*****************
+            Actual_Thickness = fliplr(dcm1_5_results(rowNum, :));
+            Actual_Thickness = Actual_Thickness(diam_test);
+            test_Diam = testStats{DCMNum}(:,4:15);
+            j = diam_test;
+            
+            minThickness = find(test_Diam(:,j) < cutoff);
+%             pause
+            if isempty(minThickness)
+            minThickness = 14; %(the minimum thickness) I might need to change this to maximum thickness
+            end
+            if minThickness(1) == 1
+            thresholdThickness = 2;
+            else
+                    k = 'tetetet';
+                 pn = test_Diam(minThickness(1), j);
+                %pn = handles.lambda(minThickness(1), j);
+                pnMinusOne = test_Diam(minThickness(1) - 1, j);
+                %pnMinusOne = handles.lambda(minThickness(1) - 1, j);
+                tn = handles.thickness(minThickness(1));
+                tnMinusOne = handles.thickness(minThickness(1) - 1);
+                thresholdThickness = (((cutoff - pnMinusOne)/(pn - pnMinusOne)) * (tn - tnMinusOne)) + tnMinusOne;
+                if thresholdThickness < 0 
+                    thresholdThickness = 0;
+                elseif thresholdThickness > 2
+                    thresholdThickness = 2;
+                end
+                
+            end
+            thresholdThickness;
+            error = (thresholdThickness - Actual_Thickness)^2;
+%             error = ((thresholdThickness - Actual_Thickness)*handles.diameter(diam_test+3))^2;   %Activate this to weight by the diameter being tested
+            SumError = SumError + error;
+            
+%             pause
+            
+        end
+%         pause
+    end
+    formatSpec = 'Error is %4.2f at cutoff of %9.1f\n';
+    fprintf(formatSpec, SumError, cutoff)
+%     pause
+end
+
+%% 
+
+for cutoff = [167000, 149000, 144500]% 128500, 175000, 190000]
+% cutoff = .05*1e7;
+    SumError = 0;
+    y_guess = zeros(5,12);
+r = 0;
+     for DCMNum = [6, 7, 8, 9, 10] %6, 7, 8, 20, 21
+         r = r + 1;
+         counter = 0;
+        for diam_test = 1:12
+            counter = counter+1;
+            Actual_Thickness = fliplr(dcm6_21_results(rowNum, :));
+            Actual_Thickness = Actual_Thickness(diam_test);
+            test_Diam = testStats{DCMNum}(:,4:15);
+            j = diam_test;
+            
+            minThickness = find(test_Diam(:,j) < cutoff);
+%             pause
+            if isempty(minThickness)
+            minThickness = 14; %(the minimum thickness) I might need to change this to maximum thickness
+            end
+            if minThickness(1) == 1
+            thresholdThickness = 2;
+            else
+                    k = 'tetetet';
+                 pn = test_Diam(minThickness(1), j);
+                %pn = handles.lambda(minThickness(1), j);
+                pnMinusOne = test_Diam(minThickness(1) - 1, j);
+                %pnMinusOne = handles.lambda(minThickness(1) - 1, j);
+                tn = handles.thickness(minThickness(1));
+                tnMinusOne = handles.thickness(minThickness(1) - 1);
+                thresholdThickness = (((cutoff - pnMinusOne)/(pn - pnMinusOne)) * (tn - tnMinusOne)) + tnMinusOne;
+                if thresholdThickness < 0 
+                    thresholdThickness = 0;
+                elseif thresholdThickness > 2
+                    thresholdThickness = 2;
+                end
+                
+            end
+            y_guess(r, counter) = thresholdThickness;
+            error = (thresholdThickness - Actual_Thickness)^2;
+%             error = ((thresholdThickness - Actual_Thickness)*handles.diameter(diam_test+3))^2;   %Activate this to weight by the diameter being tested
+            SumError = SumError + error;
+            
+%             pause
+            
+        end
+    end
+    formatSpec = 'Error is %4.2f at cutoff of %9.1f\n';
+    fprintf(formatSpec, SumError, cutoff)
+%     pause
+
+figure
+xs = handles.diameter(4:15); %mm
+y_Act = fliplr(dcm6_21_results(rowNum, :));
+y_guess
+scatter(xs, y_Act)
+hold on
+scatter(xs, y_guess(1,:),'b*')
+hold on
+scatter(xs, y_guess(2,:),'g*')
+hold on
+scatter(xs, y_guess(3,:),'c*')
+hold on
+scatter(xs, y_guess(4,:),'k*')
+hold on
+scatter(xs, y_guess(5,:),'m*')
+end

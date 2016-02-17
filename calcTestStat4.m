@@ -1,6 +1,7 @@
 function [results] = calcTestStat4(I_dicom_orig, BW1, center, attenuation, radius, atten_disks)
 handles.attenuation = attenuation;
-d = ceil((radius.*2.*sqrt(2)));
+dt = round(radius.*2) + 1;
+d = ceil((dt.*sqrt(2)));
 %% Below this line has to be done after every change of the center.
 largeRectRegion = I_dicom_orig(center(1) - max(d):center(1) + max(d),center(2) - max(d):center(2) + max(d));
 bkgr_roi = mean2(largeRectRegion);

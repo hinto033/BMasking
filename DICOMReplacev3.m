@@ -210,7 +210,8 @@ for j = 1:NumImageAnalyze
 I_dicom_orig{j}(all(I_dicom_orig{j}>10000,2),:)=[];
 [height, width] = size(I_dicom_orig{j});
 %% Calculate the blurred disks and store them
-radius = round((handles.diameter.*0.5)./(pixel*magn));
+radius = ((handles.diameter.*0.5)./(pixel*magn));
+handles.diameter
 [atten_disks] = circle_roi4(radius);
 %% Expand image s.t. the edges go out 250 pixel worth of the reflection
 I_DCM_Expanded = padarray(I_dicom_orig{j},[250 250],'symmetric','both');
@@ -218,7 +219,7 @@ I_DCM_Expanded = padarray(I_dicom_orig{j},[250 250],'symmetric','both');
 maskingmap = I_DCM_Expanded;
 % threshold 
 maskingmap=maskingmap./max(maskingmap(:));
-maskingmap = im2bw(maskingmap,0.6);
+maskingmap = im2bw(maskingmap,0.5);
 maskingmap = imcomplement(maskingmap);
 [heightExp,widthExp] = size(maskingmap);
 fractionIncluded = bwarea(maskingmap) / (heightExp*widthExp);
@@ -255,7 +256,7 @@ while center(1) < heightExp && center(2) < widthExp-250
         count = count+1;
         %imshow(maskimage, [])
         %drawnow
-    elseif mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))~=1 && mean2(maskingmap(center(1),center(2)))==1 
+    elseif mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))~=1 && mean2(maskingmap(center(1)-20:center(1)+20,center(2)-20:center(2)+20))==1 
         %search area goes outside the breast but the center is in  breast
         %Essentially along the breast edge
         addedBreast = I_DCM_Expanded(center(1)-250:center(1)+250,center(2)-250:center(2)+250);
@@ -265,7 +266,10 @@ while center(1) < heightExp && center(2) < widthExp-250
         handles.results = calcTestStat4(replaced,replaced, center, handles.attenuation, radius, atten_disks);
         results = handles.results;
         %% Calculate IQF Based on that
-        cutoff = 110000; %For the current calibration using only the changing diameter
+        cutoff = 144500; %For the current calibration using only the changing diameter
+        %If want more accurate for larger sizes, use 238500
+        %Perhaps insert a loop in here to test what the different test
+        %statistics output. 
         [cdData, IQF] = calcIQF(results, cutoff, handles.thickness, handles.diameter);
         %% Insert that IQF Value into the masking image
         maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift)= IQF(1);

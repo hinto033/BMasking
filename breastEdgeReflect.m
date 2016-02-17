@@ -2,6 +2,20 @@ function [replaced] = breastEdgeReflect(addedBreast, BW, I_DCM_Expanded, center)
 altered = addedBreast;
 flipvert = 0;
 fliphorz = 0;
+
+% figure
+% imshow(altered, [])
+% figure
+% imshow(BW, [])
+
+if mean2(BW(1:10,:))>mean2(BW(501-10:501,:));
+    %Do nothing
+else
+    BW = flipud(BW);
+    altered = flipud(altered);
+    flipvert = 1;
+end
+
 if mean2(BW(:,1:10))>mean2(BW(:,501-10:501));
     %Do nothing
 else
@@ -31,13 +45,7 @@ for z = 1:501
     end
 end
 end
-if mean2(BW(1:10,:))>mean2(BW(501-10:501,:));
-    %Do nothing
-else
-    BW = flipud(BW);
-    altered = flipud(altered);
-    flipvert = 1;
-end
+
 for times = 1:3
 for z = 1:501
     col = BW(:,z);
@@ -71,6 +79,10 @@ elseif flipvert == 0 && fliphorz==0
     %Do nothing
 end
 %Now insert that into the OG image
+% figure
+% imshow(altered, [])
+% pause
+
 replaced = I_DCM_Expanded;
 replaced(center(1)-250:center(1)+250,center(2)-250:center(2)+250) = altered;  
         
