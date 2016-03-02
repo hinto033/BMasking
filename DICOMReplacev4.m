@@ -204,14 +204,12 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %the thicknesses, diameters, and attenuations for the corresponding
 %thicknesses of the CDMAM
 global pixelshift magn pixel FileName_Naming I_dicom_orig NumImageAnalyze parts part1 part2
-
 %% Doing calculation for each image that was originally selected
 for j = 1:NumImageAnalyze
 I_dicom_orig{j}(all(I_dicom_orig{j}>10000,2),:)=[];
 [height, width] = size(I_dicom_orig{j});
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixel*magn));
-handles.diameter
 [atten_disks] = circle_roi4(radius);
 %% Expand image s.t. the edges go out 250 pixel worth of the reflection
 I_DCM_Expanded = padarray(I_dicom_orig{j},[250 250],'symmetric','both');
@@ -230,7 +228,7 @@ fractionIncluded = bwarea(maskingmap) / (heightExp*widthExp);
 % pause
 %% set parms
 handles.results = zeros(length(handles.thickness), length(handles.diameter));
-[l,w] = size(I_dicom_orig{j})
+[l,w] = size(I_dicom_orig{j});
 maskimage = zeros(l,w,3);  %Each layer is a different IQF value
 center = [271,271]; %Normally 271,271, but at 250,1050 we hit the nipple (first chance for flipping)
 centerstart = [271,271];
@@ -244,6 +242,11 @@ count = 1;
 dat.center = zeros(1,2,1);
 dat.cdData = zeros(length(handles.diameter),2,1);
 dat.IQF = zeros(1,3,1);
+
+handles.results = calcTestStat5(I_DCM_Expanded,I_DCM_Expanded, center, handles.attenuation, radius, atten_disks, handles.thickness); %um);
+
+pause
+
 while center(1) < heightExp && center(2) < widthExp-250 
     if mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))==1 && mean2(maskingmap(center(1),center(2)))==1 
         %Calculation if the entire searched region is within the actual

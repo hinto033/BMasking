@@ -16,6 +16,11 @@ for p = 1:pmax %All diameters
         atten_disk2 = atten_disks(:,:,p)*disk_diff(k);
         inserted = largeRectRegion + atten_disk2;
         handles.ytest1 = inserted(:)';
+        figure
+        imshow(handles.xtest-inserted,[])
+        figure
+        imshow(inserted,[])
+        pause
         lambda = (handles.xtest1 - handles.ytest1) * handles.ytest1';
         handles.lambda_npwmf1(k,p) = lambda;
     end

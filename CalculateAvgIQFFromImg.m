@@ -41,7 +41,7 @@ width = rect(3)
 height = rect(4)
 % Load entire mat file contents into a structure.
 % The structure has a member "I" that is a double 512x512 array.
-storedStructure = load('DCM7_MaskingImage_05-Feb-2016_17-21-41','-mat');
+storedStructure = load('UCSF_3C01029_DCM7_MaskingImage_24-Feb-2016_12-06-03','-mat');
 % Extract out the image from the structure into its own variable.
 % Don't use I as the variable name - bad for several reasons.
 imageArray = storedStructure.maskimage;  % Or storedStructure.I depending on what members your structure has.
