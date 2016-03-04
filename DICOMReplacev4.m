@@ -203,7 +203,8 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %% Parameter Setting
 %the thicknesses, diameters, and attenuations for the corresponding
 %thicknesses of the CDMAM
-global pixelshift magn pixel FileName_Naming I_dicom_orig NumImageAnalyze parts part1 part2
+global pixelshift magn pixel FileName_Naming I_dicom_orig NumImageAnalyze part1 part2
+global levels IQF
 %% Doing calculation for each image that was originally selected
 for j = 1:NumImageAnalyze
 I_dicom_orig{j}(all(I_dicom_orig{j}>10000,2),:)=[];
@@ -212,7 +213,7 @@ I_dicom_orig{j}(all(I_dicom_orig{j}>10000,2),:)=[];
 radius = ((handles.diameter.*0.5)./(pixel*magn));
 [atten_disks] = circle_roi4(radius);
 %% Expand image s.t. the edges go out 250 pixel worth of the reflection
-I_DCM_Expanded = padarray(I_dicom_orig{j},[250 250],'symmetric','both');
+I_DCM_Expanded = padarray(I_dicom_orig{j},[205 205],'symmetric','both');
 %% Set areas where i'll do calculations
 maskingmap = I_DCM_Expanded;
 % threshold 
@@ -221,117 +222,37 @@ maskingmap = im2bw(maskingmap,0.2);
 maskingmap = imcomplement(maskingmap);
 [heightExp,widthExp] = size(maskingmap);
 fractionIncluded = bwarea(maskingmap) / (heightExp*widthExp);
-% figure
-% imshow(I_DCM_Expanded, [])
-% figure
-% imshow(maskingmap, [])
-% pause
 %% set parms
-handles.results = zeros(length(handles.thickness), length(handles.diameter));
 [l,w] = size(I_dicom_orig{j});
-maskimage = zeros(l,w,3);  %Each layer is a different IQF value
 center = [271,271]; %Normally 271,271, but at 250,1050 we hit the nipple (first chance for flipping)
-centerstart = [271,271];
-centerMask = [21,21]; %Normaly at 21, 21
-timePerROI = 0.5;
-timeSec = round(((height*width*fractionIncluded) / ((2*pixelshift)^2)) * timePerROI);
+timePerPixel = 6.17645411e-5;
+[l1,w1] = size(I_DCM_Expanded);
+timeSec = timePerPixel*(l1*w1)
 timeMin = timeSec / 60
-timeHr = timeMin / 60
+
 pause(2)
-count = 1;
-dat.center = zeros(1,2,1);
-dat.cdData = zeros(length(handles.diameter),2,1);
-dat.IQF = zeros(1,3,1);
+[handles.levels, handles.IQF] = calcTestStat5(I_DCM_Expanded,I_DCM_Expanded, center, handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter); %um);
+levels = handles.levels;
+IQF = handles.IQF;
 
-handles.results = calcTestStat5(I_DCM_Expanded,I_DCM_Expanded, center, handles.attenuation, radius, atten_disks, handles.thickness); %um);
-
-pause
-
-while center(1) < heightExp && center(2) < widthExp-250 
-    if mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))==1 && mean2(maskingmap(center(1),center(2)))==1 
-        %Calculation if the entire searched region is within the actual
-        %breast area (Including edge of image)
-        %% Calculate the test statistic after inserting them in a region
-        handles.results = calcTestStat4(I_DCM_Expanded,I_DCM_Expanded, center, handles.attenuation, radius, atten_disks);
-        results = handles.results;
-        %% Calculate IQF Based on that
-        cutoff = 110000; %For the current calibration
-        [cdData, IQF] = calcIQF(results, cutoff, handles.thickness, handles.diameter);
-        %% Insert that IQF Value into the masking image
-        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift,1)= IQF(1);
-        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift,2)= IQF(2);
-        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift,3)= IQF(3);
-        dat.center(:,:,count) = [centerMask(1), centerMask(2)];
-        dat.cdData(:,:,count) = cdData;
-        dat.IQF(:,:,count) = IQF;
-        count = count+1;
-        %imshow(maskimage, [])
-        %drawnow
-    elseif mean2(maskingmap(center(1)-202:center(1)+202,center(2)-202:center(2)+202))~=1 && mean2(maskingmap(center(1)-20:center(1)+20,center(2)-20:center(2)+20))==1 
-        %search area goes outside the breast but the center is in  breast
-        %Essentially along the breast edge
-        addedBreast = I_DCM_Expanded(center(1)-250:center(1)+250,center(2)-250:center(2)+250);
-        minMaskMap = maskingmap(center(1)-250:center(1)+250,center(2)-250:center(2)+250);
-        BW = minMaskMap;
-        [replaced] = breastEdgeReflect(addedBreast, BW, I_DCM_Expanded, center);
-        handles.results = calcTestStat4(replaced,replaced, center, handles.attenuation, radius, atten_disks);
-        results = handles.results;
-        %% Calculate IQF Based on that
-        cutoff = 144500; %For the current calibration using only the changing diameter
-        %If want more accurate for larger sizes, use 238500
-        %Perhaps insert a loop in here to test what the different test
-        %statistics output. 
-        [cdData, IQF] = calcIQF(results, cutoff, handles.thickness, handles.diameter);
-        %% Insert that IQF Value into the masking image
-        maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift)= IQF(1);
-        dat.center(:,:,count) = [centerMask(1), centerMask(2)];
-        dat.cdData(:,:,count) = cdData;
-        dat.IQF(:,:,count) = IQF;
-        count = count+1;
-        %imshow(maskimage, []) 
-        %drawnow
-    else %Do nothing if completely out of search area
-    end %if
-    if center(1)+(2*pixelshift) < height+250
-        center(1) = center(1) + 2*pixelshift;
-        centerMask(1) = centerMask(1) + 2*pixelshift;
-        center(2) = center(2);
-    elseif center(1) +(2*pixelshift) >= height+250
-        center(1) = centerstart(1);
-        center(2) = center(2) + 2*pixelshift;
-        centerMask(1) = pixelshift+1;
-        centerMask(2) = centerMask(2) + 2*pixelshift;
-    end %if
-centerMask
-end %while
 %% Export images
 formatout = 'dd-mmm-yyyy_HH-MM-SS';
 str = datestr(now, formatout);
 A1 = char(part1{j});
 A2 = char(part2{j});
 A3 = char(FileName_Naming{j});
-A4 = 'MaskingImage';
+A4 = 'ThicknessEachDiam';
 A5 = str;
 A6 = '.mat';
 formatSpec = '%s_%s_%s_%s_%s%s';
 fileForSaving = sprintf(formatSpec,A1,A2, A3, A4, A5, A6)
-save(fileForSaving, 'maskimage')
+save(fileForSaving, 'levels')
 
-A4_2 = 'MaskingData';
+A4_2 = 'IQFMap';
 formatSpec2 = '%s_%s_%s_%s_%s%s';
 fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_2, A5, A6)
-save(fileForSaving, 'dat')
+save(fileForSaving, 'IQF')
 
-figure
-imshow(maskimage(:,:,1), [])
-figure
-imshow(maskimage(:,:,2), [])
-figure
-imshow(maskimage(:,:,3), [])
-% pause
-% fileForSaving = [parts(3),'_',parts(2), '_',FileName_Naming{j},'_MaskingImage_',str,'.mat']
-% %As I continue this, I can include the scan type, details of scan, etc.
-% save(fileForSaving, 'maskimage')
 end %Going through set of images
 guidata(hObject,handles);
 
@@ -463,11 +384,46 @@ function AdditionalInfo_Callback(hObject, eventdata, handles)
 % hObject    handle to AdditionalInfo (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+k = 8
+% levels = handles.levels;
+% IQF = handles.IQF;
+% load('UCSF_3C01029_DCM7_IQFMap_04-Mar-2016_10-19-46.mat')
+% load('UCSF_3C01029_DCM7_ThicknessEachDiam_04-Mar-2016_10-19-46.mat')
+ 
+global levels IQF
 
-
+figure
+imshow(IQF,[])
+B=levels;
+size(B)
+fig=figure(100);
+set(fig,'Name','Image','Toolbar','figure',...
+    'NumberTitle','off')
+% Create an axes to plot in
+axes('Position',[.15 .05 .7 .9]);
+% sliders for epsilon and lambda
+slider1_handle=uicontrol(fig,'Style','slider','Max',20,'Min',1,...
+    'Value',1, 'SliderStep',[1/(20-1) 1/(20-1)],...
+    'Units','normalized','Position',[.02 .02 .14 .05]);
+uicontrol(fig,'Style','text','Units','normalized','Position',[.02 .07 .14 .04],...
+    'String','Choose Diameter');
+% Set up callbacks
+vars=struct('slider1_handle',slider1_handle,'B',B);
+set(slider1_handle,'Callback',{@slider1_callback,vars});
+plotterfcn(vars)
 guidata(hObject,handles);
+% End of main file
 
+% Callback subfunctions to support UI actions
+function slider1_callback(~,~,vars)
+    % Run slider1 which controls value of epsilon
+    vars.slider1_handle
+    plotterfcn(vars)
 
+function plotterfcn(vars)
+    % Plots the image
+    imshow(vars.B(:,:,get(vars.slider1_handle,'Value')));
+    title(num2str(get(vars.slider1_handle,'Value')));
 
 function NumImageImport_Callback(hObject, eventdata, handles)
 % hObject    handle to NumImageImport (see GCBO)
