@@ -252,7 +252,7 @@ while center(1) < heightExp && center(2) < widthExp-250
         handles.results = calcTestStat4(I_DCM_Expanded,I_DCM_Expanded, center, handles.attenuation, radius, atten_disks);
         results = handles.results;
         %% Calculate IQF Based on that
-        cutoff = 110000; %For the current calibration
+        cutoff = 144500; %For the current calibration
         [cdData, IQF] = calcIQF(results, cutoff, handles.thickness, handles.diameter);
         %% Insert that IQF Value into the masking image
         maskimage(centerMask(1)-pixelshift:centerMask(1)+pixelshift,centerMask(2)-pixelshift:centerMask(2)+pixelshift,1)= IQF(1);
