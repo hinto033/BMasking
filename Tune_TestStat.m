@@ -85,7 +85,12 @@ dt = round(radius.*2) + 1
 rt = dt./2
 [atten_disks] = circle_roi4(radius);
 % for j = 1:10
-for j = 1:10
+
+
+rowNum=3
+% cutoff = 144500
+error = 0
+for j = 5%1:10
 full_file_dicomread = [pathstr,name,num2str(dcmEnding(j))];
 info_dicom = dicominfo(full_file_dicomread);
 I_dicom{j} = double(dicomread(info_dicom));
@@ -98,83 +103,30 @@ I_dicom_orig{j} = BW1;
 close
 center = [round(ySel),round(xSel)];
 
-% handles.results = calcTestStat(I_dicom_orig{j}, BW1, center, handles.attenuation, handles.thickness, handles.diameter);
-% testStats{j} = handles.results;
-handles.results = calcTestStat4(I_dicom_orig{j}, BW1, center, handles.attenuation, radius, atten_disks);
-testStats{j} = handles.results;
-% pause
+centerimage = I_dicom_orig{j}(ySel-250:ySel+250, xSel-250:xSel+250);
 
+for cutoff = 1.3e5:.1e4:1.6e5
+[handles.levels, handles.IQF] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff); %um);
+levels=handles.levels;
+for k = 1:16
+center=size(levels(:,:,k))/2+.5;
+center = ceil(center);
+cdThickness(k) = levels(center(1), center(2), k); %thickness
+cdDiam(k) = handles.diameter(k);
 end
 
+testStats{j} = [cdThickness',cdDiam'];
+% pause
+%%
+testStats{j}=testStats{j}(4:15,:);
+            Actual_Thickness = fliplr(dcm1_5_results(rowNum, :));
+            Actual_Thickness = Actual_Thickness(1:12)';
+error = sum((testStats{j}(:,1) - Actual_Thickness).^2 ); %Predicted thicknesses - actual thicknesses
+    formatSpec = 'Error is %4.4f at cutoff of %9.1f\n';
+    fprintf(formatSpec, error, cutoff)
+end
+end
 
-% % % % % % %handles.thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06, .05, .04, .03]; %um
-% % % % % % rowNum = 3 %1 = automater, 2 = predicted human, 3 = fit to predicted gold
-% % % % % % for k = 4:15
-% % % % % %     for j = [1,2,3,5]  %Just for the training set
-% % % % % %     CDCOMResults = dcmResults{j}(rowNum, :)
-% % % % % %     CDCOMAVGResults = dcm1_5_results(rowNum, :)
-% % % % % %     CDCOMSE = dcmResults{j}(4, :)
-% % % % % %     CDCOMAVGSE = dcm1_5_results(4, :)
-% % % % % %     
-% % % % % %     testStatResults = testStats{j}(:,4:15)
-% % % % % %     %Compare results from DCM_ to the teststats... find the best fit point
-% % % % % %     pause
-% % % % % %     end
-% % % % % % 
-% % % % % % end
-%% 
-% % % % % %Using all 4 individual test objects
-% % % % % rowNum = 3;
-% % % % % counter = 1;
-% % % % % for cutoff = 1e4:0.5e4:1e7
-% % % % % % cutoff = .05*1e7;
-% % % % %     SumError = 0;
-% % % % %     counter = counter+1;
-% % % % %     for DCMNum = [1,2,3,4,5]
-% % % % %         for diam_test = 1:12
-% % % % %             Actual_Thickness = fliplr(dcmResults{DCMNum}(rowNum, :));
-% % % % %             Actual_Thickness = Actual_Thickness(diam_test);
-% % % % %             test_Diam = testStats{DCMNum}(:,4:15);
-% % % % %             j = diam_test;
-% % % % %             
-% % % % %             minThickness = find(test_Diam(:,j) < cutoff);
-% % % % % %             pause
-% % % % %             if isempty(minThickness)
-% % % % %             minThickness = 14; %(the minimum thickness) I might need to change this to maximum thickness
-% % % % %             end
-% % % % %             if minThickness(1) == 1
-% % % % %             thresholdThickness = 2;
-% % % % %             else
-% % % % %                     k = 'tetetet';
-% % % % %                  pn = test_Diam(minThickness(1), j);
-% % % % %                 %pn = handles.lambda(minThickness(1), j);
-% % % % %                 pnMinusOne = test_Diam(minThickness(1) - 1, j);
-% % % % %                 %pnMinusOne = handles.lambda(minThickness(1) - 1, j);
-% % % % %                 tn = handles.thickness(minThickness(1));
-% % % % %                 tnMinusOne = handles.thickness(minThickness(1) - 1);
-% % % % %                 thresholdThickness = (((cutoff - pnMinusOne)/(pn - pnMinusOne)) * (tn - tnMinusOne)) + tnMinusOne;
-% % % % %                 if thresholdThickness < 0 
-% % % % %                     thresholdThickness = 0;
-% % % % %                 elseif thresholdThickness > 2
-% % % % %                     thresholdThickness = 2;
-% % % % %                 end
-% % % % %                 
-% % % % %             end
-% % % % %             thresholdThickness;
-% % % % %             error = (thresholdThickness - Actual_Thickness)^2;
-% % % % % %             handles.diameter(diam_test+3)
-% % % % % %             error = ((thresholdThickness - Actual_Thickness)*handles.diameter(diam_test+3))^2;   %Activate this to weight by the diameter being tested
-% % % % % %             pause
-% % % % %             SumError = SumError + error;
-% % % % %             
-% % % % % %             pause
-% % % % %             
-% % % % %         end
-% % % % %     end
-% % % % %     formatSpec = 'Error is %4.2f at cutoff of %9.1f\n';
-% % % % %     fprintf(formatSpec, SumError, cutoff)
-% % % % % %     pause
-% % % % % end
 
 
 
