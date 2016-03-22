@@ -123,27 +123,26 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %% Parameter Setting
 %the thicknesses, diameters, and attenuations for the corresponding
 %thicknesses of the CDMAM
-global magn pixel FileName_Naming NumImageAnalyze part1 part2 I_dicom_orig
+global magn FileName_Naming NumImageAnalyze part1 part2 I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 %% Doing calculation for each image that was originally selected
 for j = 1:NumImageAnalyze
 %%Import an image    
-I_dicom_orig = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+[I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 cutoff = 145000;
-%% Define scaling factor, etc. 
-% handles.bodyPartThickness = info_dicom.BodyPartThickness;
-% handles.anodeTargetMaterial = info_dicom.AnodeTargetMaterial;
-% handles.pixelSpacing = info_dicom.PixelSpacing;
-% handles.pixelAspectRatio = info_dicom.PixelAspectRatio;
-% handles.KVP = info_dicom.KVP;
-% handles.exposureInuAs = info_dicom.ExposureInuAs;
+%%
+pixelSpacing = spacing(1)
+% pause
 I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
 [height, width] = size(I_dicom_orig);
 %% Calculate the blurred disks and store them
-radius = ((handles.diameter.*0.5)./(pixel*magn));
+radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [atten_disks] = circle_roi4(radius);
+[q1, q2] = size(atten_disks(:,:,1));
+padamnt = (q1+1)/2;
+% pause
 %% Expand image s.t. the edges go out 250 pixel worth of the reflection
-I_DCM_Expanded = padarray(I_dicom_orig,[205 205],'symmetric','both');
+I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
 %% Set areas where i'll do calculations
 maskingmap = I_DCM_Expanded;
 % threshold 
@@ -154,14 +153,12 @@ maskingmap = imcomplement(maskingmap);
 fractionIncluded = bwarea(maskingmap) / (heightExp*widthExp);
 %% set parms
 [l,w] = size(I_dicom_orig);
-center = [271,271]; %Normally 271,271, but at 250,1050 we hit the nipple (first chance for flipping)
-timePerPixel = 6.17645411e-5;
-[l1,w1] = size(I_DCM_Expanded);
-timeSec = timePerPixel*(l1*w1)
-timeMin = timeSec / 60
+timePerPixel = 1.183e-6;
+[l1,w1] = size(I_dicom_orig);
+timeMin = timePerPixel*(l1*w1)
 
 pause(2)
-[handles.levels, handles.IQF] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff); %um);
+[handles.levels, handles.IQF] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
 levels = handles.levels;
 IQF = handles.IQF;
 %% Export images
@@ -397,7 +394,7 @@ function Plot_IsoContour_Callback(hObject, eventdata, handles)
 global levels IQF
 imageArray = flipud(IQF); 
 
-countourSizes = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+contourSizes = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
 figure
 contourf(imageArray, contourSizes)
 colorbar

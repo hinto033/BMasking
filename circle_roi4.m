@@ -22,5 +22,3 @@ end
 atten_disks = zeros(2*max(d)+1,2*max(d)+1,length(radius));
 PSF = fspecial('gaussian',6,2); 
 atten_disks(:,:,:) = imfilter(smalldisk(:,:,:),PSF,'symmetric','conv');
-
-
