@@ -129,7 +129,7 @@ global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 for j = 1:NumImageAnalyze
 %%Import an image    
 [I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-cutoff = 145000;
+cutoff = 95000;
 %%
 pixelSpacing = spacing(1)
 % pause

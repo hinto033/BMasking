@@ -80,17 +80,18 @@ handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287
     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
 
 
-radius = ((handles.diameter.*0.5)./(pixel*magn));
+radius = ((handles.diameter.*0.5)./(pixel*magn))
 dt = round(radius.*2) + 1
 rt = dt./2
 [atten_disks] = circle_roi4(radius);
 % for j = 1:10
-
-
+size(atten_disks)
+[q1, q2] = size(atten_disks(:,:,1));
+padamnt = ceil((q1+1)/2);
 rowNum=3
 % cutoff = 144500
 error = 0
-for j = 5%1:10
+for j = 1%1:10
 full_file_dicomread = [pathstr,name,num2str(dcmEnding(j))];
 info_dicom = dicominfo(full_file_dicomread);
 I_dicom{j} = double(dicomread(info_dicom));
@@ -103,10 +104,11 @@ I_dicom_orig{j} = BW1;
 close
 center = [round(ySel),round(xSel)];
 
-centerimage = I_dicom_orig{j}(ySel-250:ySel+250, xSel-250:xSel+250);
+% centerimage = I_dicom_orig{j}(ySel-250:ySel+250, xSel-250:xSel+250);
+centerimage = I_dicom_orig{j}(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
 
-for cutoff = 1.3e5:.1e4:1.6e5
-[handles.levels, handles.IQF] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff); %um);
+for cutoff = 1e4:.1e4:1.5e5
+[handles.levels, handles.IQF] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
 levels=handles.levels;
 for k = 1:16
 center=size(levels(:,:,k))/2+.5;

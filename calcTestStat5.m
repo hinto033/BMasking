@@ -8,11 +8,11 @@ d = ceil((dt.*sqrt(2)));
 pmax = length(radius);
 kmax = length(attenuation);
 cutoff = cutoff;
-[l,w] = size(I_dicom_orig)
+[l,w] = size(I_dicom_orig);
 % pause
 b=2*max(d);
 conv_image2 = ones(l,w, pmax)*2; 
-padnum = padamnt
+padnum = padamnt;
 for p = 1:pmax %All diameters
     for k = 1:kmax %All attenuations
         neg_disk = atten_disks(:,:,p);
@@ -102,8 +102,10 @@ IQF = IQF .* maskingmap;
 
 %%
 levels = conv_image2;
-levels = levels(250:l-250, 250:w-250,:);
-IQF = IQF(250:l-250, 250:w-250);
+size(levels);
+padamnt;
+levels = levels(padamnt:l-padamnt, padamnt:w-padamnt,:);
+IQF = IQF(padamnt:l-padamnt, padamnt:w-padamnt);
 % figure
 % imshow(IQF, [])
 % pause
