@@ -16,6 +16,4 @@ end
 atten_disks = zeros(searchArea,searchArea,length(radius));
 PSF = fspecial('gaussian',6,2); 
 atten_disks(:,:,:) = imfilter(smalldisk(:,:,:),PSF,'symmetric','conv');
-% figure
-% imshow(atten_disks(:,:,1),[])
-% pause
+

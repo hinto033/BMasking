@@ -388,3 +388,188 @@ scatter(xs, y_guess(4,:),'k*')
 hold on
 scatter(xs, y_guess(5,:),'m*')
 end
+
+
+%% Generate Noise
+
+% The function generates a sequence of pink (flicker) noise samples. 
+% Pink noise has equal energy in all octaves (or similar log bundles) of frequency.
+% In terms of power at a constant bandwidth, pink noise falls off at 3 dB per octave. 
+
+% difine the length of the vector
+% ensure that the M is even
+N=200
+
+if rem(N,2)
+    M = N+1;
+else
+    M = N;
+end
+
+% generate white noise
+x = randn(M, M);
+figure
+imshow(x, [])
+% FFT
+X = fft2(x);
+figure
+imshow(X, [])
+% prepare a vector for 1/f multiplication
+NumUniquePts = M/2 + 1;
+n = 1:NumUniquePts;
+n = sqrt(n);
+
+% multiplicate the left half of the spectrum so the power spectral density
+% is proportional to the frequency by factor 1/f, i.e. the
+% amplitudes are proportional to 1/sqrt(f)
+X(1:NumUniquePts, 1:NumUniquePts) = X(1:NumUniquePts, 1:NumUniquePts)./n;
+
+% prepare a right half of the spectrum - a copy of the left one,
+% except the DC component and Nyquist frequency - they are unique
+X(NumUniquePts+1:M, NumUniquePts+1:M) = real(X(M/2:-1:2,M/2:-1:2)) -1i*imag(X(M/2:-1:2,M/2:-1:2));
+
+% IFFT
+y = ifft(X);
+
+% prepare output vector y
+y = real(y(1, 1:N));
+figure
+plot(y)
+% ensure unity standard deviation and zero mean value
+y = y - mean(y);
+yrms = sqrt(mean(y.^2));
+y = y/yrms;
+
+% end
+%% Generate 1/f3 map
+ 
+ ans=pincnoise(n)
+%--- Generate 1/f noise. ---
+%--- Fast result for n=2^m ---
+fnoise=exp(2*pi*i*rand(n/2,1)).*1./(1:(n/2-1)/(n/2-1):n/2)';
+fnoise(n/2)=real(fnoise(n/2));
+f2=fnoise(1:n/2-1);
+f3=conj(flipdim(f2,1));
+f4=cat(1,[0],fnoise,f3);
+ans=real(ifft(f4,n));
+
+%% d
+n = 1000
+
+
+map = zeros(n,n);
+%% Generate Noise
+
+% function: y = pinknoise(N) 
+% N - number of samples to be returned in row vector
+% y - row vector of pink (flicker) noise samples
+
+% The function generates a sequence of pink (flicker) noise samples. 
+% Pink noise has equal energy in all octaves (or similar log bundles) of frequency.
+% In terms of power at a constant bandwidth, pink noise falls off at 3 dB per octave. 
+
+% difine the length of the vector
+% ensure that the M is even
+
+N=200
+
+if rem(N,2)
+    M = N+1;
+else
+    M = N;
+end
+
+
+%% d
+
+% generate white noise
+x = randn(1, M);
+figure
+plot(x)
+% FFT
+X = fft(x);
+
+% prepare a vector for 1/f multiplication
+NumUniquePts = M/2 + 1;
+n = 1:NumUniquePts;
+n = sqrt(n);
+
+% multiplicate the left half of the spectrum so the power spectral density
+% is proportional to the frequency by factor 1/f, i.e. the
+% amplitudes are proportional to 1/sqrt(f)
+X(1:NumUniquePts) = X(1:NumUniquePts)./n;
+
+% prepare a right half of the spectrum - a copy of the left one,
+% except the DC component and Nyquist frequency - they are unique
+X(NumUniquePts+1:M) = real(X(M/2:-1:2)) -1i*imag(X(M/2:-1:2));
+
+% IFFT
+y = ifft(X);
+
+% prepare output vector y
+y = real(y(1, 1:N));
+figure
+plot(y)
+
+
+% ensure unity standard deviation and zero mean value
+y = y - mean(y);
+yrms = sqrt(mean(y.^2));
+y = y/yrms;
+%% Creates 1/f3 noise apparently?
+
+
+im4 = randn(500, 500);
+
+% im4 = zeros(500,500);
+% im4(20:150, 20:150) = 1;
+
+figure
+imshow(im4)
+
+imFFT = fft2(im4);
+% figure
+% imshow(imFFT)
+
+imFFTShifted = fftshift(imFFT);
+% figure
+% imshow(imFFTShifted, [])
+
+[a,b] = size(imFFTShifted);
+center = [(b/2)+1, (a/2)+1];
+frequencyMap = ones(a,b);
+for j = 1:a
+    for k = 1:b
+        if j==center(2) && k == center(1)
+        else
+        frequencyMap(j,k) = frequencyMap(j,k)/(sqrt((j-center(2))^2 + (k-center(1))^2))^3;
+        end
+    end
+end
+% figure
+% imshow(frequencyMap,[])
+
+%Mult Together
+nextStep = frequencyMap.*imFFTShifted;
+% figure
+% imshow(nextStep, [])
+altered = ifftshift(nextStep);
+
+alteredreal = ifft2(altered);
+figure
+imshow(alteredreal, [])
+
+
+
+
+% 
+% im = imread('peppers.png');
+% im = rgb2gray(im)
+% fftim = fft2(im)
+% fftshiftim = fftshift(im)
+% figure
+% imshow(fftim, [])
+% figure
+% imshow(fftshiftim, [])
+
+
