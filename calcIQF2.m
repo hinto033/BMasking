@@ -10,7 +10,7 @@ cdData = zeros(1,2);
 % pause
 iqfDenom = 0;
     for j = 1:numberDiams%6 %Scroll through diameters 1:16
-        minThickness = find(results(j,:) < cutoff)
+        minThickness = find(results(j,:) < cutoff);
 %         pause
         if isempty(minThickness)
             minThickness = 16; %(the minimum thickness) I might need to change this to maximum thickness

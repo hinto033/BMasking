@@ -43,10 +43,9 @@ else
 end
 % End initialization code - DO NOT EDIT
 
-
 % --- Executes just before DICOMReplace is made visible.
 function DICOMReplace_OpeningFcn(hObject, eventdata, handles, varargin)
-
+%Sets Initial Variables.
 global magn cutoff
 global NumImageAnalyze
 NumImageAnalyze=1;
@@ -58,88 +57,60 @@ handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287
     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
 magn = 1; %1.082;
 cutoff = 95000;
-% Choose default command line output for DICOMReplace
 handles.output = hObject;
-
 % Update handles structure
 guidata(hObject, handles);
 
-% UIWAIT makes DICOMReplace wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
-
-
 % --- Outputs from this function are returned to the command line.
 function varargout = DICOMReplace_OutputFcn(hObject, eventdata, handles) 
-% varargout  cell array for returning output args (see VARARGOUT);
-% hObject    handle to figure
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Get default command line output from handles structure
 varargout{1} = handles.output;
-
 
 % --- Executes on button press in SelectFile.
 function SelectFile_Callback(hObject, eventdata, handles)
-% hObject    handle to SelectFile (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%Selects a certain number of files and stores the path for use later
 global NumImageAnalyze FileName PathName FilterIndex ext
 global FileName_Naming parts part1 part2 PathName_Naming FilterIndex_Naming extension
-
 for j = 1:NumImageAnalyze
-%%Opens up dialogue bo to impore a DICOM file of your choosing
+%%Opens up dialogue box to import a DICOM file of your choosing
 [FileName,PathName,FilterIndex] = uigetfile;
-%This section import the DICOM file and sets some initial variables
-%need to add in lines that read some of the dicominfo
-%Stores variables for the image itself and path to the image
+%Stores filepath
 FileName_Naming{j} = FileName
 PathName_Naming{j} = PathName;
 FilterIndex_Naming{j} = FilterIndex;
 [pathstr,name,ext] = fileparts([PathName,'\',FileName]);
-extension{j} = ext
+extension{j} = ext;
 s=pathstr;
 parts=regexp(s,'\','split');
 parts = fliplr(parts);
 part1{j} = parts(3);
 part2{j} = parts(2);
 end
-
 guidata(hObject,handles);
-
 
 % --- Executes on button press in InsertDisks.
 function InsertDisks_Callback(hObject, eventdata, handles)
-%% Parameter Setting
-%the thicknesses, diameters, and attenuations for the corresponding
-%thicknesses of the CDMAM
+%Parameter Setting
 global magn FileName_Naming NumImageAnalyze part1 part2 %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
-%% Doing calculation for each image that was originally selected
-for j = 1:NumImageAnalyze
-%%Import an image    
+for j = 1:NumImageAnalyze %Does calculation for each image that was selected
+%Import an image    
 [I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-%%
 pixelSpacing = spacing(1)
+%Remove blank top rows (Important for padding)
 I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [atten_disks] = circle_roi4(radius);
 [q1, q2] = size(atten_disks(:,:,1));
 padamnt = (q1+1)/2;
-%% Expand image s.t. the edges go out 250 pixel worth of the reflection
+%% Expand image s.t. the edges reflect out to get full convolution
 I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
 %% set guess of time to calculate
-[l,w] = size(I_dicom_orig);
-timePerPixel = 1.183e-6;
-timeMin = timePerPixel*(l*w)
+timePerImage = 5 %Min
 pause(2)
 %Calculate IQF and Detectability at different diameter levels 
-% [handles.levels, handles.IQF] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
-[handles.levels, handles.IQF] = calcTestStat6(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
-levels = handles.levels;
-IQF = handles.IQF;
-%% Export images
+[levels, IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt);
+%% Export images as .mats
 formatout = 'dd-mmm-yyyy_HH-MM-SS';
 str = datestr(now, formatout);
 A1 = char(part1{j});
@@ -161,58 +132,40 @@ guidata(hObject,handles);
 
 % --- Executes on button press in CreateCDIQF.
 function CreateCDIQF_Callback(hObject, eventdata, handles)
-% hObject    handle to CreateCDIQF (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global magn pixel FileName_Naming NumImageAnalyze part1 part2 %I_dicom_orig
+%Allows you to select a point on the first file, and it produces a CD curve
+%from that
+global magn FileName_Naming NumImageAnalyze part1 part2
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
+%Import Image
 [I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-% I_dicom_orig = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-
-pixelSpacing = spacing(1)
+pixelSpacing = spacing(1);
 I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
-%% Calculate the blurred disks and store them
+% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [atten_disks] = circle_roi4(radius);
+%Calculate necessary amount of padding
 [q1, q2] = size(atten_disks(:,:,1));
 padamnt = (q1+1)/2;
-%% Expand image s.t. the edges go out 250 pixel worth of the reflection
+% Expand image s.t. the edges go out 250 pixel worth of the reflection
 I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
-
-
-% % % I_DCM_Expanded = padarray(I_dicom_orig,[250 250],'symmetric','both');
-figure 
-imshow(I_DCM_Expanded, [])
-%Obtain Point
-[xSel,ySel] = ginput(1);  % [x, y]]
-close
-% % % radius = ((handles.diameter.*0.5)./(pixel*magn));
-% % % [atten_disks] = circle_roi4(radius);
-%% Expand image s.t. the edges go out 250 pixel worth of the reflection
-centerimage = I_DCM_Expanded(ySel-250:ySel+250, xSel-250:xSel+250); %*******FIX*** Should be involved with padarray
-% %% Calculate the blurred disks and store them
-radius = round((handles.diameter.*0.5)./(pixel*magn))
-[atten_disks] = circle_roi4(radius);
-
-%% Calculate the test statistic after inserting them in a region
-tic
-% [handles.levels, handles.IQF] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
-[handles.levels, handles.IQF] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
-toc
-levels = handles.levels;
-IQF = handles.IQF;
-
-size(levels)
-for k = 1:20 %***************FIX, should be length(diameter) or whatever
+%Open Image and Obtain Point
+figure; imshow(I_DCM_Expanded, []);
+[xSel,ySel] = ginput(1); close; % [x, y]]
+% Only do analysis on the 250*250 size box
+centerimage = I_DCM_Expanded(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
+% Calculate the test statistic after inserting them in a region
+[levels,IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt);
+%Calculate CD Curve
+for k = 1:length(radius) 
 center=size(levels(:,:,k))/2+.5;
 center = ceil(center);
-cdThickness(k) = levels(center(1), center(2), k) %thickness
-cdDiam(k) = handles.diameter(k)
+cdThickness(k) = levels(center(1), center(2), k); %thickness
+cdDiam(k) = handles.diameter(k);
 end
-%% If I want to make CD curves of a certain spot. 
+% If I want to make CD curves of a certain spot. 
 figure
-scatter(cdDiam, cdThickness)%,'Parent', handles.PNGImage)
+scatter(cdDiam, cdThickness)
 xlabel('Detail Diameter (mm)')
 ylabel('Threshold Gold Thickness(um)')
 set(gca,'xscale','log')
@@ -223,20 +176,11 @@ guidata(hObject,handles);
 
 % --- Executes on selection change in ShapeSelect.
 function ShapeSelect_Callback(hObject, eventdata, handles)
-% hObject    handle to ShapeSelect (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%Allows you to select a type of shape for the inserted disk
+%CURRENTLY DOES NOTHING
 contents = cellstr(get(hObject,'String')) %returns ShapeSelect contents as cell array
-%        contents{get(hObject,'Value')}
-
 global shape
 shape = contents{get(hObject,'Value')}
-% Hints: contents = cellstr(get(hObject,'String')) returns ShapeSelect contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from ShapeSelect
-
-
-
-
 guidata(hObject,handles);
 
 
@@ -255,30 +199,29 @@ end
 
 % --- Executes on button press in MakeVideo.
 function MakeVideo_Callback(hObject, eventdata, handles)
-% hObject    handle to MakeVideo (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% % Display image
-figure 
-imshow(handles.I_dicom_orig, [])
-%Obtain rectangular region of where video will go
-rect = getrect %[xmin ymin width height]
-xmin = round(rect(1))
-ymin = round(rect(2))
-width = round(rect(3))
-height = round(rect(4))
-bottomRow = ymin + height
-topRow = ymin
-leftColumn = xmin
-rightColumn = xmin + width
-region = handles.I_dicom_orig(topRow:bottomRow,leftColumn:rightColumn)
-
-figure
-imshow(region, [])
+%Creates video of disks being inserted into the region that you select.
+%CURRENTLY DOES NOT WORK.
+global magn FileName_Naming NumImageAnalyze part1 part2
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+j=1;
+%Import Image
+[I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = spacing(1); 
+figure; imshow(I_dicom_orig, []);
+[xSel,ySel] = ginput(1); close; 
+%Calculate disks
+radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
+[atten_disks] = circle_roi4(radius);
+%Calculate necessary amount of padding
+[q1, q2] = size(atten_disks(:,:,1));
+padamnt = (q1+1)/2;
+centerimage = I_dicom_orig(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
 
 
-pause
+%Make function that takes centerimage and inserts disk, makes 48 
+%FUNCTIONFUCNTIONFUNCTION
+
+
 %Insert disks in middle of this region and save that section as an image
 %file (or not?)
 figure
@@ -288,7 +231,6 @@ figure
     images = imread(full_file_png);
     size(images)
     imshow(images(500:1500,600:1500))%,[0,20])
-%     pause
     class(images);
     drawnow
     F(j) = getframe;
@@ -306,21 +248,12 @@ guidata(hObject,handles);
 
 % --- Executes on button press in Thicknesses_Slider.
 function Thicknesses_Slider_Callback(hObject, eventdata, handles)
-% hObject    handle to Thicknesses_Slider (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-k = 8
-% levels = handles.levels;
-% IQF = handles.IQF;
-% load('UCSF_3C01029_DCM7_IQFMap_04-Mar-2016_10-19-46.mat')
-% load('UCSF_3C01029_DCM7_ThicknessEachDiam_04-Mar-2016_10-19-46.mat')
- 
+%Takes Levels and IQF and makes a slider where you can look at the
+%detectability of different diameters.
 global levels IQF
 
-figure
-imshow(IQF,[])
 B=levels;
-size(B)
+size(B);
 fig=figure(100);
 set(fig,'Name','Image','Toolbar','figure',...
     'NumberTitle','off')
@@ -335,14 +268,13 @@ uicontrol(fig,'Style','text','Units','normalized','Position',[.02 .07 .14 .04],.
 % Set up callbacks
 vars=struct('slider1_handle',slider1_handle,'B',B);
 set(slider1_handle,'Callback',{@slider1_callback,vars});
-plotterfcn(vars)
+plotterfcn(vars);
 guidata(hObject,handles);
-% End of main file
 
 % Callback subfunctions to support UI actions
 function slider1_callback(~,~,vars)
     % Run slider1 which controls value of epsilon
-    vars.slider1_handle
+    vars.slider1_handle;
     plotterfcn(vars)
 
 function plotterfcn(vars)
@@ -351,24 +283,15 @@ function plotterfcn(vars)
     title(num2str(get(vars.slider1_handle,'Value')));
 
 function NumImageImport_Callback(hObject, eventdata, handles)
-% hObject    handle to NumImageImport (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%Allows you to say how many images you want to analyze
 global NumImageAnalyze
-NumImageAnalyze = str2double(get(hObject,'String'))
+NumImageAnalyze = str2double(get(hObject,'String'));
 guidata(hObject,handles);
-% Hints: get(hObject,'String') returns contents of NumImageImport as text
-%        str2double(get(hObject,'String')) returns contents of NumImageImport as a double
+
 
 
 % --- Executes during object creation, after setting all properties.
 function NumImageImport_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to NumImageImport (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
@@ -376,16 +299,12 @@ end
 
 % --- Executes on button press in Plot_IsoContour.
 function Plot_IsoContour_Callback(hObject, eventdata, handles)
-% hObject    handle to Plot_IsoContour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% storedStructure = load('UCSF_3C01029_DCM7_IQFMap_18-Mar-2016_11-34-44','-mat');
-% Extract out the image from the structure into its own variable.
-% Don't use I as the variable name - bad for several reasons.
-global levels IQF
+%Plots a contour image of the IQF Image
+%Load and flip
+global IQF
 imageArray = flipud(IQF); 
-
-contourSizes = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+%Plot
+contourSizes = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34];
 figure
 contourf(imageArray, contourSizes)
 colormap(gray)
@@ -395,41 +314,34 @@ guidata(hObject,handles);
 
 % --- Executes on button press in ImportMATs.
 function ImportMATs_Callback(hObject, eventdata, handles)
-% hObject    handle to ImportMATs (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%Allows you to import previous data files to analyze them later on
 global levels IQF
-[FileName,PathName,FilterIndex] = uigetfile
+[FileName,PathName,FilterIndex] = uigetfile;
 full_file_mat = [PathName,'\',FileName];
 storedStructure = load(full_file_mat,'-mat');
 IQF = (storedStructure.IQF(:,:,1)); 
 
-[FileName,PathName,FilterIndex] = uigetfile
+[FileName,PathName,FilterIndex] = uigetfile;
 full_file_mat = [PathName,'\',FileName];
 storedStructure = load(full_file_mat,'-mat');
 levels = (storedStructure.levels); 
-
-figure
-imshow(IQF,[])
-figure
-imshow(levels(:,:,13),[])
 guidata(hObject,handles);
 
 
 
 % --- Executes on button press in pushbutton10.
 function pushbutton10_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton10 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Generate Lambda of point
+%Doesn't work in this section right now!!!
+%Adjust the genLambdas Function so that it calculates with noise and stuff.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 global magn pixel FileName_Naming NumImageAnalyze part1 part2 %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
 [I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-% I_dicom_orig = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-
-pixelSpacing = spacing(1)
+pixelSpacing = spacing(1);
 I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
@@ -439,64 +351,28 @@ padamnt = (q1+1)/2;
 %% Expand image s.t. the edges go out 250 pixel worth of the reflection
 I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
 
-
-% % % I_DCM_Expanded = padarray(I_dicom_orig,[250 250],'symmetric','both');
-figure 
-imshow(I_DCM_Expanded, [])
 %Obtain Point
-[xSel,ySel] = ginput(1);  % [x, y]]
-close
-% % % radius = ((handles.diameter.*0.5)./(pixel*magn));
-% % % [atten_disks] = circle_roi4(radius);
+figure; imshow(I_DCM_Expanded, []);
+[xSel,ySel] = ginput(1); close;  % [x, y]]
 %% Expand image s.t. the edges go out 250 pixel worth of the reflection
-centerimage = I_DCM_Expanded(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt) 
+centerimage = I_DCM_Expanded(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt) ;
 
-radius = round((handles.diameter.*0.5)./(pixelSpacing*magn))
-[atten_disks] = circle_roi4(radius);
-[Lambdas, IQF] = genLambdas(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
-
-Lambdas
-
-
-figure
-imshow(centerimage, [])
-pause
-
-
-for k = 1:9
-aa = mean2(centerimage)
-noiseAmplitude = [5, 10, 50, 100, 500, 1000, 1500, 2000, 5000]
+for k = 1:11
+aa = mean2(centerimage);
+noiseAmplitude = [0*aa, .005*aa, .01*aa, .05*aa, .1*aa, .2*aa, .3*aa, .5*aa, .6*aa, .8*aa, 1*aa];
 NoiseImg = centerimage + (noiseAmplitude(k) * 2*(rand(size(centerimage))-.5));
-
-mean2(NoiseImg)
-
-figure
-imshow(NoiseImg, [])
 
 %% Calculate the test statistic after inserting them in a region
 tic
-% [handles.levels, handles.IQF] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
-
-[LambdasNoise, IQFNoise] = genLambdas(NoiseImg,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt); %um);
+[LambdasNoise, IQFNoise] = genLambdaswNoise(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt, noiseAmplitude(k)); %um);
 toc
 
-
 LambdasNoise
-Lambdas - LambdasNoise
+diffWithNormal = Lambdas - LambdasNoise
+noiseAtLevel = noiseAmplitude(k)
+noiseAsPercent = noiseAmplitude(k)/aa
+pause
+end
 noiseAmplitude
 noiseAmplitude/aa
-pause
-end
-
-pause
-levels = handles.levels;
-IQF = handles.IQF;
-
-size(levels)
-for k = 1:20 %***************FIX, should be length(diameter) or whatever
-center=size(levels(:,:,k))/2+.5;
-center = ceil(center);
-cdThickness(k) = levels(center(1), center(2), k) %thickness
-cdDiam(k) = handles.diameter(k)
-end
 guidata(hObject,handles);

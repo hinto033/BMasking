@@ -6,17 +6,20 @@ kmax = length(attenuation);
 conv_image2 = ones(l,w, pmax)*2; 
 %% New Section fixed bias term...THIS SHOULD BE MOST ACCURATE< CUrrently, wrong
 stop = 0;
-start = [400,400];
+start = [200,200];
 cutoff = 0.3e8;
 
 IQFImage = zeros(l,w);
-figure
+% figure
 while stop == 0
-
+    center = I_dicom_orig(start(1):start(1)+2*(padamnt-1), start(2):start(2)+2*(padamnt-1));
+figure
+imshow(center, [])
 lambdaSet = zeros(pmax,kmax);
 for p = 1:pmax %All diameters
     for k = 1:kmax %All attenuations
-        
+%         k = 1
+%         k = 16
 %         tic
 %         figure
 %         imshow(I_dicom_orig, [])
@@ -56,12 +59,19 @@ for p = 1:pmax %All diameters
         sect8 = imresize(sect8, [205 205]);
         sect9 = imresize(sect9, [205 205]);
         
-        gs = ((sect1+sect3+sect5+sect7+sect9)/5)+neg_disk;
+        
+        ms1 = mean2((sect1+sect3+sect5+sect7+sect9)/5);
+        ms2 = mean2((sect2+sect4+sect5+sect6+sect8)/5);
+        test =ms2 + (ms1-ms2);
+        mean2(neg_disk);
+
+        gs = ((sect1+sect3+sect5+sect7+sect9)/5)-neg_disk; %Should be plus neg_disk?
 %         gs = ((sect1+sect3+sect5+sect7+sect9)/5);
-        gn = ((sect2+sect4+sect5+sect6+sect8)/5);
+        gn = ((sect2+sect4+sect5+sect6+sect8)/5) + (ms1-ms2);
         
-        w = gs-gn;
-        
+
+        w = gs-gn; %This is probably actually the correct one
+% % %         w = gn-gs;
 %         figure
 %         imshow(gs, [])
 %         figure
@@ -71,11 +81,17 @@ for p = 1:pmax %All diameters
 %         figure
 %         surf(w)
         
-        
-        gtest = center +neg_disk;
+        gtest = center -neg_disk;  %Should be + Neg_disk
+% % %         gtest = center -neg_disk;  %Should be + Neg_disk
 %         figure
 %         surf(gtest)
         lambda = w(:)'*gtest(:);
+        if lambda < 0
+            lambda = 0
+        end
+        lambda/(lsmall*wsmall);
+        mean2(center);
+        mean2((gs-gn));
 %         toc
         lambdaSet(p,k) = lambda;
 %         pause
@@ -140,13 +156,13 @@ if start(2) == 2000
     stop = 1
 end
 lambdaSet
-cdData
+% cdData
 
 IQFImage(start(1):start(1)+2*(padamnt-1), start(2):start(2)+2*(padamnt-1)) = IQF;
 
-
-imshow(IQFImage)
-drawnow
+pause
+% imshow(IQFImage)
+% drawnow
 
 end
 

@@ -1,4 +1,4 @@
-function [levels, IQF] = genLambdas(I_dicom_orig, attenuation, radius, atten_disks, thickness, diameter, cutoff, padamnt, noiseamnt)
+function [levels, IQF] = genLambdaswNoise(I_dicom_orig, attenuation, radius, atten_disks, thickness, diameter, cutoff, padamnt, noiseamnt)
 %% Setting Parms
 pmax = length(radius);
 kmax = length(attenuation);
