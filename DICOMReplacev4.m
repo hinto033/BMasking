@@ -214,33 +214,50 @@ radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [atten_disks] = circle_roi4(radius);
 %Calculate necessary amount of padding
 [q1, q2] = size(atten_disks(:,:,1));
-padamnt = (q1+1)/2;
+padamnt = floor((q1)/2);
 centerimage = I_dicom_orig(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
+%Set up to save the name of the video
+X = round(xSel);
+Y = round(ySel);
+fps = 3;
+formatout = 'dd-mmm-yyyy_HH-MM-SS';
+str = datestr(now, formatout);
+A1 = char(part1{j});
+A2 = char(part2{j});
+A3 = char(FileName_Naming{j});
+A35 = 'fdsafdsa'
+A37 = num2str(fps)
+A38 = 'fps'
+A4 = num2str(X);
+A45 = num2str(Y);
+A5 = str;
+A6 = '.avi';
+formatSpec = '%s_%s_%s_%s%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2,A3,A37,A38, A4,A45, A5, A6)
 
-
-%Make function that takes centerimage and inserts disk, makes 48 
-%FUNCTIONFUCNTIONFUNCTION
-
-
-%Insert disks in middle of this region and save that section as an image
-%file (or not?)
+nDiam = length(handles.diameter);
+nThickness = length(handles.attenuation);
+attenuation = handles.attenuation;
+%Create the video by cycling thru diams/attens and saving each frame
 figure
- for j = 1:48
-    imgfile = sprintf('1029_DCM7_Video_%1.0f_1138_986.png', j);
-    full_file_png = ['Hard to See','\',imgfile];
-    images = imread(full_file_png);
-    size(images)
-    imshow(images(500:1500,600:1500))%,[0,20])
-    class(images);
-    drawnow
-    F(j) = getframe;
-
- end
-
-v = VideoWriter('HARDTOSEE_Zoomed_2fps.avi')
-v.FrameRate = 2
+v = VideoWriter(fileForSaving);
+v.FrameRate = fps;
 open(v)
-writeVideo(v,F)
+ for j = 1:nDiam
+     for k = 1:nThickness
+         %Obtain the disk that I'm interested in
+         negDisk = atten_disks(:,:,j);
+         avgROI = mean2(centerimage);
+         attenDisk = negDisk*((avgROI-50)'*(attenuation(k) - 1));
+         imgWDisk = attenDisk+centerimage;
+         
+         imshow(imgWDisk, []);
+         drawnow
+
+         F = getframe;
+         writeVideo(v,F)
+     end 
+ end
 close(v)
 guidata(hObject,handles);
 
@@ -332,11 +349,9 @@ guidata(hObject,handles);
 % --- Executes on button press in pushbutton10.
 function pushbutton10_Callback(hObject, eventdata, handles)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%Generate Lambda of point
-%Doesn't work in this section right now!!!
-%Adjust the genLambdas Function so that it calculates with noise and stuff.
+%Generate Lambda of point and compare with lambda of region with white
+%noise added in
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 global magn pixel FileName_Naming NumImageAnalyze part1 part2 %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
@@ -347,32 +362,48 @@ I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [atten_disks] = circle_roi4(radius);
 [q1, q2] = size(atten_disks(:,:,1));
-padamnt = (q1+1)/2;
-%% Expand image s.t. the edges go out 250 pixel worth of the reflection
+padamnt = floor((q1)/2);
+% Expand image s.t. the edges go out 250 pixel worth of the reflection
 I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
-
 %Obtain Point
 figure; imshow(I_DCM_Expanded, []);
 [xSel,ySel] = ginput(1); close;  % [x, y]]
-%% Expand image s.t. the edges go out 250 pixel worth of the reflection
+% Expand image s.t. the edges go out 250 pixel worth of the reflection
 centerimage = I_DCM_Expanded(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt) ;
-
-for k = 1:11
+%Add in disk
+nDiam = length(handles.diameter);
+nThickness = length(handles.attenuation);
+attenuation = handles.attenuation;
 aa = mean2(centerimage);
 noiseAmplitude = [0*aa, .005*aa, .01*aa, .05*aa, .1*aa, .2*aa, .3*aa, .5*aa, .6*aa, .8*aa, 1*aa];
-NoiseImg = centerimage + (noiseAmplitude(k) * 2*(rand(size(centerimage))-.5));
+%Scrolls through different levels of noise
+for i = 1:11
+noiseamnt = noiseAmplitude(i)
+lambda = zeros(nDiam, nThickness);
+lambdaNoise = zeros(nDiam, nThickness);
+%Creates test statistic for each thickness/diameter
+ for j = 1:nDiam
+     for k = 1:nThickness
+        negDisk = atten_disks(:,:,j);
+         avgROI = mean2(centerimage);
+         attenDisk = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
+         imgWDisk = attenDisk+centerimage;
+         imgWDiskNoise = imgWDisk+(noiseamnt * 2*(rand(size(imgWDisk))-.5));  %Is my gtest
+         
+         w = attenDisk(:);
+         wNoise = attenDisk(:) + (noiseamnt * 2*(rand(size(attenDisk(:)))-.5));
+         gtest = imgWDisk(:);
+         gtestNoise = imgWDiskNoise(:);
 
-%% Calculate the test statistic after inserting them in a region
-tic
-[LambdasNoise, IQFNoise] = genLambdaswNoise(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt, noiseAmplitude(k)); %um);
-toc
+         lambda(j,k) = w'*gtest;
+         lambdaNoise(j,k) = wNoise'*gtestNoise;
 
-LambdasNoise
-diffWithNormal = Lambdas - LambdasNoise
-noiseAtLevel = noiseAmplitude(k)
-noiseAsPercent = noiseAmplitude(k)/aa
+     end
+ end
+%Lets you see test stat for each level of noise
+lambda
+lambdaNoise
 pause
 end
-noiseAmplitude
-noiseAmplitude/aa
+%Calculate IQF Values and table and stuff.
 guidata(hObject,handles);
