@@ -94,25 +94,25 @@ global magn FileName_Naming NumImageAnalyze part1 part2 %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 %Import an image    
-[I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = spacing(1)
 %Remove blank top rows (Important for padding)
-I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-[atten_disks] = circle_roi4(radius);
-[q1, q2] = size(atten_disks(:,:,1));
-padamnt = (q1+1)/2;
+[attenDisks] = circle_roi4(radius);
+[q1, q2] = size(attenDisks(:,:,1));
+padAmnt = (q1+1)/2;
 %% Expand image s.t. the edges reflect out to get full convolution
-I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
+IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
 %% set guess of time to calculate
 timePerImage = 5 %Min
 pause(2)
 %Calculate IQF and Detectability at different diameter levels 
-[levels, IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(I_DCM_Expanded,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt);
+[levels, IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(IDCMExpanded,handles.attenuation, radius, attenDisks, handles.thickness, handles.diameter, cutoff, padAmnt);
 %% Export images as .mats
-formatout = 'dd-mmm-yyyy_HH-MM-SS';
-str = datestr(now, formatout);
+formatOut = 'dd-mmm-yyyy_HH-MM-SS';
+str = datestr(now, formatOut);
 A1 = char(part1{j});
 A2 = char(part2{j});
 A3 = char(FileName_Naming{j});
@@ -138,24 +138,24 @@ global magn FileName_Naming NumImageAnalyze part1 part2
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
 %Import Image
-[I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = spacing(1);
-I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 % Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-[atten_disks] = circle_roi4(radius);
+[attenDisk] = circle_roi4(radius);
 %Calculate necessary amount of padding
-[q1, q2] = size(atten_disks(:,:,1));
-padamnt = (q1+1)/2;
+[q1, q2] = size(attenDisk(:,:,1));
+padAmnt = (q1+1)/2;
 % Expand image s.t. the edges go out 250 pixel worth of the reflection
-I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
+IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
 %Open Image and Obtain Point
-figure; imshow(I_DCM_Expanded, []);
+figure; imshow(IDCMExpanded, []);
 [xSel,ySel] = ginput(1); close; % [x, y]]
 % Only do analysis on the 250*250 size box
-centerimage = I_DCM_Expanded(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
+centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
 % Calculate the test statistic after inserting them in a region
-[levels,IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt);
+[levels,IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(centerImage,handles.attenuation, radius, attenDisk, handles.thickness, handles.diameter, cutoff, padAmnt);
 %Calculate CD Curve
 for k = 1:length(radius) 
 center=size(levels(:,:,k))/2+.5;
@@ -205,17 +205,17 @@ global magn FileName_Naming NumImageAnalyze part1 part2
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
 %Import Image
-[I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = spacing(1); 
-figure; imshow(I_dicom_orig, []);
+figure; imshow(IDicomOrig, []);
 [xSel,ySel] = ginput(1); close; 
 %Calculate disks
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-[atten_disks] = circle_roi4(radius);
+[attenDisk] = circle_roi4(radius);
 %Calculate necessary amount of padding
-[q1, q2] = size(atten_disks(:,:,1));
-padamnt = floor((q1)/2);
-centerimage = I_dicom_orig(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
+[q1, q2] = size(attenDisk(:,:,1));
+padAmnt = floor((q1)/2);
+centerImage = IDicomOrig(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
 %Set up to save the name of the video
 X = round(xSel);
 Y = round(ySel);
@@ -246,10 +246,10 @@ open(v)
  for j = 1:nDiam
      for k = 1:nThickness
          %Obtain the disk that I'm interested in
-         negDisk = atten_disks(:,:,j);
-         avgROI = mean2(centerimage);
+         negDisk = attenDisk(:,:,j);
+         avgROI = mean2(centerImage);
          attenDisk = negDisk*((avgROI-50)'*(attenuation(k) - 1));
-         imgWDisk = attenDisk+centerimage;
+         imgWDisk = attenDisk+centerImage;
          
          imshow(imgWDisk, []);
          drawnow
@@ -355,48 +355,48 @@ function pushbutton10_Callback(hObject, eventdata, handles)
 global magn pixel FileName_Naming NumImageAnalyze part1 part2 %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
-[I_dicom_orig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = spacing(1);
-I_dicom_orig(all(I_dicom_orig>10000,2),:)=[];
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-[atten_disks] = circle_roi4(radius);
-[q1, q2] = size(atten_disks(:,:,1));
-padamnt = floor((q1)/2);
+[attenDisk] = circle_roi4(radius);
+[q1, q2] = size(attenDisk(:,:,1));
+padAmnt = floor((q1)/2);
 % Expand image s.t. the edges go out 250 pixel worth of the reflection
-I_DCM_Expanded = padarray(I_dicom_orig,[padamnt padamnt],'symmetric','both');
+IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
 %Obtain Point
-figure; imshow(I_DCM_Expanded, []);
+figure; imshow(IDCMExpanded, []);
 [xSel,ySel] = ginput(1); close;  % [x, y]]
 % Expand image s.t. the edges go out 250 pixel worth of the reflection
-centerimage = I_DCM_Expanded(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt) ;
+centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt) ;
 %Add in disk
 nDiam = length(handles.diameter);
 nThickness = length(handles.attenuation);
 attenuation = handles.attenuation;
-aa = mean2(centerimage);
-noiseAmplitude = [0*aa, .005*aa, .01*aa, .05*aa, .1*aa, .2*aa, .3*aa, .5*aa, .6*aa, .8*aa, 1*aa];
+meanImg = mean2(centerImage);
+noiseAmplitude = [0*meanImg, .005*meanImg, .01*meanImg, .05*meanImg, .1*meanImg, .2*meanImg, .3*meanImg, .5*meanImg, .6*meanImg, .8*meanImg, 1*meanImg];
 %Scrolls through different levels of noise
 for i = 1:11
-noiseamnt = noiseAmplitude(i)
+noiseAmnt = noiseAmplitude(i)
 lambda = zeros(nDiam, nThickness);
 lambdaNoise = zeros(nDiam, nThickness);
 %Creates test statistic for each thickness/diameter
  for j = 1:nDiam
      for k = 1:nThickness
-        negDisk = atten_disks(:,:,j);
-         avgROI = mean2(centerimage);
+        negDisk = attenDisk(:,:,j);
+         avgROI = mean2(centerImage);
          attenDisk = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
-         imgWDisk = attenDisk+centerimage;
-         imgWDiskNoise = imgWDisk+(noiseamnt * 2*(rand(size(imgWDisk))-.5));  %Is my gtest
+         imgWDisk = attenDisk+centerImage;
+         imgWDiskNoise = imgWDisk+(noiseAmnt * 2*(rand(size(imgWDisk))-.5));  %Is my gtest
          
          w = attenDisk(:);
-         wNoise = attenDisk(:) + (noiseamnt * 2*(rand(size(attenDisk(:)))-.5));
-         gtest = imgWDisk(:);
-         gtestNoise = imgWDiskNoise(:);
+         wNoise = attenDisk(:) + (noiseAmnt * 2*(rand(size(attenDisk(:)))-.5));
+         gTest = imgWDisk(:);
+         gTestNoise = imgWDiskNoise(:);
 
-         lambda(j,k) = w'*gtest;
-         lambdaNoise(j,k) = wNoise'*gtestNoise;
+         lambda(j,k) = w'*gTest;
+         lambdaNoise(j,k) = wNoise'*gTestNoise;
 
      end
  end
