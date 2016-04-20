@@ -248,8 +248,8 @@ open(v)
          %Obtain the disk that I'm interested in
          negDisk = attenDisk(:,:,j);
          avgROI = mean2(centerImage);
-         attenDisk = negDisk*((avgROI-50)'*(attenuation(k) - 1));
-         imgWDisk = attenDisk+centerImage;
+         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1));
+         imgWDisk = attenDisks+centerImage;
          
          imshow(imgWDisk, []);
          drawnow
@@ -386,12 +386,12 @@ lambdaNoise = zeros(nDiam, nThickness);
      for k = 1:nThickness
         negDisk = attenDisk(:,:,j);
          avgROI = mean2(centerImage);
-         attenDisk = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
-         imgWDisk = attenDisk+centerImage;
+         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
+         imgWDisk = attenDisks+centerImage;
          imgWDiskNoise = imgWDisk+(noiseAmnt * 2*(rand(size(imgWDisk))-.5));  %Is my gtest
          
-         w = attenDisk(:);
-         wNoise = attenDisk(:) + (noiseAmnt * 2*(rand(size(attenDisk(:)))-.5));
+         w = attenDisks(:);
+         wNoise = attenDisks(:) + (noiseAmnt * 2*(rand(size(attenDisks(:)))-.5));
          gTest = imgWDisk(:);
          gTestNoise = imgWDiskNoise(:);
 
