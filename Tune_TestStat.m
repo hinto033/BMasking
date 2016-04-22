@@ -518,22 +518,11 @@ yrms = sqrt(mean(y.^2));
 y = y/yrms;
 %% Creates 1/f3 noise apparently?
 
-
+clc
+clear all
 im4 = randn(500, 500);
-
-% im4 = zeros(500,500);
-% im4(20:150, 20:150) = 1;
-
-figure
-imshow(im4)
-
 imFFT = fft2(im4);
-% figure
-% imshow(imFFT)
-
 imFFTShifted = fftshift(imFFT);
-% figure
-% imshow(imFFTShifted, [])
 
 [a,b] = size(imFFTShifted);
 center = [(b/2)+1, (a/2)+1];
@@ -542,34 +531,18 @@ for j = 1:a
     for k = 1:b
         if j==center(2) && k == center(1)
         else
-        frequencyMap(j,k) = frequencyMap(j,k)/(sqrt((j-center(2))^2 + (k-center(1))^2))^3;
+            frequencyMap(j,k) = frequencyMap(j,k)/(sqrt((j-center(2))^2 + (k-center(1))^2))^2.8;
         end
     end
 end
-% figure
-% imshow(frequencyMap,[])
 
 %Mult Together
 nextStep = frequencyMap.*imFFTShifted;
-% figure
-% imshow(nextStep, [])
 altered = ifftshift(nextStep);
 
 alteredreal = ifft2(altered);
 figure
 imshow(alteredreal, [])
 
-
-
-
-% 
-% im = imread('peppers.png');
-% im = rgb2gray(im)
-% fftim = fft2(im)
-% fftshiftim = fftshift(im)
-% figure
-% imshow(fftim, [])
-% figure
-% imshow(fftshiftim, [])
 
 
