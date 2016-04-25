@@ -230,9 +230,8 @@ str = datestr(now, formatout);
 A1 = char(part1{j});
 A2 = char(part2{j});
 A3 = char(FileName_Naming{j});
-A35 = 'fdsafdsa'
-A37 = num2str(fps)
-A38 = 'fps'
+A37 = num2str(fps);
+A38 = 'fps';
 A4 = num2str(X);
 A45 = num2str(Y);
 A5 = str;
@@ -416,12 +415,12 @@ guidata(hObject,handles);
 
 % --- Executes on button press in AddF3Noise.
 function AddF3Noise_Callback(hObject, eventdata, handles)
-global shape
+global shape magn
 
 
 %Setting Parms
 
-cdcomDiams = [0.08 0.10 0.13 0.16 0.20 0.25	0.31 0.40 0.50 0.63	0.80 1.00];
+cdcomDiams = fliplr([0.08 0.10 0.13 0.16 0.20 0.25	0.31 0.40 0.50 0.63	0.80 1.00]);
 diams = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06];
 cutoff = zeros(5,length(diams))
 pathstr = 'W:\Breast Studies\CDMAM\Selenia Feb15\';
@@ -478,63 +477,131 @@ dcm6_21_results = [0.989	0.462	0.313	0.214	0.159	0.124	0.084	0.058	0.046	0.036	0
 1.006	0.725	0.495	0.372	0.276	0.209	0.163	0.124	0.099	0.081	0.068	0.059;
 0.175	0.120	0.074	0.056	0.045	0.034	0.026	0.020	0.018	0.016	0.014	0.014];
 
+full_file_dicomread = [pathstr,name,num2str(dcmEnding(1))];
+info_dicom = dicominfo(full_file_dicomread);
+pixelSpacing = info_dicom.PixelSpacing(1);
 
-radius = ((handles.diameter.*0.5)./(pixel*magn));
+radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 dt = round(radius.*2) + 1;
 rt = dt./2;
-[atten_disks] = circle_roi4(radius, shape);
+shape = 'Round'
+[attenDisk] = circle_roi4(radius, shape);
 rowNum=3;
-[q1, q2] = size(atten_disks(:,:,1));
-padamnt = ceil((q1+1)/2);
+[q1, q2] = size(attenDisk(:,:,1));
+padamnt = round((q1)/2)-1
+nDiam = length(handles.diameter)
+nThickness = length(handles.thickness)
+attenuation = handles.attenuation;
 
 %Do Calibration Multiple Times
 for cycle = 1:5
-    
+    cutoffLambda = zeros(10,nDiam)
     for j = 1:10
         error = 0;
         %Import DCM Images
-% % %         full_file_dicomread = [pathstr,name,num2str(dcmEnding(j))];
-% % %         info_dicom = dicominfo(full_file_dicomread);
-% % %         I_dicom{j} = double(dicomread(info_dicom));
-% % %         I_dicom_orig{j} = I_dicom{j};
-% % %         figure
-% % %         imshow(I_dicom{j}, [])
-% % %         [xSel,ySel] = ginput(1);
-% % %         close
-% % %         center = [round(ySel),round(xSel)];
-% % %         centerimage = I_dicom_orig{j}(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
+        full_file_dicomread = [pathstr,name,num2str(dcmEnding(j))];
+        info_dicom = dicominfo(full_file_dicomread);
+        I_dicom{j} = double(dicomread(info_dicom));
+%         figure
+%         imshow(I_dicom{j}, [])
+%         [xSel,ySel] = ginput(1);
+%         close
+        xSel = 2300
+        ySel = 3050
+        center = [round(ySel),round(xSel)];
+        centerImage = I_dicom{j}(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
         
-        
+                
         %Insert Noise into the DCM Images
-        %Do it for each DCM image
-        %Read the images in CDCOM or whatever to get the readability
         %Adjust so that has same average and stuff as a breast tissue
-    
-        %Find Best Lambda for Each diameter within CDCOM
-        for k = 1:length(cdcomDiams)
-            center=size(levels(:,:,k))/2+.5;
-            center = ceil(center);
-            cdThickness(k) = levels(center(1), center(2), k); %thickness
-            cdDiam(k) = handles.diameter(k);
-            [levels, IQF, IQFLarge, IQFMed,IQFSmall] = calcTestStat5(centerimage,handles.attenuation, radius, atten_disks, handles.thickness, handles.diameter, cutoff, padamnt);
+        
+        
+        
+        %Calculte Test Statistics of the region
+         for i = 1:nDiam
+             for k = 1:nThickness
+                negDisk = attenDisk(:,:,i);
+                 avgROI = mean2(centerImage);
+                 attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
+                 imgWDisk = attenDisks+centerImage;%Is my gtest
+
+                 w = attenDisks(:);
+                 gTest = imgWDisk(:);
+                 lambda(i,k) = w'*gTest;
+             end
+         end
+         lambda
+%         pause
+        
+%Diams are rows in lambda
+%Thicknesses are columns
+        for p = 1:length(cdcomDiams)
+            Diam = cdcomDiams(p);
+                     
+            Actual_Thickness = fliplr(dcm1_5_results(rowNum, :));
+            Actual_Thickness = Actual_Thickness(p);
+            rownum = find(handles.diameter == Diam);
+            lambdasAtDiam = lambda(rownum,:);
+            tooThickInd = find(handles.thickness>=Actual_Thickness);
+            if isempty(tooThickInd)
+                tooThick = 2;
+                lambAbove = lambdasAtDiam(1)
+            else  
+                tooThick = handles.thickness(tooThickInd(end));
+                lambAbove = lambdasAtDiam(tooThickInd(end));
+            end
+            tooThinInd = find(handles.thickness<=Actual_Thickness);
+            if isempty(tooThinInd)
+                tooThin = 0.03;
+                lambBelow = lambdasAtDiam(end);
+            else  
+                tooThin = handles.thickness(tooThinInd(1));
+                lambBelow = lambdasAtDiam(tooThinInd(1));
+            end
             
-            %Do stuff here, scroll thru cutoff values to find best one.
-                %Generate testStat for each DICOM at a specific point
-                 %Store readability for each DICOM
-                %Do least square regression at each diameter to get cutoff at each diam
-    
-            cutoffLambda(j,k) = j+k; %Figure out what this actually is.
+            dl = tooThick - Actual_Thickness;
+            dr = tooThin - Actual_Thickness;
+            dist = tooThick - tooThin;
+            valTest = tooThick - (dl/(dist)*dist);
+            
+            distLamb = lambAbove - lambBelow ;
+            LambValTest = lambAbove - (dl/(dist)*distLamb);
+            
+            
+             
+            cutoffLambda(j,rownum) = LambValTest
+%             pause
         end
-        %Average the cutoff for each diam across the different cycles.
-        lambdas = mean(cutoffLambda)% (Should be row vector)
+       
+
+        
+        %Compare the detectability of this with actual values
+        %Set thresholds for each diameter.
+        
+      
+%         lambdas = mean(cutoffLambda)% (Should be row vector)
     end
-    cutoff(cycle,:) = cycle*ones(1 ,length(cdcomDiams));
+    BestLambdas(cycle,:) = mean(cutoffLambda)% (Should be row vector)
+%     cutoff(cycle,:) = cycle*ones(1 ,length(cdcomDiams));
     %Need to do additional treating ot make sure I get the other sides of
     %the diameters in this equation
 
 end
 
-LambCutoffs = mean(cutoff)
+LambCutoffs = mean(BestLambdas)
+Ds = handles.diameter
+
+figure
+scatter(Ds, LambCutoffs)
+
+
+figure
+scatter(Ds, LambCutoffs)
+xlabel('Detail Diameter (mm)')
+ylabel('Threshold Lambda Values(um)')
+set(gca,'xscale','log')
+set(gca,'yscale','log')
+
 
 % % % % % % 
 % % % % % % magn = 1% 1.082;
