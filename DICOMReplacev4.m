@@ -382,7 +382,7 @@ meanImg = mean2(centerImage);
 noiseAmplitude = [0*meanImg, .005*meanImg, .01*meanImg, .05*meanImg, .1*meanImg, .2*meanImg, .3*meanImg, .5*meanImg, .6*meanImg, .8*meanImg, 1*meanImg];
 %Scrolls through different levels of noise
 for i = 1:11
-noiseAmnt = noiseAmplitude(i)
+noiseAmnt = noiseAmplitude(i);
 lambda = zeros(nDiam, nThickness);
 lambdaNoise = zeros(nDiam, nThickness);
 %Creates test statistic for each thickness/diameter
@@ -409,6 +409,11 @@ lambda
 lambdaNoise
 pause
 end
+avgArea = mean2(centerImage)
+stDevArea = std2(centerImage)
+%Generate other 50 features here! :)
+%Figure out what to save and what to compare and things like that.
+
 %Calculate IQF Values and table and stuff.
 guidata(hObject,handles);
 
@@ -545,7 +550,7 @@ for cycle = 1:5
             tooThickInd = find(handles.thickness>=Actual_Thickness);
             if isempty(tooThickInd)
                 tooThick = 2;
-                lambAbove = lambdasAtDiam(1)
+                lambAbove = lambdasAtDiam(1);
             else  
                 tooThick = handles.thickness(tooThickInd(end));
                 lambAbove = lambdasAtDiam(tooThickInd(end));
