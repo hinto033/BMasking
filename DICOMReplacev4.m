@@ -168,14 +168,40 @@ center = ceil(center);
 cdThickness(k) = levels(center(1), center(2), k); %thickness
 cdDiam(k) = handles.diameter(k);
 end
-% If I want to make CD curves of a certain spot. 
+
+%Do the Linear Fit Here
+y = cdThickness(8:20)'
+x = cdDiam(8:20)'
+
+% 
+% load hahn1;
+f = fit(x,y,'power1')
 figure
-scatter(cdDiam, cdThickness)
+plot(f,x,y)
+xlabel('Detail Diameter (mm)')
+ylabel('Threshold Gold Thickness(um)')
+% set(gca,'xscale','log')
+% set(gca,'yscale','log')
+% axis([ 10^-2 10 0.01 10])  
+figure
+plot(f,cdDiam,cdThickness)
 xlabel('Detail Diameter (mm)')
 ylabel('Threshold Gold Thickness(um)')
 set(gca,'xscale','log')
 set(gca,'yscale','log')
-axis([ 10^-2 10 0.01 10])       
+axis([ 10^-2 10 0.01 10])  
+pause
+
+
+
+% If I want to make CD curves of a certain spot. 
+% hold on
+% scatter(cdDiam, cdThickness)
+% xlabel('Detail Diameter (mm)')
+% ylabel('Threshold Gold Thickness(um)')
+% set(gca,'xscale','log')
+% set(gca,'yscale','log')
+% axis([ 10^-2 10 0.01 10])  
 guidata(hObject,handles);
 
 
@@ -324,6 +350,8 @@ function Plot_IsoContour_Callback(hObject, eventdata, handles)
 %Load and flip
 global IQF
 imageArray = flipud(IQF); 
+figure
+imshow(IQF, [])
 %Plot
 contourSizes = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34];
 figure
