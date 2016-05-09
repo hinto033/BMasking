@@ -142,6 +142,50 @@ function CreateCDIQF_Callback(hObject, eventdata, handles)
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
+
+
+%% Prolly get rid of this eventually.
+%section to get parms on all sections
+[w,h,l] = size(levels)
+pause
+% for k = 1:w
+%     for m = 1:h
+        tic
+
+cdThickness = levels(200,200,:);
+cdThickness = cdThickness(:)';
+cdThickness2 = levels(250,250,:);
+cdThickness2 = cdThickness2(:)';
+
+cdThickness = [cdThickness;cdThickness2]'
+% figure
+% imshow(IQF,[])
+
+cdDiam = handles.diameter;
+y = cdThickness(8:20,:)
+x = cdDiam(8:20)'
+
+% 
+% load hahn1;
+f = fit(x,y,'power1')
+coeffs = coeffvalues(f)
+a(k,m) = coeffs(1);
+b(k,m) = coeffs(2);
+toc
+%     end
+% end
+
+figure
+imshow(a,[])
+figure
+imshow(b,[])
+
+pause
+%%
+
+
+
+
 %Import Image
 [IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = spacing(1);
@@ -176,6 +220,10 @@ x = cdDiam(8:20)'
 % 
 % load hahn1;
 f = fit(x,y,'power1')
+coeffs = coeffvalues(f)
+a = coeffs(1)
+b = coeffs(2)
+% CONFINT extracts the confidence intervals
 figure
 plot(f,x,y)
 xlabel('Detail Diameter (mm)')
@@ -190,7 +238,6 @@ ylabel('Threshold Gold Thickness(um)')
 set(gca,'xscale','log')
 set(gca,'yscale','log')
 axis([ 10^-2 10 0.01 10])  
-pause
 
 
 
