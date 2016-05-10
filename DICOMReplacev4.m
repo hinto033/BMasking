@@ -99,9 +99,9 @@ for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 pixelSpacing = spacing(1)
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-figure
-imshow(IDicomOrig, [])
-pause
+% figure
+% imshow(IDicomOrig, [])
+% pause
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 shape = handles.shape
@@ -144,48 +144,6 @@ global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
 
 
-%% Prolly get rid of this eventually.
-%section to get parms on all sections
-[w,h,l] = size(levels)
-pause
-% for k = 1:w
-%     for m = 1:h
-        tic
-
-cdThickness = levels(200,200,:);
-cdThickness = cdThickness(:)';
-cdThickness2 = levels(250,250,:);
-cdThickness2 = cdThickness2(:)';
-
-cdThickness = [cdThickness;cdThickness2]'
-% figure
-% imshow(IQF,[])
-
-cdDiam = handles.diameter;
-y = cdThickness(8:20,:)
-x = cdDiam(8:20)'
-
-% 
-% load hahn1;
-f = fit(x,y,'power1')
-coeffs = coeffvalues(f)
-a(k,m) = coeffs(1);
-b(k,m) = coeffs(2);
-toc
-%     end
-% end
-
-figure
-imshow(a,[])
-figure
-imshow(b,[])
-
-pause
-%%
-
-
-
-
 %Import Image
 [IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = spacing(1);
@@ -216,6 +174,9 @@ end
 %Do the Linear Fit Here
 y = cdThickness(8:20)'
 x = cdDiam(8:20)'
+
+% y = cdThickness(8:16)'
+% x = cdDiam(8:16)'
 
 % 
 % load hahn1;
@@ -604,14 +565,21 @@ for cycle = 1:5
                  avgROI = mean2(centerImage);
                  attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
                  imgWDisk = attenDisks+centerImage;%Is my gtest
-
                  w = attenDisks(:);
                  gTest = imgWDisk(:);
                  lambda(i,k) = w'*gTest;
+%                  pause
+biasterm(i,k) = attenDisks(:)'*attenDisks(:);
+tissueterm(i,k) = attenDisks(:)'*centerImage(:);
+shouldbeLambda(i,k) = biasterm(i,k)+tissueterm(i,k);
+% pause
              end
          end
+         biasterm
+         tissueterm
+         shouldbeLambda
          lambda
-%         pause
+        pause
         
 %Diams are rows in lambda
 %Thicknesses are columns
