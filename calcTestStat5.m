@@ -18,22 +18,16 @@ for p = 1:pMax %All diameters
 %         padA = padAmnt - 1;
 %         centerImage = IDicomOrig(rowSel-padA:rowSel+padA, colSel-padA:colSel+padA);
 %         negDisk = attenDisk(:,:,p);
-%          avgROI = mean2(centerImage);
-%          attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
-%          attenDisks = negDisk.*((centerImage-50)'*(attenuation(k) - 1));
-% %          size(attenDisks)
-% %          size(centerImage)
-%          imgWDisk = attenDisks+centerImage;%Is my gtest
-%          wnpw = attenDisks(:);
-%          gTest = imgWDisk(:);
-%          lambda = wnpw'*gTest
+%         avgROI = mean2(centerImage);
+%         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
+%         attenDisks = negDisk.*((centerImage-50)'*(attenuation(k) - 1));
+%         imgWDisk = attenDisks+centerImage;%Is my gtest
+%         wnpw = attenDisks(:);
+%         gTest = imgWDisk(:);
+%         lambda = wnpw'*gTest
 %         biasterm = attenDisks(:)'*attenDisks(:)
 %         tissueterm = attenDisks(:)'*centerImage(:)
 %         shouldbeLambda = biasterm+tissueterm
-%         
-        
-
-        
         
         binDisk = attenDisk(:,:,p);
         negDisk = -binDisk;
@@ -44,20 +38,7 @@ if diameter(p)>=2 %If diameter of disk is greater or equal to 2 mm ->Do FFT
             origPad = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
             [a,b] = size(origPad);
             d = max(a,b);
-%             D1 = fft2(origPad, a, b);
-%             D2 = fft2(posDisk, a, b); D2(find(D2 == 0)) = 1e-6; %If it goes wrong, comment out this section
-%             D3 = D1.*D2; D4 = ifft2(D3);
-%             imageUnpad = D4(2*padAmnt+1:2*padAmnt+l, 2*padAmnt+1:2*padAmnt+w);
-%             tissueImg2a = attenImg.*imageUnpad;
-
-%             attenImgSquaredPad = padarray(attenImgSquared,[padAmnt padAmnt],'symmetric','both');
-%             [a,b] = size(attenImgSquaredPad);
-%             D1 = fft2(attenImgSquaredPad, a, b);
-%             D2 = fft2(negDisk, a, b); D2(find(D2 == 0)) = 1e-6;
-%             D3 = D1.*D2; D4 = ifft2(D3);
-%             tissueImg2b = D4(2*padAmnt+1:2*padAmnt+l, 2*padAmnt+1:2*padAmnt+w);
-
-%Tissue Image
+            %Tissue Image
             D1 = fft2(binDisk, a, b);% D1(find(D1 == 0)) = 1e-8;
             attenAndTiss = attenImg.*IDicomOrig;
             D2 = fft2(attenAndTiss, a, b);
@@ -65,49 +46,34 @@ if diameter(p)>=2 %If diameter of disk is greater or equal to 2 mm ->Do FFT
             D5 = ifft2(D4);
             imageUnpad = D5(padAmnt+1:padAmnt+l, padAmnt+1:padAmnt+w);
             tissueImg2a = imageUnpad;
-%Bias Image
+            %Bias Image
             [a,b] = size(origPad);
             D2 = fft2(binDisk, a, b); %D2(find(D2 == 0)) = 1e-8;          
             D1 = fft2(attenImgSquared, a, b);
-       
-            
             D3 = D1.*D2; 
             D4 = ifft2(D3);%.^2;
             tissueImg2b = D4(padAmnt+1:padAmnt+l, padAmnt+1:padAmnt+w);
-
             testStatImg = tissueImg2a + tissueImg2b;
-
-% tissftt = tissueImg2a(1500,400)
-% biasfft = tissueImg2b(1500,400)
-% fftlambda = testStatImg(1500,400)
+            % tissftt = tissueImg2a(1500,400)
+            % biasfft = tissueImg2b(1500,400)
+            % fftlambda = testStatImg(1500,400)
             toc
         elseif diameter(p)<2 %Do Conv if diameter less than 2 mm 
             %(Because faster than fft for small signals)
-            tic
-%             convTissue = conv2(attenImg,binDisk, 'same' ); %Maybe Valid           
-%             tissue_img = IDicomOrig.*convTissue;
-            
+            tic            
             convTissue = attenImg.*IDicomOrig;
             tissue_img = conv2(convTissue,binDisk, 'same' );
-            
             diskImg = conv2(attenImgSquared,binDisk, 'same' ); %Maybe Valid
-%             diskImg = diskImg.^2;
             toc
-            testStatImg = tissue_img + diskImg;
-            
-            
-% tissconv = tissue_img(1500,400)       
-% biasconv = diskImg(1500,400)            
-% convlambda = testStatImg(1500,400)
-
-
+            testStatImg = tissue_img + diskImg;                 
+            % tissconv = tissue_img(1500,400)       
+            % biasconv = diskImg(1500,400)            
+            % convlambda = testStatImg(1500,400)
 
 end
         j = convImage2(:,:, p);
-%         j(testStatImg>=cutoff)=thickness(k);
         j(testStatImg<=cutoffs(p))=thickness(k);
         convImage2(:,:, p) = j;
-
     end
 end
 %% Calculate Full IQF

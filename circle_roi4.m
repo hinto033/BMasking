@@ -2,12 +2,11 @@ function [attenDisk] = circle_roi4(radius, shape)
 diam = round(radius.*2) + 1;
 rt = diam./2;
 searchArea = ceil(max(diam.*sqrt(2)))+1;
-attenDisk = 0
+attenDisk = 0;
 if isequal(shape, 'Round')%shape == 'Round'
     centerX = round(searchArea+1)/2;
     centerY = round(searchArea+1)/2;
     smallDisk = zeros(searchArea, searchArea, length(radius));
-    size(smallDisk(:,:,1))
     cx=centerX;cy=centerY;ix=searchArea;iy=searchArea;
     for j = 1:length(radius)
     r=rt(j);

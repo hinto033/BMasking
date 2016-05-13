@@ -4,10 +4,10 @@ function [IDicomOrig, spacing] = import_image(j, FileNameNaming, PathNameNaming,
     handles.pathname = PathNameNaming{j};
     handles.filterIndex = FilterIndexNaming{j};
     handles.fullpath = [handles.pathname,'\',handles.filename];
-    ext = extension{j}
+    ext = extension{j};
 FileName = handles.filename;   %'DCM2';
 if (strcmp(ext, '') || strcmp(ext, '.dcm') || strcmp(ext, '.DCM') )
-    k = 'DCM import'
+    importType = 'DCM import'
     %***************ALSO SHOULD GET DICOM INFO IN HERE***************%
     % Creating image files of DICOM Image
     %Imports the .png file associated with the DICOM
@@ -29,7 +29,7 @@ if (strcmp(ext, '') || strcmp(ext, '.dcm') || strcmp(ext, '.DCM') )
     handles.exposureInuAs = info_dicom.ExposureInuAs;
 elseif (strcmp(ext, '.png'))
     %Importing Breast Images if .png
-    k = 'png import'
+    importType = 'png import'
     FileName = handles.filename;   %'DCM2';
 
     % Creating image files of DICOM Image
