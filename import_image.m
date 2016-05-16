@@ -1,4 +1,4 @@
-function [IDicomOrig, spacing] = import_image(j, FileNameNaming, PathNameNaming, FilterIndexNaming, extension)
+function [IDicomOrig, DICOMData] = import_image(j, FileNameNaming, PathNameNaming, FilterIndexNaming, extension)
 
     handles.filename = FileNameNaming{j};
     handles.pathname = PathNameNaming{j};
@@ -20,13 +20,14 @@ if (strcmp(ext, '') || strcmp(ext, '.dcm') || strcmp(ext, '.DCM') )
     IDicomOrig =  IDicom; %Stores as original image
     % I = -log(I/12314)*10000; 
     %% Define scaling factor, etc. 
-    handles.bodyPartThickness = info_dicom.BodyPartThickness;
-    handles.anodeTargetMaterial = info_dicom.AnodeTargetMaterial;
-    handles.pixelSpacing = info_dicom.PixelSpacing;
-    spacing = handles.pixelSpacing;
-    handles.pixelAspectRatio = info_dicom.PixelAspectRatio;
-    handles.KVP = info_dicom.KVP;
-    handles.exposureInuAs = info_dicom.ExposureInuAs;
+    DICOMData = info_dicom
+%     DICOMData.bodyPartThickness = info_dicom.BodyPartThickness;
+%     DICOMData.anodeTargetMaterial = info_dicom.AnodeTargetMaterial;
+%     DICOMData.pixelSpacing = info_dicom.PixelSpacing;
+% %     DICOMData.spacing = handles.pixelSpacing;
+%     DICOMData.pixelAspectRatio = info_dicom.PixelAspectRatio;
+%     DICOMData.KVP = info_dicom.KVP;
+%     DICOMData.exposureInuAs = info_dicom.ExposureInuAs;
 elseif (strcmp(ext, '.png'))
     %Importing Breast Images if .png
     importType = 'png import'

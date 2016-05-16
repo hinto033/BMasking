@@ -22,7 +22,7 @@ function varargout = DICOMReplace(varargin)
 
 % Edit the above text to modify the response to help DICOMReplace
 
-% Last Modified by GUIDE v2.5 13-May-2016 09:17:54
+% Last Modified by GUIDE v2.5 16-May-2016 11:18:11
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -95,8 +95,8 @@ global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 %Import an image    
-[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-pixelSpacing = spacing(1);
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 % figure
@@ -188,9 +188,7 @@ for i = 51:100:nRows
         coeffs = coeffvalues(f);
         aMat(i-50:i+50,j-50:j+50) = coeffs(1);
         bMat(i-50:i+50,j-50:j+50) = coeffs(2);
-        
         %Add in the map for the different a b, and rsquared
-        
     end
 end
 figure
@@ -267,8 +265,8 @@ global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
 %Import Image
-[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-pixelSpacing = spacing(1); 
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing =DICOMData.PixelSpacing(1);
 figure; imshow(IDicomOrig, []);
 [xSel,ySel] = ginput(1); close; 
 %Calculate disks
@@ -418,8 +416,8 @@ function GenLambdasAtPoint_Callback(hObject, eventdata, handles)
 global magn pixel FileName_Naming NumImageAnalyze part1 part2 shape %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
-[IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-pixelSpacing = spacing(1);
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
@@ -452,7 +450,7 @@ lambdaNoise = zeros(nDiam, nThickness);
          attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
          imgWDisk = attenDisks+centerImage;
          imgWDiskNoise = imgWDisk+(noiseAmnt * 2*(rand(size(imgWDisk))-.5));  %Is my gtest
-         
+         centerImageNoise = centerImage + (noiseAmnt * 2*(rand(size(centerImage))-.5));
          w = attenDisks(:);
          wNoise = attenDisks(:) + (noiseAmnt * 2*(rand(size(attenDisks(:)))-.5));
          gTest = imgWDisk(:);
@@ -460,19 +458,47 @@ lambdaNoise = zeros(nDiam, nThickness);
 
          lambda(j,k) = w'*gTest;
          lambdaNoise(j,k) = wNoise'*gTestNoise;
-
+         
+         h(j,k) = ttest2(imgWDisk(:), centerImage(:));
+         if h(j,k) == 0
+             figure
+             imshow(imgWDisk,[])
+             pause
+             close
+         end
+         hNoise(j,k) = ttest2(imgWDiskNoise(:), centerImageNoise(:));
+%          returns a test decision for the null hypothesis that the data in
+% vectors x and y comes from independent random samples from normal
+% distributions with equal means and equal but unknown variances, using the
+% two-sample t-test. The alternative hypothesis is that the data in x and y
+% comes from populations with unequal means. The result h is 1 if the test 
+% rejects the null hypothesis at the 5% significance level, and 0 otherwise.
+%          pause        
      end
  end
 %Lets you see test stat for each level of noise
-lambda
-lambdaNoise
+lambda;
+lambdaNoise;
+h;
+hNoise;
+lambda2_2(i) = lambdaNoise(1,1);
+lambdasmall_small(i) = lambdaNoise(9,9);
 pause
 end
 avgArea = mean2(centerImage)
 stDevArea = std2(centerImage)
 %Generate other 50 features here! :)
 %Figure out what to save and what to compare and things like that.
-
+figure
+scatter(noiseAmplitude./meanImg, lambda2_2)
+xlabel('Noise Amount (as fraction of Average image Value')
+ylabel('Threshold Lambda Values')
+title('Threshold Lambda Values for 2 cm diam and 2 mm thick disk')
+figure
+scatter(noiseAmplitude./meanImg, lambdasmall_small)
+xlabel('Noise Amount (as fraction of Average image Value')
+ylabel('Threshold Lambda Values')
+title('Threshold Lambda Values for small diam and small thickness')
 %Calculate IQF Values and table and stuff.
 guidata(hObject,handles);
 
@@ -655,4 +681,30 @@ set(gca,'yscale','log')
 % % % % % % handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
 % % % % % %     0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
 % % % % % %     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
+guidata(hObject,handles);
+
+
+% --- Executes on button press in DICOMDATA.
+function DICOMDATA_Callback(hObject, eventdata, handles)
+% hObject    handle to DICOMDATA (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global magn FileName_Naming NumImageAnalyze part1 part2 shape
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+j=1;
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+
+    bodyPartThickness= DICOMData.BodyPartThickness
+    anodeTargetMaterial = DICOMData.AnodeTargetMaterial
+    spacing = DICOMData.PixelSpacing(1)
+    pixelAspectRatio = DICOMData.PixelAspectRatio
+    KVP = DICOMData.KVP
+    exposureInuAs = DICOMData.ExposureInuAs
+    filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2
+    filterMaterial = DICOMData.FilterMaterial
+    imageOrientation = DICOMData.SeriesDescription
+    xRayCurrent = DICOMData.XrayTubeCurrent
+    exposure = DICOMData.Exposure
+    exposureTime = DICOMData.ExposureTime
+    
 guidata(hObject,handles);
