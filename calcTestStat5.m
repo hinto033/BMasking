@@ -5,11 +5,15 @@ kMax = length(attenuation);
 [l,w] = size(IDicomOrig);
 convImage2 = ones(l,w, pMax)*2; 
 % cutoff = -1e5
-cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
+%For 1 cm length...
+% cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
+%For 5 cm lenghts
+cutoffs = [-4, -4, -4, -4,-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
 % cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.2426,-1.2426,-1.2426, -1.2426];
 cutoffs = cutoffs*1e5;
 %% Performing Calculation of Lambdas
 for p = 1:pMax %All diameters
+    diameter(p)
     for k = 1:kMax %All attenuations
         
         %Calc Actual Lambda here
@@ -31,8 +35,18 @@ for p = 1:pMax %All diameters
         
         binDisk = attenDisk(:,:,p);
         negDisk = -binDisk;
+        
+        centerDisk=size(binDisk)/2+.5;
+        radDiskExt = ceil(radius(p)*1.4);
+
+        binDisk = binDisk(centerDisk(1)-radDiskExt:centerDisk(1)+radDiskExt,centerDisk(2)-radDiskExt:centerDisk(2)+radDiskExt);
+        negDisk = -binDisk;
+
         attenImg = ((IDicomOrig-50)'*(attenuation(k) - 1))';
         attenImgSquared = attenImg.*attenImg;    
+        [r,c] = size(binDisk);
+        padAmnt = (r+1)/2;
+        
 if diameter(p)>=2 %If diameter of disk is greater or equal to 2 mm ->Do FFT
             tic
             origPad = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
@@ -105,17 +119,29 @@ IQFMed = IQFMed .* maskingMap;
 IQFSmall = IQFSmall .* maskingMap;
 %% Undo the padding
 levels = convImage2;
-levels = levels(padAmnt:l-padAmnt, padAmnt:w-padAmnt,:);
-IQF = IQF(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-IQFLarge = IQFLarge(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-IQFMed = IQFMed(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-IQFSmall = IQFSmall(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-% figure
-% imshow(IQF, [])
+% % levels = levels(padAmnt:l-padAmnt, padAmnt:w-padAmnt,:);
+% % IQF = IQF(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
+% % IQFLarge = IQFLarge(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
+% % IQFMed = IQFMed(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
+% % IQFSmall = IQFSmall(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
+%% Calculate IQFAverage
+%Flawed because it doesnt account for the muscle tissue
+IQFVector = IQF(:);
+IQFVectorNoZeros = IQFVector(IQFVector~=0);
+avgIQF = mean(IQFVectorNoZeros)
+stdevIQF = std(IQFVectorNoZeros)
+
+
+
+
+figure
+imshow(IQF, [])
 % figure
 % imshow(IQFLarge, [])
 % figure
 % imshow(IQFMed, [])
 % figure
 % imshow(IQFSmall, [])
+pause
+
 

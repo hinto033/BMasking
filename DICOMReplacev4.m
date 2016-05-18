@@ -50,8 +50,8 @@ global magn cutoff
 global NumImageAnalyze
 NumImageAnalyze=1;
 handles.thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06, .05, .04, .03]; %um
-% handles.diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
-handles.diameter = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
+handles.diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
+% handles.diameter = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
 handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
     0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
@@ -109,7 +109,8 @@ shape = handles.shape;
 [q1, q2] = size(attenDisks(:,:,1));
 padAmnt = (q1+1)/2;
 %% Expand image s.t. the edges reflect out to get full convolution
-IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
+% IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
+IDCMExpanded = IDicomOrig;
 %% set guess of time to calculate
 timePerImage = 6; %Min
 pause(2)
