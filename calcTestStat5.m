@@ -1,57 +1,29 @@
-function [levels, IQF, IQFLarge, IQFMed,IQFSmall] = calcTestStat5(IDicomOrig, attenuation, radius, attenDisk, thickness, diameter, cutoff, padAmnt)
+function [levels, IQF] = calcTestStat5(IDicomOrig, attenuation, radius,...
+    attenDisk, thickness, diameter, cutoffs, spacing)
 %% Setting Parms
 pMax = length(radius);
 kMax = length(attenuation);
 [l,w] = size(IDicomOrig);
 convImage2 = ones(l,w, pMax)*2; 
-% cutoff = -1e5
-%For 1 cm length...
-% cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
-%For 5 cm lenghts
-cutoffs = [-4, -4, -4, -4,-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
-% cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966, -1.2005,-1.5624,-1.3016,-1.2426,-1.2426,-1.2426,-1.2426, -1.2426];
-cutoffs = cutoffs*1e5;
 %% Performing Calculation of Lambdas
 for p = 1:pMax %All diameters
-    diameter(p)
+    diam = diameter(p)/10;
+    s = sprintf('Now calculating detectability at %1.3f cm', diam);
+    disp(s)
+    binDisk = attenDisk(:,:,p);
+    centerDisk=size(binDisk)/2+.5;
+    radDiskExt = ceil(radius(p)*1.4);
+    binDisk = binDisk(centerDisk(1)-radDiskExt:centerDisk(1)+radDiskExt,centerDisk(2)-radDiskExt:centerDisk(2)+radDiskExt);
+    [r,c] = size(binDisk);
+    padAmnt = (r+1)/2;
     for k = 1:kMax %All attenuations
-        
-        %Calc Actual Lambda here
-%         rowSel = 1500;
-%         colSel = 400;
-%         padA = padAmnt - 1;
-%         centerImage = IDicomOrig(rowSel-padA:rowSel+padA, colSel-padA:colSel+padA);
-%         negDisk = attenDisk(:,:,p);
-%         avgROI = mean2(centerImage);
-%         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
-%         attenDisks = negDisk.*((centerImage-50)'*(attenuation(k) - 1));
-%         imgWDisk = attenDisks+centerImage;%Is my gtest
-%         wnpw = attenDisks(:);
-%         gTest = imgWDisk(:);
-%         lambda = wnpw'*gTest
-%         biasterm = attenDisks(:)'*attenDisks(:)
-%         tissueterm = attenDisks(:)'*centerImage(:)
-%         shouldbeLambda = biasterm+tissueterm
-        
-        binDisk = attenDisk(:,:,p);
-        negDisk = -binDisk;
-        
-        centerDisk=size(binDisk)/2+.5;
-        radDiskExt = ceil(radius(p)*1.4);
-
-        binDisk = binDisk(centerDisk(1)-radDiskExt:centerDisk(1)+radDiskExt,centerDisk(2)-radDiskExt:centerDisk(2)+radDiskExt);
-        negDisk = -binDisk;
-
         attenImg = ((IDicomOrig-50)'*(attenuation(k) - 1))';
         attenImgSquared = attenImg.*attenImg;    
-        [r,c] = size(binDisk);
-        padAmnt = (r+1)/2;
-        
-if diameter(p)>=2 %If diameter of disk is greater or equal to 2 mm ->Do FFT
+        %If diameter of disk is greater or equal to 2 mm ->Do FFT
+        if diameter(p)>=2
             tic
             origPad = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
             [a,b] = size(origPad);
-            d = max(a,b);
             %Tissue Image
             D1 = fft2(binDisk, a, b);% D1(find(D1 == 0)) = 1e-8;
             attenAndTiss = attenImg.*IDicomOrig;
@@ -68,38 +40,33 @@ if diameter(p)>=2 %If diameter of disk is greater or equal to 2 mm ->Do FFT
             D4 = ifft2(D3);%.^2;
             tissueImg2b = D4(padAmnt+1:padAmnt+l, padAmnt+1:padAmnt+w);
             testStatImg = tissueImg2a + tissueImg2b;
-            % tissftt = tissueImg2a(1500,400)
-            % biasfft = tissueImg2b(1500,400)
-            % fftlambda = testStatImg(1500,400)
             toc
-        elseif diameter(p)<2 %Do Conv if diameter less than 2 mm 
+        %Do Conv if diameter less than 2 mm 
+        elseif diameter(p)<2
             %(Because faster than fft for small signals)
             tic            
             convTissue = attenImg.*IDicomOrig;
             tissue_img = conv2(convTissue,binDisk, 'same' );
             diskImg = conv2(attenImgSquared,binDisk, 'same' ); %Maybe Valid
+            testStatImg = tissue_img + diskImg;  
             toc
-            testStatImg = tissue_img + diskImg;                 
-            % tissconv = tissue_img(1500,400)       
-            % biasconv = diskImg(1500,400)            
-            % convlambda = testStatImg(1500,400)
 
-end
+        end
         j = convImage2(:,:, p);
         j(testStatImg<=cutoffs(p))=thickness(k);
         convImage2(:,:, p) = j;
     end
 end
 %% Calculate Full IQF
+disp('Now Organizing Data into IQF and IQF of small, medium, and large disks')
 [l,w,v] = size(convImage2);
 aBase = ones(l,w);
 A = zeros(l,w,pMax);
 for m = 1:pMax
    A(:,:,m) = aBase*diameter(m);
 end
-n = pMax;
 IQFdenom = dot(A,convImage2, 3);
-IQF = sum(diameter(:))./IQFdenom;  %originally n./IQFdenom;, but this way normalizes for different ranges
+IQF = sum(diameter(:))./IQFdenom;  %originally pMax./IQFdenom;, but this way normalizes for different ranges
 %% Calculate Subset IQFs
 IQFLargeDenom = dot(A(:,:,1:6),convImage2(:,:,1:6), 3);
 IQFMedDenom = dot(A(:,:,7:12),convImage2(:,:,7:12), 3);
@@ -113,35 +80,84 @@ maskingMap = IDicomOrig;
 maskingMap= maskingMap./max(maskingMap(:));
 maskingMap = im2bw(maskingMap,0.2);
 maskingMap = imcomplement(maskingMap);
-IQF = IQF .* maskingMap;
-IQFLarge = IQFLarge .* maskingMap;
-IQFMed = IQFMed .* maskingMap;
-IQFSmall = IQFSmall .* maskingMap;
-%% Undo the padding
+IQF.IQF = IQF .* maskingMap;
+IQF.Large = IQFLarge .* maskingMap;
+IQF.Med = IQFMed .* maskingMap;
+IQF.Small = IQFSmall .* maskingMap;
 levels = convImage2;
-% % levels = levels(padAmnt:l-padAmnt, padAmnt:w-padAmnt,:);
-% % IQF = IQF(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-% % IQFLarge = IQFLarge(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-% % IQFMed = IQFMed(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
-% % IQFSmall = IQFSmall(padAmnt:l-padAmnt, padAmnt:w-padAmnt);
 %% Calculate IQFAverage
 %Flawed because it doesnt account for the muscle tissue
-IQFVector = IQF(:);
+IQFVector = IQF.IQF(:);
 IQFVectorNoZeros = IQFVector(IQFVector~=0);
-avgIQF = mean(IQFVectorNoZeros)
-stdevIQF = std(IQFVectorNoZeros)
+IQF.avgIQF = mean(IQFVectorNoZeros);
+IQF.stdevIQF = std(IQFVectorNoZeros);
+%%
+%Calculate the percent of the IQF above a certain value (Look at John
+%notes0
+%Area that has the top 10% of IQF Values
+num = length(IQFVectorNoZeros);
+tenPercentCutoff = num*0.9;
+IQFVectorNoZerosSorted = sort(IQFVectorNoZeros);
+IQF10Area = IQFVectorNoZerosSorted(num*0.9:end);
+avgIQF10 = mean(IQF10Area);
+stdIQF10 = std(IQF10Area);
+%Area that has the top 25% of IQF Values
+IQF25Area = IQFVectorNoZerosSorted(num*0.75:end);
+avgIQF25 = mean(IQF25Area);
+stdIQF25 = std(IQF25Area);
+% %%
+% %Do exponential fit of the data and produce a and b values
+% cdDiam = diameter;
+% x = cdDiam(8:20)';
+% halfmm = ceil(.5/spacing);
+% mm = halfmm*2;
+% [nRows,nCols,p] = size(levels);
+% aMat = zeros(nRows,nCols);
+% bMat = zeros(nRows,nCols);
+% RSquare = zeros(nRows,nCols);
+% disp('Now calculating Exponential Fits of Threshold Thickness vs Diameter')
+% tic
+% for i = mm+1:2*mm:nRows
+%     for j = mm+1:2*mm:nCols
+%         cdThickness = reshape(levels(i,j,:), [1,p]);
+%         y = cdThickness(8:20)';
+%         [f, gof] = fit(x,y,'power1');
+%         RSquare(i-mm:i+mm,j-mm:j+mm) = gof.rsquare;
+%         coeffs = coeffvalues(f);
+%         aMat(i-mm:i+mm,j-mm:j+mm) = coeffs(1);
+%         bMat(i-mm:i+mm,j-mm:j+mm) = coeffs(2);
+%         %Add in the map for the different a b, and rsquared
+%     end
+% end
+% toc
 
 
 
+%To reconfirm getting real values.
+        %Calc Actual Lambda here
+%         rowSel = 1500;
+%         colSel = 400;
+%         padA = padAmnt - 1;
+%         centerImage = IDicomOrig(rowSel-padA:rowSel+padA, colSel-padA:colSel+padA);
+%         negDisk = attenDisk(:,:,p);
+%         avgROI = mean2(centerImage);
+%         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
+%         attenDisks = negDisk.*((centerImage-50)'*(attenuation(k) - 1));
+%         imgWDisk = attenDisks+centerImage;%Is my gtest
+%         wnpw = attenDisks(:);
+%         gTest = imgWDisk(:);
+%         lambda = wnpw'*gTest
+%         biasterm = attenDisks(:)'*attenDisks(:)
+%         tissueterm = attenDisks(:)'*centerImage(:)
+%         shouldbeLambda = biasterm+tissueterm
 
-figure
-imshow(IQF, [])
-% figure
-% imshow(IQFLarge, [])
-% figure
-% imshow(IQFMed, [])
-% figure
-% imshow(IQFSmall, [])
-pause
+%Insert htis into the fft section to test.
+            % tissftt = tissueImg2a(1500,400)
+            % biasfft = tissueImg2b(1500,400)
+            % fftlambda = testStatImg(1500,400)
 
 
+%Insert this into the convolution section to test
+            % tissconv = tissue_img(1500,400)       
+            % biasconv = diskImg(1500,400)            
+            % convlambda = testStatImg(1500,400)

@@ -22,7 +22,7 @@ function varargout = DICOMReplace(varargin)
 
 % Edit the above text to modify the response to help DICOMReplace
 
-% Last Modified by GUIDE v2.5 16-May-2016 11:18:11
+% Last Modified by GUIDE v2.5 19-May-2016 14:43:29
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -46,20 +46,29 @@ end
 % --- Executes just before DICOMReplace is made visible.
 function DICOMReplace_OpeningFcn(hObject, eventdata, handles, varargin)
 %Sets Initial Variables.
-global magn cutoff
+global magn cutoffs diameter attenuation thickness
 global NumImageAnalyze
 NumImageAnalyze=1;
-handles.thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06, .05, .04, .03]; %um
-handles.diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
-% handles.diameter = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
-handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
+thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
+    .05, .04, .03]; %um
+diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
+    .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
+% handles.diameter = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31,...
+%     .25, .2, .16, .13, .1, .08, .06]; %mm
+attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
     0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
 magn = 1; %1.082;
-cutoff = 95000;
+%For 1 cm length...
+% cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,...
+% -1.5966, -1.2005,-1.5624,-1.3016,-1.2426,...
+%     -1.6839,-1.3971,-1.9411, -1.9411];
+%For 5 cm lenghts
+cutoffs = 1e5*[-4, -4, -4, -4,-4,-4,...
+    -4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966,...
+    -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
 handles.shape = 'Round'
 handles.output = hObject;
-% Update handles structure
 guidata(hObject, handles);
 
 % --- Outputs from this function are returned to the command line.
@@ -92,39 +101,32 @@ guidata(hObject,handles);
 function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
-global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global diameter thickness attenuation
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 %Import an image    
-[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = DICOMData.PixelSpacing(1);
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-% figure
-% imshow(IDicomOrig, [])
-% pause
 %% Calculate the blurred disks and store them
-radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-shape = handles.shape;
-[attenDisks] = circle_roi4(radius, shape);
-[q1, q2] = size(attenDisks(:,:,1));
-padAmnt = (q1+1)/2;
-%% Expand image s.t. the edges reflect out to get full convolution
-% IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
-IDCMExpanded = IDicomOrig;
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
+shape = handles.shape; [attenDisks] = circle_roi4(radius, shape);
 %% set guess of time to calculate
 timePerImage = 6; %Min
+TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1)
 pause(2)
 %Calculate IQF and Detectability at different diameter levels 
-[levels, IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(IDCMExpanded,handles.attenuation, radius, attenDisks, handles.thickness, handles.diameter, cutoff, padAmnt);
-%% Export images as .mats
+[levels, IQF] = calcTestStat5(IDicomOrig,attenuation, radius,...
+    attenDisks, thickness, diameter, cutoffs, pixelSpacing);
+[aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
+%% Export images/data as .mats
 formatOut = 'dd-mmm-yyyy_HH-MM-SS';
 str = datestr(now, formatOut);
-A1 = char(part1{j});
-A2 = char(part2{j});
-A3 = char(FileName_Naming{j});
-A4 = 'ThicknessEachDiam';
-A5 = str;
-A6 = '.mat';
+A1 = char(part1{j}); A2 = char(part2{j});
+A3 = char(FileName_Naming{j}); A4 = 'ThicknessEachDiam';
+A5 = str; A6 = '.mat';
 formatSpec = '%s_%s_%s_%s_%s%s';
 fileForSaving = sprintf(formatSpec,A1,A2, A3, A4, A5, A6)
 save(fileForSaving, 'levels')
@@ -140,98 +142,41 @@ function CreateCDIQF_Callback(hObject, eventdata, handles)
 %Allows you to select a point on the first file, and it produces a CD curve
 %from that
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
-global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global diameter thickness attenuation spacing
 j=1;
 %Import Image
-% % % % [IDicomOrig, spacing] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-% % % % pixelSpacing = spacing(1);
-% % % % IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-% % % % % Calculate the blurred disks and store them
-% % % % radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-% % % % [attenDisk] = circle_roi4(radius, shape);
-% % % % %Calculate necessary amount of padding
-% % % % [q1, q2] = size(attenDisk(:,:,1));
-% % % % padAmnt = (q1+1)/2;
-% % % % % Expand image s.t. the edges go out 250 pixel worth of the reflection
-% % % % IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
-% % % % %Open Image and Obtain Point
-% % % % figure; imshow(IDCMExpanded, []);
-% % % % [xSel,ySel] = ginput(1); close; % [x, y]]
-% % % % % Only do analysis on the 250*250 size box
-% % % % centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
-% % % % % Calculate the test statistic after inserting them in a region
-% % % % [levels,IQF,IQFLarge, IQFMed,IQFSmall] = calcTestStat5(centerImage,handles.attenuation, radius, attenDisk, handles.thickness, handles.diameter, cutoff, padAmnt);
-% % % % %Calculate CD Curve
-% % % % for k = 1:length(radius) 
-% % % % center=size(levels(:,:,k))/2+.5;
-% % % % center = ceil(center);
-% % % % cdThickness(k) = levels(center(1), center(2), k); %thickness
-% % % % cdDiam(k) = handles.diameter(k);
-% % % % end
-
-
-%%Section trying to do computations as fast as possible
-[nRows,nCols,p] = size(levels);
-% pause
-cdDiam = handles.diameter;
-x = cdDiam(8:20)';
-
-aMat = zeros(nRows,nCols);
-bMat = zeros(nRows,nCols);
-RSquare = zeros(nRows,nCols);
-tic
-for i = 51:100:nRows
-    for j = 51:100:nCols
-        cdThickness = reshape(levels(i,j,:), [1,20]);
-        y = cdThickness(8:20)';
-        [f, gof] = fit(x,y,'power1');
-        RSquare(i,j) = gof.rsquare;
-        coeffs = coeffvalues(f);
-        aMat(i-50:i+50,j-50:j+50) = coeffs(1);
-        bMat(i-50:i+50,j-50:j+50) = coeffs(2);
-        %Add in the map for the different a b, and rsquared
-    end
-end
-figure
-imshow(bMat,[])
-figure
-imshow(aMat, [])
-toc
-%MAKE OPTION TO PLOT WHICHEVER ONE I WANT
-p = 'fdsafdsa'
-pause
-%% regular section
-% thickTest = reshape(levels(1,1,:), [1,20])
-% diamTest = handles.diameter
-
-
-cdThickness
-cdDiam
-pause
-%Do the Linear Fit Here
-y = cdThickness(8:20)';
-x = cdDiam(8:20)';
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+% Calculate the blurred disks and store them
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
+[attenDisks] = circle_roi4(radius, shape);
+%Calculate necessary amount of padding
+[q1, q2] = size(attenDisks(:,:,1)); padAmnt = (q1+1)/2;
+%Open Image and Obtain Point
+figure; imshow(IDicomOrig, []);
+[xSel,ySel] = ginput(1); close;
+% Only do analysis on the 250*250 size box
+centerImage = IDicomOrig(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
+% Calculate the test statistic after inserting them in a region
+[cdThickness, cdDiam] = calcTestStatPoint(centerImage,attenuation, radius,...
+    attenDisks, thickness, diameter, cutoffs, pixelSpacing);%Calculate CD Curve
+%% Do the Linear Fit Here
+y = cdThickness(8:20)'; x = cdDiam(8:20)';
 [f, gof] = fit(x,y,'power1');
-r2 = gof.rsquare;
-coeffs = coeffvalues(f);
-a = coeffs(1);
-b = coeffs(2);
+r2 = gof.rsquare; coeffs = coeffvalues(f);
+a = coeffs(1); b = coeffs(2);
 % CONFINT extracts the confidence intervals
-figure
-plot(f,x,y)
-xlabel('Detail Diameter (mm)')
-ylabel('Threshold Gold Thickness(um)')
-figure
-plot(f,cdDiam,cdThickness)
-xlabel('Detail Diameter (mm)')
-ylabel('Threshold Gold Thickness(um)')
-set(gca,'xscale','log')
-set(gca,'yscale','log')
+figure; plot(f,x,y)
+xlabel('Detail Diameter (mm)'); ylabel('Threshold Gold Thickness(um)')
+figure; plot(f,cdDiam,cdThickness)
+xlabel('Detail Diameter (mm)'); ylabel('Threshold Gold Thickness(um)')
+set(gca,'xscale','log'); set(gca,'yscale','log')
 axis([ 10^-2 10 0.01 10])  
-hold on
-formatSpec = 'R^2 = %f';
-textBox = sprintf(formatSpec, r2);
-text(1,1,textBox)
+hold on; formatSpec = 'R^2 = %f';
+textBox = sprintf(formatSpec, r2); text(1,1,textBox)
 guidata(hObject,handles);
 
 
@@ -263,7 +208,8 @@ function MakeVideo_Callback(hObject, eventdata, handles)
 %Creates video of disks being inserted into the region that you select.
 %CURRENTLY DOES NOT WORK.
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
-global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global attenuation thickness diameter
 j=1;
 %Import Image
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
@@ -278,44 +224,30 @@ radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 padAmnt = floor((q1)/2);
 centerImage = IDicomOrig(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
 %Set up to save the name of the video
-X = round(xSel);
-Y = round(ySel);
+X = round(xSel); Y = round(ySel);
 fps = 3;
-formatout = 'dd-mmm-yyyy_HH-MM-SS';
-str = datestr(now, formatout);
-A1 = char(part1{j});
-A2 = char(part2{j});
-A3 = char(FileName_Naming{j});
-A37 = num2str(fps);
-A38 = 'fps';
-A4 = num2str(X);
-A45 = num2str(Y);
-A5 = str;
-A6 = '.avi';
-formatSpec = '%s_%s_%s_%s%s_%s_%s_%s%s';
+formatout = 'dd-mmm-yyyy_HH-MM-SS'; str = datestr(now, formatout);
+A1 = char(part1{j}); A2 = char(part2{j});
+A3 = char(FileName_Naming{j}); A37 = num2str(fps);
+A38 = 'fps'; A4 = num2str(X); A45 = num2str(Y);
+A5 = str; A6 = '.avi'; formatSpec = '%s_%s_%s_%s%s_%s_%s_%s%s';
 fileForSaving = sprintf(formatSpec,A1,A2,A3,A37,A38, A4,A45, A5, A6)
 
-nDiam = length(handles.diameter);
-nThickness = length(handles.attenuation);
-attenuation = handles.attenuation;
+nDiam = length(diameter);
+nThickness = length(attenuation);
 %Create the video by cycling thru diams/attens and saving each frame
 figure
 v = VideoWriter(fileForSaving);
-v.FrameRate = fps;
-open(v)
+v.FrameRate = fps; open(v)
  for j = 1:nDiam
      for k = 1:nThickness
          %Obtain the disk that I'm interested in
-         negDisk = attenDisk(:,:,j);
-         avgROI = mean2(centerImage);
+         negDisk = attenDisk(:,:,j); avgROI = mean2(centerImage);
          attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1));
          imgWDisk = attenDisks+centerImage;
-         
          imshow(imgWDisk, []);
          drawnow
-
-         F = getframe;
-         writeVideo(v,F)
+         F = getframe; writeVideo(v,F)
      end 
  end
 close(v)
@@ -415,13 +347,14 @@ function GenLambdasAtPoint_Callback(hObject, eventdata, handles)
 %noise added in
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global magn pixel FileName_Naming NumImageAnalyze part1 part2 shape %I_dicom_orig
-global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global attenuation thickness diameter
 j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = DICOMData.PixelSpacing(1);
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
-radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisk] = circle_roi4(radius, shape);
 [q1, q2] = size(attenDisk(:,:,1));
 padAmnt = floor((q1)/2);
@@ -433,11 +366,12 @@ figure; imshow(IDCMExpanded, []);
 % Expand image s.t. the edges go out 250 pixel worth of the reflection
 centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt) ;
 %Add in disk
-nDiam = length(handles.diameter);
-nThickness = length(handles.attenuation);
-attenuation = handles.attenuation;
+nDiam = length(diameter);
+nThickness = length(attenuation);
 meanImg = mean2(centerImage);
-noiseAmplitude = [0*meanImg, .005*meanImg, .01*meanImg, .05*meanImg, .1*meanImg, .2*meanImg, .3*meanImg, .5*meanImg, .6*meanImg, .8*meanImg, 1*meanImg];
+noiseAmplitude = [0*meanImg, .005*meanImg, .01*meanImg, .05*meanImg,...
+    .1*meanImg, .2*meanImg, .3*meanImg, .5*meanImg, .6*meanImg,...
+    .8*meanImg, 1*meanImg];
 %Scrolls through different levels of noise
 for i = 1:11
 noiseAmnt = noiseAmplitude(i);
@@ -459,32 +393,26 @@ lambdaNoise = zeros(nDiam, nThickness);
 
          lambda(j,k) = w'*gTest;
          lambdaNoise(j,k) = wNoise'*gTestNoise;
-         
-         h(j,k) = ttest2(imgWDisk(:), centerImage(:));
-         if h(j,k) == 0
-             figure
-             imshow(imgWDisk,[])
-             pause
-             close
-         end
-         hNoise(j,k) = ttest2(imgWDiskNoise(:), centerImageNoise(:));
-%          returns a test decision for the null hypothesis that the data in
-% vectors x and y comes from independent random samples from normal
-% distributions with equal means and equal but unknown variances, using the
-% two-sample t-test. The alternative hypothesis is that the data in x and y
-% comes from populations with unequal means. The result h is 1 if the test 
-% rejects the null hypothesis at the 5% significance level, and 0 otherwise.
-%          pause        
+         %To do a T test
+%          h(j,k) = ttest2(imgWDisk(:), centerImage(:));
+%          if h(j,k) == 0
+            %Shows the image if the t-test said it was undetectable
+%              figure
+%              imshow(imgWDisk,[])
+%              pause
+%              close
+%          end
+%          hNoise(j,k) = ttest2(imgWDiskNoise(:), centerImageNoise(:));     
      end
  end
 %Lets you see test stat for each level of noise
 lambda;
-lambdaNoise;
-h;
-hNoise;
+lambdaNoise
+% h;
+% hNoise;
 lambda2_2(i) = lambdaNoise(1,1);
 lambdasmall_small(i) = lambdaNoise(9,9);
-pause
+% pause
 end
 avgArea = mean2(centerImage)
 stDevArea = std2(centerImage)
@@ -676,12 +604,6 @@ xlabel('Detail Diameter (mm)')
 ylabel('Threshold Lambda Values(um)')
 set(gca,'xscale','log')
 set(gca,'yscale','log')
-
-% % % % % % handles.thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06, .05, .04, .03]; %um
-% % % % % % handles.diameter = [2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
-% % % % % % handles.attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
-% % % % % %     0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
-% % % % % %     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
 guidata(hObject,handles);
 
 
@@ -708,4 +630,37 @@ j=1;
     exposure = DICOMData.Exposure
     exposureTime = DICOMData.ExposureTime
     
+guidata(hObject,handles);
+
+
+% --- Executes on button press in ConfirmCorrectCalcs.
+function ConfirmCorrectCalcs_Callback(hObject, eventdata, handles)
+% hObject    handle to ConfirmCorrectCalcs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global diameter thickness attenuation
+%Import an image    
+j=1;
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
+%Remove blank top rows (Important for padding)
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+
+IDCMExpanded = IDicomOrig;
+%Open Image and Obtain Point
+figure; imshow(IDCMExpanded, []);
+[xSel,ySel] = ginput(1); close; % [x, y]]
+
+%% Calculate the blurred disks and store them
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
+shape = handles.shape;
+[attenDisks] = circle_roi4(radius, shape);
+[q1, q2] = size(attenDisks(:,:,1));
+padAmnt = floor((q1)/2);
+centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
+%Calculate IQF and Detectability at different diameter levels 
+[lambdaNPW, lambdaFFT,lambdaConv] = confirmCalcs(centerImage,attenuation, radius,...
+    attenDisks, thickness, diameter, cutoffs, pixelSpacing)
 guidata(hObject,handles);
