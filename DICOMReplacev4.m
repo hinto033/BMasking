@@ -64,9 +64,10 @@ magn = 1; %1.082;
 % -1.5966, -1.2005,-1.5624,-1.3016,-1.2426,...
 %     -1.6839,-1.3971,-1.9411, -1.9411];
 %For 5 cm lenghts
-cutoffs = 1e5*[-4, -4, -4, -4,-4,-4,...
-    -4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,-1.5966,...
-    -1.2005,-1.5624,-1.3016,-1.2426,-1.6839,-1.3971,-1.9411, -1.9411];
+cutoffs = 1e5*[-202.368, -161.857, -121.346, -80.8344,-40.3231,-32.2209,...
+    -20.0675,-11.9652,-7.91407,-6.29362,-4.87572, -4.0331,-2.8546,...
+    -2.3610,-1.7207,-1.5966,-1.2005,-1.5624,-1.3016,-1.2426,...
+    -1.6839,-1.3971,-1.9411, -1.9411];
 handles.shape = 'Round'
 handles.output = hObject;
 guidata(hObject, handles);
@@ -435,7 +436,7 @@ guidata(hObject,handles);
 % --- Executes on button press in AddF3Noise.
 function AddF3Noise_Callback(hObject, eventdata, handles)
 global shape magn
-
+global attenuation diameter thickness
 %Setting Parms
 cdcomDiams = fliplr([0.08 0.10 0.13 0.16 0.20 0.25	0.31 0.40 0.50 0.63	0.80 1.00]);
 diams = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06];
@@ -497,7 +498,7 @@ full_file_dicomread = [pathstr,name,num2str(dcmEnding(1))];
 info_dicom = dicominfo(full_file_dicomread);
 pixelSpacing = info_dicom.PixelSpacing(1);
 
-radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
 dt = round(radius.*2) + 1;
 rt = dt./2;
 shape = 'Round'
@@ -505,9 +506,8 @@ shape = 'Round'
 rowNum=3;
 [q1, q2] = size(attenDisk(:,:,1));
 padamnt = round((q1)/2)-1
-nDiam = length(handles.diameter)
-nThickness = length(handles.thickness)
-attenuation = handles.attenuation;
+nDiam = length(diameter)
+nThickness = length(thickness)
 
 %Do Calibration Multiple Times
 for cycle = 1:5
@@ -522,9 +522,13 @@ for cycle = 1:5
 %         imshow(I_dicom{j}, [])
 %         [xSel,ySel] = ginput(1);
 %         close
-        xSel = 2300
-        ySel = 3050
+        xSel = 2300;
+        ySel = 3050;
+        xSel = 2000;
+        ySel = 2800;
         center = [round(ySel),round(xSel)];
+        size(I_dicom{j});
+        padamnt;
         centerImage = I_dicom{j}(ySel-padamnt:ySel+padamnt, xSel-padamnt:xSel+padamnt);
 %*********TODO%
         %Insert Noise into the DCM Images
@@ -558,22 +562,22 @@ for cycle = 1:5
                      
             Actual_Thickness = fliplr(dcm1_5_results(rowNum, :));
             Actual_Thickness = Actual_Thickness(p);
-            rownum = find(handles.diameter == Diam);
+            rownum = find(diameter == Diam);
             lambdasAtDiam = lambda(rownum,:);
-            tooThickInd = find(handles.thickness>=Actual_Thickness);
+            tooThickInd = find(thickness>=Actual_Thickness);
             if isempty(tooThickInd)
                 tooThick = 2;
                 lambAbove = lambdasAtDiam(1);
             else  
-                tooThick = handles.thickness(tooThickInd(end));
+                tooThick = thickness(tooThickInd(end));
                 lambAbove = lambdasAtDiam(tooThickInd(end));
             end
-            tooThinInd = find(handles.thickness<=Actual_Thickness);
+            tooThinInd = find(thickness<=Actual_Thickness);
             if isempty(tooThinInd)
                 tooThin = 0.03;
                 lambBelow = lambdasAtDiam(end);
             else  
-                tooThin = handles.thickness(tooThinInd(1));
+                tooThin = thickness(tooThinInd(1));
                 lambBelow = lambdasAtDiam(tooThinInd(1));
             end
             
@@ -593,7 +597,7 @@ for cycle = 1:5
     %the diameters in this equation
 end
 LambCutoffs = mean(BestLambdas)
-Ds = handles.diameter
+Ds = diameter
 
 figure
 scatter(Ds, LambCutoffs)
@@ -616,20 +620,22 @@ global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-
-    bodyPartThickness= DICOMData.BodyPartThickness
-    anodeTargetMaterial = DICOMData.AnodeTargetMaterial
-    spacing = DICOMData.PixelSpacing(1)
-    pixelAspectRatio = DICOMData.PixelAspectRatio
-    KVP = DICOMData.KVP
-    exposureInuAs = DICOMData.ExposureInuAs
-    filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2
-    filterMaterial = DICOMData.FilterMaterial
-    imageOrientation = DICOMData.SeriesDescription
-    xRayCurrent = DICOMData.XrayTubeCurrent
-    exposure = DICOMData.Exposure
-    exposureTime = DICOMData.ExposureTime
     
+    bodyPartThickness= DICOMData.BodyPartThickness;
+    anodeTargetMaterial = DICOMData.AnodeTargetMaterial;
+    spacing = DICOMData.PixelSpacing(1)
+    spacingTest = DICOMData.ImagerPixelSpacing
+    spacingTest2 = DICOMData.DetectorActiveDimensions
+    pixelAspectRatio = DICOMData.PixelAspectRatio
+    KVP = DICOMData.KVP;
+    exposureInuAs = DICOMData.ExposureInuAs;
+    filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2;
+    filterMaterial = DICOMData.FilterMaterial;
+    imageOrientation = DICOMData.SeriesDescription;
+    xRayCurrent = DICOMData.XrayTubeCurrent;
+    exposure = DICOMData.Exposure;
+    exposureTime = DICOMData.ExposureTime;
+    DICOMData;
 guidata(hObject,handles);
 
 

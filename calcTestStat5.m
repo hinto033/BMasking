@@ -50,7 +50,6 @@ for p = 1:pMax %All diameters
             diskImg = conv2(attenImgSquared,binDisk, 'same' ); %Maybe Valid
             testStatImg = tissue_img + diskImg;  
             toc
-
         end
         j = convImage2(:,:, p);
         j(testStatImg<=cutoffs(p))=thickness(k);
@@ -105,59 +104,3 @@ stdIQF10 = std(IQF10Area);
 IQF25Area = IQFVectorNoZerosSorted(num*0.75:end);
 avgIQF25 = mean(IQF25Area);
 stdIQF25 = std(IQF25Area);
-% %%
-% %Do exponential fit of the data and produce a and b values
-% cdDiam = diameter;
-% x = cdDiam(8:20)';
-% halfmm = ceil(.5/spacing);
-% mm = halfmm*2;
-% [nRows,nCols,p] = size(levels);
-% aMat = zeros(nRows,nCols);
-% bMat = zeros(nRows,nCols);
-% RSquare = zeros(nRows,nCols);
-% disp('Now calculating Exponential Fits of Threshold Thickness vs Diameter')
-% tic
-% for i = mm+1:2*mm:nRows
-%     for j = mm+1:2*mm:nCols
-%         cdThickness = reshape(levels(i,j,:), [1,p]);
-%         y = cdThickness(8:20)';
-%         [f, gof] = fit(x,y,'power1');
-%         RSquare(i-mm:i+mm,j-mm:j+mm) = gof.rsquare;
-%         coeffs = coeffvalues(f);
-%         aMat(i-mm:i+mm,j-mm:j+mm) = coeffs(1);
-%         bMat(i-mm:i+mm,j-mm:j+mm) = coeffs(2);
-%         %Add in the map for the different a b, and rsquared
-%     end
-% end
-% toc
-
-
-
-%To reconfirm getting real values.
-        %Calc Actual Lambda here
-%         rowSel = 1500;
-%         colSel = 400;
-%         padA = padAmnt - 1;
-%         centerImage = IDicomOrig(rowSel-padA:rowSel+padA, colSel-padA:colSel+padA);
-%         negDisk = attenDisk(:,:,p);
-%         avgROI = mean2(centerImage);
-%         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
-%         attenDisks = negDisk.*((centerImage-50)'*(attenuation(k) - 1));
-%         imgWDisk = attenDisks+centerImage;%Is my gtest
-%         wnpw = attenDisks(:);
-%         gTest = imgWDisk(:);
-%         lambda = wnpw'*gTest
-%         biasterm = attenDisks(:)'*attenDisks(:)
-%         tissueterm = attenDisks(:)'*centerImage(:)
-%         shouldbeLambda = biasterm+tissueterm
-
-%Insert htis into the fft section to test.
-            % tissftt = tissueImg2a(1500,400)
-            % biasfft = tissueImg2b(1500,400)
-            % fftlambda = testStatImg(1500,400)
-
-
-%Insert this into the convolution section to test
-            % tissconv = tissue_img(1500,400)       
-            % biasconv = diskImg(1500,400)            
-            % convlambda = testStatImg(1500,400)
