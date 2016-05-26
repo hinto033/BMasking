@@ -22,7 +22,7 @@ function varargout = DICOMReplace(varargin)
 
 % Edit the above text to modify the response to help DICOMReplace
 
-% Last Modified by GUIDE v2.5 19-May-2016 14:43:29
+% Last Modified by GUIDE v2.5 26-May-2016 12:18:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -636,6 +636,9 @@ j=1;
     exposure = DICOMData.Exposure;
     exposureTime = DICOMData.ExposureTime;
     DICOMData;
+    
+    figure
+    imshow(IDicomOrig, [])
 guidata(hObject,handles);
 
 
@@ -669,4 +672,97 @@ centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt)
 %Calculate IQF and Detectability at different diameter levels 
 [lambdaNPW, lambdaFFT,lambdaConv] = confirmCalcs(centerImage,attenuation, radius,...
     attenDisks, thickness, diameter, cutoffs, pixelSpacing)
+guidata(hObject,handles);
+
+
+% --- Executes on button press in deriveMTF.
+function deriveMTF_Callback(hObject, eventdata, handles)
+% hObject    handle to deriveMTF (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
+global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global diameter thickness attenuation
+j=1;
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
+
+[r,c] = size(IDicomOrig)
+deriv = zeros(1,c);
+
+maxDiff = 0
+Slope = 0
+for p = 40:r
+    for m = 2:c-1
+    deriv(m) = abs(IDicomOrig(p,m) -IDicomOrig(p,m+1));
+    end
+% figure(1)
+%     plot(1:c, IDicomOrig(p,:))
+% figure(2)
+%     plot(1:c, deriv)
+
+
+    maxDeriv = max(deriv);
+    peakInd = find(deriv==maxDeriv);
+    thresh = 15;
+    
+    arrayZeros = find(deriv<thresh);
+    f = arrayZeros;
+    valToFind = peakInd(1);
+    p;
+    valToFind;
+    tmp = (f-valToFind);
+    tmpAbove = tmp(tmp>0);
+    [idxAbove] = min(tmpAbove); 
+    closestAbove = f(idxAbove); %closest value
+    TruIDXAbove = peakInd+closestAbove;
+    derivAtVal = deriv(TruIDXAbove);;
+    
+    
+    tmpBelow = abs(tmp(tmp<0));
+    [idxBelow] = min(tmpBelow);
+%     closestBelow = f(idxBelow)
+    TruIDXBelow = peakInd-idxBelow;
+    derivAtValBelow = deriv(TruIDXBelow);
+    
+    eee = (TruIDXAbove-TruIDXBelow)+1;
+%     figure(3)
+%     plot(1:eee, IDicomOrig(p,TruIDXBelow:TruIDXAbove))
+%     figure(4)
+%     plot(1:eee, deriv(TruIDXBelow:TruIDXAbove))
+    
+    %Store Data
+    maxDiffTest = abs(IDicomOrig(p,TruIDXAbove) - IDicomOrig(p,TruIDXBelow));
+    SlopeTest = maxDiffTest/(TruIDXAbove - TruIDXBelow);
+    if SlopeTest >=Slope
+p
+        maxDiff = maxDiffTest;
+        Signal = IDicomOrig(p,TruIDXBelow:TruIDXAbove);
+        SignalLength = eee;
+        DerivSignal = deriv(TruIDXBelow:TruIDXAbove);
+        rowNumber = p;
+        colIndices = [TruIDXAbove, TruIDXBelow];
+        Slope = maxDiff / (TruIDXAbove - TruIDXBelow);
+    end
+end
+
+figure(1)
+plot(1:c, IDicomOrig(rowNumber,:))
+
+    figure(2)
+    plot(1:SignalLength, IDicomOrig(rowNumber,colIndices(2):colIndices(1)))
+    length(Signal)
+    SignalLength
+    figure(3)
+    plot(1:SignalLength, Signal)
+    figure(4)
+    plot(1:SignalLength, DerivSignal)
+    
+
+        SignalLength
+        rowNumber 
+        colIndices 
+
+%Next... fit this MTF to a gaussian curve or something.... eventually
+%figure out how to convert it via some sort of fit... shouldn't be
+%terrible.
 guidata(hObject,handles);
