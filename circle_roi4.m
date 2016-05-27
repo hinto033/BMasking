@@ -1,4 +1,4 @@
-function [attenDisk] = circle_roi4(radius, shape)
+function [attenDisk] = circle_roi4(radius, shape, SigmaPixels)
 diam = round(radius.*2) + 1;
 rt = diam./2;
 searchArea = ceil(max(diam.*sqrt(2)))+1;
@@ -14,7 +14,7 @@ if isequal(shape, 'Round')%shape == 'Round'
     smallDisk(:,:,j)=((x.^2+y.^2)<=r^2);
     end
     attenDisk = zeros(searchArea,searchArea,length(radius));
-    PSF = fspecial('gaussian',6,2); 
+    PSF = fspecial('gaussian',6,SigmaPixels); 
     attenDisk(:,:,:) = imfilter(smallDisk(:,:,:),PSF,'symmetric','conv');
 elseif isequal(shape, 'Gaussian')%shape == 'Gaussian'
         %Creates Gaussian that is centered and 3*sigma = radius
@@ -28,7 +28,7 @@ elseif isequal(shape, 'Gaussian')%shape == 'Gaussian'
     smallDisk(:,:,j) = g;
     end
     attenDisk = zeros(searchArea,searchArea,length(radius));
-    PSF = fspecial('gaussian',6,2); 
+    PSF = fspecial('gaussian',6, SigmaPixels); 
     attenDisk(:,:,:) = imfilter(smallDisk(:,:,:),PSF,'symmetric','conv');
 else
     error('No currently made shape selected')

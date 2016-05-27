@@ -22,7 +22,7 @@ function varargout = DICOMReplace(varargin)
 
 % Edit the above text to modify the response to help DICOMReplace
 
-% Last Modified by GUIDE v2.5 26-May-2016 12:18:05
+% Last Modified by GUIDE v2.5 27-May-2016 10:28:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -64,11 +64,12 @@ magn = 1; %1.082;
 % -1.5966, -1.2005,-1.5624,-1.3016,-1.2426,...
 %     -1.6839,-1.3971,-1.9411, -1.9411];
 %For 5 cm lenghts
+%Will have to derive this later
 cutoffs = 1e5*[-202.368, -161.857, -121.346, -80.8344,-40.3231,-32.2209,...
     -20.0675,-11.9652,-7.91407,-6.29362,-4.87572, -4.0331,-2.8546,...
     -2.3610,-1.7207,-1.5966,-1.2005,-1.5624,-1.3016,-1.2426,...
     -1.6839,-1.3971,-1.9411, -1.9411];
-handles.shape = 'Round'
+handles.shape = 'Round';
 handles.output = hObject;
 guidata(hObject, handles);
 
@@ -103,7 +104,7 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global diameter thickness attenuation
+global diameter thickness attenuation SigmaPixels spacing
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 %Import an image    
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
@@ -111,9 +112,10 @@ for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 pixelSpacing = DICOMData.PixelSpacing(1);
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+[SigmaPixels] = determineMTF(IDicomOrig)
 %% Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
-shape = handles.shape; [attenDisks] = circle_roi4(radius, shape);
+shape = handles.shape; [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
 %% set guess of time to calculate
 timePerImage = 6; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1)
@@ -144,16 +146,17 @@ function CreateCDIQF_Callback(hObject, eventdata, handles)
 %from that
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global diameter thickness attenuation spacing
+global diameter thickness attenuation spacing SigmaPixels
 j=1;
 %Import Image
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
     PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = DICOMData.PixelSpacing(1);
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+[SigmaPixels] = determineMTF(IDicomOrig);
 % Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
-[attenDisks] = circle_roi4(radius, shape);
+[attenDisks] = circle_roi4(radius, shape, SigmaPixels);
 %Calculate necessary amount of padding
 [q1, q2] = size(attenDisks(:,:,1)); padAmnt = (q1+1)/2;
 %Open Image and Obtain Point
@@ -180,7 +183,6 @@ hold on; formatSpec = 'R^2 = %f';
 textBox = sprintf(formatSpec, r2); text(1,1,textBox)
 guidata(hObject,handles);
 
-
 % --- Executes on selection change in ShapeSelect.
 function ShapeSelect_Callback(hObject, eventdata, handles)
 %Allows you to select a type of shape for the inserted disk
@@ -188,7 +190,6 @@ function ShapeSelect_Callback(hObject, eventdata, handles)
 contents = cellstr(get(hObject,'String')) %returns ShapeSelect contents as cell array
 handles.shape = contents{get(hObject,'Value')}
 guidata(hObject,handles);
-
 
 % --- Executes during object creation, after setting all properties.
 function ShapeSelect_CreateFcn(hObject, eventdata, handles)
@@ -203,14 +204,13 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 guidata(hObject,handles);
 
-
 % --- Executes on button press in MakeVideo.
 function MakeVideo_Callback(hObject, eventdata, handles)
 %Creates video of disks being inserted into the region that you select.
 %CURRENTLY DOES NOT WORK.
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global attenuation thickness diameter
+global attenuation thickness diameter SigmaPixels
 j=1;
 %Import Image
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
@@ -218,8 +218,9 @@ pixelSpacing =DICOMData.PixelSpacing(1);
 figure; imshow(IDicomOrig, []);
 [xSel,ySel] = ginput(1); close; 
 %Calculate disks
+[SigmaPixels] = determineMTF(IDicomOrig)
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-[attenDisk] = circle_roi4(radius, shape);
+[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 %Calculate necessary amount of padding
 [q1, q2] = size(attenDisk(:,:,1));
 padAmnt = floor((q1)/2);
@@ -349,14 +350,15 @@ function GenLambdasAtPoint_Callback(hObject, eventdata, handles)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global magn pixel FileName_Naming NumImageAnalyze part1 part2 shape %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global attenuation thickness diameter
+global attenuation thickness diameter SigmaPixels
 j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = DICOMData.PixelSpacing(1);
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
+[SigmaPixels] = determineMTF(IDicomOrig)
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
-[attenDisk] = circle_roi4(radius, shape);
+[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 [q1, q2] = size(attenDisk(:,:,1));
 padAmnt = floor((q1)/2);
 % Expand image s.t. the edges go out 250 pixel worth of the reflection
@@ -436,7 +438,7 @@ guidata(hObject,handles);
 % --- Executes on button press in AddF3Noise.
 function AddF3Noise_Callback(hObject, eventdata, handles)
 global shape magn
-global attenuation diameter thickness
+global attenuation diameter thickness SigmaPixels
 %Setting Parms
 cdcomDiams = fliplr([0.08 0.10 0.13 0.16 0.20 0.25	0.31 0.40 0.50 0.63	0.80 1.00]);
 diams = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31, .25, .2, .16, .13, .1, .08, .06];
@@ -502,7 +504,8 @@ radius = ((diameter.*0.5)./(pixelSpacing*magn));
 dt = round(radius.*2) + 1;
 rt = dt./2;
 shape = 'Round'
-[attenDisk] = circle_roi4(radius, shape);
+[SigmaPixels] = determineMTF(full_file_dicomread)
+[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 rowNum=3;
 [q1, q2] = size(attenDisk(:,:,1));
 padamnt = round((q1)/2)-1
@@ -649,14 +652,14 @@ function ConfirmCorrectCalcs_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global diameter thickness attenuation
+global diameter thickness attenuation SigmaPixels
 %Import an image    
 j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = DICOMData.PixelSpacing(1);
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-
+[SigmaPixels] = determineMTF(IDicomOrig)
 IDCMExpanded = IDicomOrig;
 %Open Image and Obtain Point
 figure; imshow(IDCMExpanded, []);
@@ -665,7 +668,7 @@ figure; imshow(IDCMExpanded, []);
 %% Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 shape = handles.shape;
-[attenDisks] = circle_roi4(radius, shape);
+[attenDisks] = circle_roi4(radius, shape, SigmaPixels);
 [q1, q2] = size(attenDisks(:,:,1));
 padAmnt = floor((q1)/2);
 centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
@@ -682,87 +685,15 @@ function deriveMTF_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global diameter thickness attenuation
+global diameter thickness attenuation SigmaPixels
 j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-
-[r,c] = size(IDicomOrig)
-deriv = zeros(1,c);
-
-maxDiff = 0
-Slope = 0
-for p = 40:r
-    for m = 2:c-1
-    deriv(m) = abs(IDicomOrig(p,m) -IDicomOrig(p,m+1));
-    end
-% figure(1)
-%     plot(1:c, IDicomOrig(p,:))
-% figure(2)
-%     plot(1:c, deriv)
-
-
-    maxDeriv = max(deriv);
-    peakInd = find(deriv==maxDeriv);
-    thresh = 15;
-    
-    arrayZeros = find(deriv<thresh);
-    f = arrayZeros;
-    valToFind = peakInd(1);
-    p;
-    valToFind;
-    tmp = (f-valToFind);
-    tmpAbove = tmp(tmp>0);
-    [idxAbove] = min(tmpAbove); 
-    closestAbove = f(idxAbove); %closest value
-    TruIDXAbove = peakInd+closestAbove;
-    derivAtVal = deriv(TruIDXAbove);;
-    
-    
-    tmpBelow = abs(tmp(tmp<0));
-    [idxBelow] = min(tmpBelow);
-%     closestBelow = f(idxBelow)
-    TruIDXBelow = peakInd-idxBelow;
-    derivAtValBelow = deriv(TruIDXBelow);
-    
-    eee = (TruIDXAbove-TruIDXBelow)+1;
-%     figure(3)
-%     plot(1:eee, IDicomOrig(p,TruIDXBelow:TruIDXAbove))
-%     figure(4)
-%     plot(1:eee, deriv(TruIDXBelow:TruIDXAbove))
-    
-    %Store Data
-    maxDiffTest = abs(IDicomOrig(p,TruIDXAbove) - IDicomOrig(p,TruIDXBelow));
-    SlopeTest = maxDiffTest/(TruIDXAbove - TruIDXBelow);
-    if SlopeTest >=Slope
-p
-        maxDiff = maxDiffTest;
-        Signal = IDicomOrig(p,TruIDXBelow:TruIDXAbove);
-        SignalLength = eee;
-        DerivSignal = deriv(TruIDXBelow:TruIDXAbove);
-        rowNumber = p;
-        colIndices = [TruIDXAbove, TruIDXBelow];
-        Slope = maxDiff / (TruIDXAbove - TruIDXBelow);
-    end
-end
-
-figure(1)
-plot(1:c, IDicomOrig(rowNumber,:))
-
-    figure(2)
-    plot(1:SignalLength, IDicomOrig(rowNumber,colIndices(2):colIndices(1)))
-    length(Signal)
-    SignalLength
-    figure(3)
-    plot(1:SignalLength, Signal)
-    figure(4)
-    plot(1:SignalLength, DerivSignal)
-    
-
-        SignalLength
-        rowNumber 
-        colIndices 
-
-%Next... fit this MTF to a gaussian curve or something.... eventually
-%figure out how to convert it via some sort of fit... shouldn't be
-%terrible.
+[SigmaPixels] = determineMTF(IDicomOrig)
 guidata(hObject,handles);
+
+
+% --- Executes on button press in getSpectraAttens.
+function getSpectraAttens_Callback(hObject, eventdata, handles)
+% hObject    handle to getSpectraAttens (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
