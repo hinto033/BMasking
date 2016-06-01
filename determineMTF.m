@@ -1,76 +1,70 @@
 function [SigmaPixels] = determineMTF(IDicomOrig)
-IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-[r,c] = size(IDicomOrig)
+IDicomOrig(all(IDicomOrig>10000,2),:)=[]; %Delete Empty Rows
+[r,c] = size(IDicomOrig); 
 deriv = zeros(1,c);
-maxDiff = 0;
+maxDiff = 0; %Initializing variables
 Slope = 0;
-for p = 1:r
-    for m = 2:c-1
-    deriv(m) = abs(IDicomOrig(p,m) -IDicomOrig(p,m+1));
+for p = 1:r %Every Row
+    for m = 2:c-1 %Finds derivative (Max slope)
+        deriv(m) = abs(IDicomOrig(p,m) -IDicomOrig(p,m+1));
     end
-    %Finds peak derivative (Max slope)
-    maxDeriv = max(deriv);
-    peakInd = find(deriv==maxDeriv);
+    maxDeriv = max(deriv);  DerivInd = find(deriv==maxDeriv);
     thresh = 15;   %This is arbitrary and I might need to change it.
-    %Finds locations where the derivative is small
-    arrayZeros = find(deriv<thresh);
-    f = arrayZeros;
+    arrayZeros = find(deriv<thresh);  zeroLocations = arrayZeros;
     %Finds 'zero' locations to left and right of the peak derivative
-    valToFind = peakInd(1);
-    tmp = (f-valToFind);
-    tmpAbove = tmp(tmp>0);
-    [idxAbove] = min(tmpAbove); 
-    closestAbove = f(idxAbove); %closest value
-    TruIDXAbove = peakInd+closestAbove;
-    derivAtVal = deriv(TruIDXAbove);
-    
-    tmpBelow = abs(tmp(tmp<0));
-    [idxBelow] = min(tmpBelow);
-    TruIDXBelow = peakInd-idxBelow;
-    derivAtValBelow = deriv(TruIDXBelow);
-    
-    eee = (TruIDXAbove-TruIDXBelow)+1;
-
-    
-    %Calculate Slope and maximum
+    slopeRegionToFind = DerivInd(1);
+    tmp = (zeroLocations-slopeRegionToFind);
+    tmpAbove = tmp(tmp>0); %Finds zero region to right of max slope
+    tmpBelow = abs(tmp(tmp<0)); %Finds zero region to left of max slope
+    [indexAbove] = min(tmpAbove);   [idxBelow] = min(tmpBelow);
+    closestAbove = zeroLocations(indexAbove);
+    TruIDXAbove = DerivInd+closestAbove; TruIDXBelow = DerivInd-idxBelow;
+    %derivAtVal = deriv(TruIDXAbove);
+    %derivAtValBelow = deriv(TruIDXBelow);
+   
+    %Calculate difference in intensity and the slope during in that region
     maxDiffTest = abs(IDicomOrig(p,TruIDXAbove) - IDicomOrig(p,TruIDXBelow));
     SlopeTest = maxDiffTest/(TruIDXAbove - TruIDXBelow);
+    slopeLength = (TruIDXAbove-TruIDXBelow)+1;
     %Saves this row and relevant data if the slope in this row is larger
     %than any other row I've seen.
     if SlopeTest >=Slope
-        p %Displays the row if I find a new peak slope
-        maxDiff = maxDiffTest;
+        rowNumber = p
+        maxDiff = maxDiffTest; SignalLength = slopeLength;
         Signal = IDicomOrig(p,TruIDXBelow:TruIDXAbove);
-        SignalLength = eee;
         DerivSignal = deriv(TruIDXBelow:TruIDXAbove);
-        rowNumber = p;
         colIndices = [TruIDXAbove, TruIDXBelow];
         Slope = maxDiff / (TruIDXAbove - TruIDXBelow);
     end
 end
-%Plots to check that the function worked well
-figure(1)
-plot(1:c, IDicomOrig(rowNumber,:))
-figure(3)
-plot(1:SignalLength, Signal)
-%This is my lineSpreadFunction (The derivative)
-figure(4)
-plot(1:SignalLength, DerivSignal)
 %Do gaussian fit to determine the proper amoutn of blur
 %Assumes LSF = PSF
 yData = DerivSignal' / max(DerivSignal);
 xData = linspace(1,SignalLength, SignalLength)';
-[f, gof] = fit(xData,yData,'gauss1')
-figure(5)
-plot(f,xData,yData)
-%Calculates gaussian fit so I can find my sigma
-r2 = gof.rsquare; coeffs = coeffvalues(f);
+[zeroLocations, gof] = fit(xData,yData,'gauss1');
+
+%Calculates gaussian fit so I can find my sigma (which is my MTF)
+rSquared = gof.rsquare; coeffs = coeffvalues(zeroLocations);
 Scaling = coeffs(1); OffSet = coeffs(2); SigmaPixels = coeffs(3);
 Sigmamm = SigmaPixels* .07;
+
+
+
+
 %MTF = FFT of LineSpreadFunction
-xMTF = linspace(-10, 10, 100);
-LSF = Scaling*exp(-((xMTF-OffSet)./SigmaPixels).^2);
-MTF = fft(LSF);
-figure(9)
-plot(abs(MTF))
-pause
+% xMTF = linspace(-10, 10, 100);
+% LSF = Scaling*exp(-((xMTF-OffSet)./SigmaPixels).^2);
+% MTF = fft(LSF);
+
+%Plots to check that the function worked well
+% figure(1)
+% plot(1:c, IDicomOrig(rowNumber,:))
+% figure(2)
+% plot(1:SignalLength, Signal)
+%This is my lineSpreadFunction (The derivative)
+% figure(3)
+% plot(1:SignalLength, DerivSignal)
+% figure(4)
+% plot(zeroLocations,xData,yData)
+% figure(5)
+% plot(abs(MTF))

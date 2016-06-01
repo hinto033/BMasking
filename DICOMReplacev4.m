@@ -621,6 +621,7 @@ function DICOMDATA_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
+global DICOMData
 j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
     
@@ -697,3 +698,209 @@ function getSpectraAttens_Callback(hObject, eventdata, handles)
 % hObject    handle to getSpectraAttens (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+global DICOMData
+if isempty(DICOMData)
+    msg = 'no DICOM Data imported' 
+    error(msg)
+end
+
+    kVp = DICOMData.KVP;
+    anodeTargetMaterial = DICOMData.AnodeTargetMaterial;
+    mAs = DICOMData.ExposureInuAs;
+    energies0=[1:0.1:150];
+    
+initcoef;
+initcoef2;
+initcoef3;
+    
+    
+    if anodeTargetMaterial == 'MOLYBDENUM'
+        coef = SimulationX.data.coefMoly
+        energies = SimulationX.data.energiesMoly
+    elseif anodeTargetMaterial == 'TUNGSTEN'
+        coef = SimulationX.data.coefTungsten
+        energies = SimulationX.data.energiesTungsten
+    elseif anodeTargetMaterial == 'RHODIUM'
+        coef = SimulationX.data.coefRhodium
+        energies = SimulationX.data.energiesRhodium
+    end
+    
+    if isempty(coef)|isempty(energies)
+       error('no proper attenuant selected') 
+    end
+    
+    
+    %Calculate the original spectrum
+    %From funspectre.m in Simux
+    mask=(energies<=kVp);  %to prevent the negative value for E>kVp
+    degre=[ones(size(coef,1),1) 2*ones(size(coef,1),1) 3*ones(size(coef,1),1) 4*ones(size(coef,1),1)];
+    tempspectre=sum(((kVp*ones(size(degre))).^degre.*coef)');
+    spectre=mAs.*tempspectre.*mask;
+ 
+%     spectre=funcspectre(1,kVp,SimulationX.data.coefMoly,SimulationX.data.energiesMoly);
+    energies0=[1:0.1:kVp];
+    spectre0=interp1(SimulationX.data.energiesMoly,spectre,energies0,'pchip')
+    figure(2)
+    plot(energies0,spectre0)
+    
+
+%     Now calculate the attenuated spectrum. (After going through filter)
+    filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2;
+    filterMaterial = DICOMData.FilterMaterial;
+    
+    numbermaterialAttenuant = 1
+    AttenuantList = SimulationX.FiltrationAttenuant
+    attenuationData = SimulationX.data
+    Filtration=0*energies0;
+    Filtration=0*energies0;
+for index=1:numbermaterialAttenuant
+        
+        filtrationID=filterMaterial
+        thickness=filterThickness/10
+        strcmp(filtrationID,'ADIPOSE')
+        if strcmp(filtrationID,'ADIPOSE')==1
+            Filtration=Filtration+interp1(attenuationData.Adipous(:,1),attenuationData.Adipous(:,2),energies0,'pchip')*thickness*0.95;
+        elseif strcmp(filtrationID,'ALUMINUM')==1
+            Filtration=Filtration+interp1(attenuationData.Aluminum(:,1),attenuationData.Aluminum(:,2),energies0,'pchip')*thickness*2.669;
+        elseif strcmp(filtrationID,'BREAST')==1
+            Filtration=Filtration+interp1(attenuationData.Breast(:,1),attenuationData.Breast(:,2),energies0,'pchip')*thickness*1.02;
+        elseif strcmp(filtrationID,'MOLYBDENUM')==1
+            Filtration=Filtration+interp1(attenuationData.Molybdenum(:,1),attenuationData.Molybdenum(:,2),energies0,'pchip')*thickness*10.22;
+        elseif strcmp(filtrationID,'RHODIUM')==1
+            Filtration=Filtration+interp1(attenuationData.Rhodium(:,1),attenuationData.Rhodium(:,2),energies0,'pchip')*thickness*12.4;
+        elseif strcmp(filtrationID,'COPPER')==1
+            Filtration=Filtration+interp1(attenuationData.Copper(:,1),attenuationData.Copper(:,2),energies0,'pchip')*thickness*8.96;
+        elseif strcmp(filtrationID,'WATER')==1
+            Filtration=Filtration+interp1(attenuationData.Water(:,1),attenuationData.Water(:,2),energies0,'pchip')*thickness*SimulationX.rho.Fat;
+        elseif strcmp(filtrationID,'CorticalBone')==1
+            Filtration=Filtration+interp1(attenuationData.CorticalBone(:,1),attenuationData.CorticalBone(:,2),energies0,'pchip')*thickness*1.92;
+        elseif strcmp(filtrationID,'BERYLLIUM')==1
+            Filtration=Filtration+interp1(attenuationData.Beryllium(:,1),attenuationData.Beryllium(:,2),energies0,'pchip')*thickness*SimulationX.rho.Beryllium;
+        elseif strcmp(filtrationID,'PMMA')==1
+            Filtration=Filtration+interp1(attenuationData.PMMA(:,1),attenuationData.PMMA(:,2),energies0,'pchip')*thickness*SimulationX.rho.PMMA;
+        elseif strcmp(filtrationID,'PE')==1
+            Filtration=Filtration+interp1(attenuationData.PE(:,1),attenuationData.PE(:,2),energies0,'pchip')*thickness*SimulationX.rho.PE;
+        elseif strcmp(filtrationID,'CesiumIodide')==1
+            Filtration=Filtration+interp1(attenuationData.CesiumIodide(:,1),attenuationData.CesiumIodide(:,2),energies0,'pchip')*thickness*SimulationX.rho.CesiumIodide;
+        elseif strcmp(filtrationID,'Cerium')==1
+            Filtration=Filtration+interp1(attenuationData.Cerium(:,1),attenuationData.Cerium(:,2),energies0,'pchip')*thickness*SimulationX.rho.Cerium;
+        elseif strcmp(filtrationID,'POLYSTYRENE')==1
+            Filtration=Filtration+interp1(attenuationData.Polystyrene(:,1),attenuationData.Polystyrene(:,2),energies0,'pchip')*thickness*SimulationX.rho.Polystyrene;
+        elseif strcmp(filtrationID,'MUSCLE')==1
+            Filtration=Filtration+interp1(attenuationData.Muscle(:,1),attenuationData.Muscle(:,2),energies0,'pchip')*thickness*SimulationX.rho.Muscle;
+        elseif strcmp(filtrationID,'PVC')==1
+            Filtration=Filtration+interp1(attenuationData.PVC(:,1),attenuationData.PVC(:,2),energies0,'pchip')*thickness*SimulationX.rho.PVC;
+        elseif strcmp(filtrationID,'Sn')==1
+            Filtration=Filtration+interp1(attenuationData.Sn(:,1),attenuationData.Sn(:,2),energies0,'pchip')*thickness*SimulationX.rho.Sn;
+        elseif strcmp(filtrationID,'Se')==1
+            Filtration=Filtration+interp1(attenuationData.Se(:,1),attenuationData.Se(:,2),energies0,'pchip')*thickness*SimulationX.rho.Se;
+        elseif strcmp(filtrationID,'PROTEIN')==1
+            Filtration=Filtration+interp1(attenuationData.Protein(:,1),attenuationData.Protein(:,2),energies0,'pchip')*thickness*SimulationX.rho.Protein;
+        elseif strcmp(filtrationID,'FAT')==1
+            Filtration=Filtration+interp1(attenuationData.Fat(:,1),attenuationData.Fat(:,2),energies0,'pchip')*thickness*SimulationX.rho.Fat;
+        elseif strcmp(filtrationID,'GOLD')==1
+            Filtration=Filtration+interp1(attenuationData.Gold(:,1),attenuationData.Gold(:,2),energies0,'pchip')*thickness*19.3;    
+        end
+end
+
+        %%%% Source Filtration
+    spectre1=spectre0.*exp(-Filtration);
+    hold on
+    plot(energies0,spectre1)
+%     
+    
+thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
+    .05, .04, .03];
+    %Now calculate the spectrum after going through gold disks
+    numbermaterialAttenuant = 1
+    AttenuantList = SimulationX.FiltrationAttenuant
+    attenuationData = SimulationX.data
+    Filtration=0*energies0;
+for index=1:length(thickness)
+        Filtration=0*energies0;
+        filtrationID='GOLD';   %Change this to include diff material types.
+        thicknessCurrent=thickness(index)/10
+        if strcmp(filtrationID,'ADIPOSE')==1
+            Filtration=Filtration+interp1(attenuationData.Adipous(:,1),attenuationData.Adipous(:,2),energies0,'pchip')*thicknessCurrent*0.95;
+        elseif strcmp(filtrationID,'ALUMINUM')==1
+            Filtration=Filtration+interp1(attenuationData.Aluminum(:,1),attenuationData.Aluminum(:,2),energies0,'pchip')*thicknessCurrent*2.669;
+        elseif strcmp(filtrationID,'BREAST')==1
+            Filtration=Filtration+interp1(attenuationData.Breast(:,1),attenuationData.Breast(:,2),energies0,'pchip')*thicknessCurrent*1.02;
+        elseif strcmp(filtrationID,'MOLYBDENUM')==1
+            Filtration=Filtration+interp1(attenuationData.Molybdenum(:,1),attenuationData.Molybdenum(:,2),energies0,'pchip')*thicknessCurrent*10.22;
+        elseif strcmp(filtrationID,'RHODIUM')==1
+            Filtration=Filtration+interp1(attenuationData.Rhodium(:,1),attenuationData.Rhodium(:,2),energies0,'pchip')*thicknessCurrent*12.4;
+        elseif strcmp(filtrationID,'COPPER')==1
+            Filtration=Filtration+interp1(attenuationData.Copper(:,1),attenuationData.Copper(:,2),energies0,'pchip')*thicknessCurrent*8.96;
+        elseif strcmp(filtrationID,'WATER')==1
+            Filtration=Filtration+interp1(attenuationData.Water(:,1),attenuationData.Water(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Fat;
+        elseif strcmp(filtrationID,'CorticalBone')==1
+            Filtration=Filtration+interp1(attenuationData.CorticalBone(:,1),attenuationData.CorticalBone(:,2),energies0,'pchip')*thicknessCurrent*1.92;
+        elseif strcmp(filtrationID,'BERYLLIUM')==1
+            Filtration=Filtration+interp1(attenuationData.Beryllium(:,1),attenuationData.Beryllium(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Beryllium;
+        elseif strcmp(filtrationID,'PMMA')==1
+            Filtration=Filtration+interp1(attenuationData.PMMA(:,1),attenuationData.PMMA(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PMMA;
+        elseif strcmp(filtrationID,'PE')==1
+            Filtration=Filtration+interp1(attenuationData.PE(:,1),attenuationData.PE(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PE;
+        elseif strcmp(filtrationID,'CesiumIodide')==1
+            Filtration=Filtration+interp1(attenuationData.CesiumIodide(:,1),attenuationData.CesiumIodide(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.CesiumIodide;
+        elseif strcmp(filtrationID,'Cerium')==1
+            Filtration=Filtration+interp1(attenuationData.Cerium(:,1),attenuationData.Cerium(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Cerium;
+        elseif strcmp(filtrationID,'POLYSTYRENE')==1
+            Filtration=Filtration+interp1(attenuationData.Polystyrene(:,1),attenuationData.Polystyrene(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Polystyrene;
+        elseif strcmp(filtrationID,'MUSCLE')==1
+            Filtration=Filtration+interp1(attenuationData.Muscle(:,1),attenuationData.Muscle(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Muscle;
+        elseif strcmp(filtrationID,'PVC')==1
+            Filtration=Filtration+interp1(attenuationData.PVC(:,1),attenuationData.PVC(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PVC;
+        elseif strcmp(filtrationID,'Sn')==1
+            Filtration=Filtration+interp1(attenuationData.Sn(:,1),attenuationData.Sn(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Sn;
+        elseif strcmp(filtrationID,'Se')==1
+            Filtration=Filtration+interp1(attenuationData.Se(:,1),attenuationData.Se(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Se;
+        elseif strcmp(filtrationID,'PROTEIN')==1
+            Filtration=Filtration+interp1(attenuationData.Protein(:,1),attenuationData.Protein(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Protein;
+        elseif strcmp(filtrationID,'FAT')==1
+            Filtration=Filtration+interp1(attenuationData.Fat(:,1),attenuationData.Fat(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Fat;
+        elseif strcmp(filtrationID,'GOLD')==1
+            Filtration=Filtration+interp1(attenuationData.Gold(:,1),attenuationData.Gold(:,2),energies0,'pchip')*thicknessCurrent*19.3;    
+        end
+        
+        
+        spectre2=spectre1.*exp(-Filtration);
+        hold on
+        plot(energies0,spectre2)
+        
+        attenuationMeasure(index)=-log(sum(energies0.*spectre2)./sum(energies0.*spectre1))
+        attenuationMeasurev2(index)=(sum(energies0.*spectre2)./sum(energies0.*spectre1))
+        I_signal(index) = sum(energies0.*spectre2)/10e6*0.680878613
+        I0_signal(index) = sum(energies0.*spectre1)/10e6*0.680878613  %signal before attenuant  
+        I_I0ratio(index) = sum(energies0.*spectre2)./sum(energies0.*spectre1) %I/I0 ratio
+end
+
+
+
+% Filtration=funcComputeFiltration(SimulationX.numbermaterialAttenuant,SimulationX.FiltrationAttenuant,SimulationX.data,energies0);
+% if (ResultChoice==3)
+%     spectre2=spectre1.*exp(-Filtration);
+% end
+
+%compute the attenuation; assume the detector respons is proportional to the energy
+% if (ResultChoice==3) % RESULTS->Detector Spectrum
+%     attenuation=-log(sum(energies0.*spectre2)./sum(energies0.*spectre1)); %-ln(I/I0) attenuation
+% %     SimulationX.result.attenuation=attenuation;
+%     I_signal = sum(energies0.*spectre2)/10e6*0.680878613;  %signal of the detector after attenuant              *0.699540498*1.025697674
+%     set(SimulationX.ctrl.result,'string',num2str(attenuation));
+% %     set(SimulationX.ctrl.result,'string',num2str(I_signal));
+%     I0_signal = sum(energies0.*spectre1)/10e6*0.680878613;  %signal before attenuant  
+%     I_I0ratio = sum(energies0.*spectre2)./sum(energies0.*spectre1); %I/I0 ratio
+%     output = [I_I0ratio;I_signal; I0_signal; attenuation]
+% end
+
+
+
+    %Now calculate the attenuation from the OG and attenuated spectrum.
+    %Prolly do this for each thickness of gold that is likely.
+    
+  
+
+
+guidata(hObject,handles);
