@@ -55,9 +55,9 @@ diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
     .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
 % handles.diameter = [10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5, .4, .31,...
 %     .25, .2, .16, .13, .1, .08, .06]; %mm
-attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
-    0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
-    0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
+% attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
+%     0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
+%     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
 magn = 1; %1.082;
 %For 1 cm length...
 % cutoffs = [-4,-4,-4,-4,-4,-4,-4, -4.0331,-2.8546,-2.3610,-1.7207,...
@@ -103,7 +103,7 @@ guidata(hObject,handles);
 function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
-global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
+global levels PathName_Naming FilterIndex_Naming extension cutoffs %IQF
 global diameter thickness attenuation SigmaPixels spacing
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 %Import an image    
@@ -112,7 +112,8 @@ for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 pixelSpacing = DICOMData.PixelSpacing(1);
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-[SigmaPixels] = determineMTF(IDicomOrig)
+[SigmaPixels] = determineMTF(IDicomOrig);
+[attenuation] = getSpectraAttens(DICOMData, thickness);
 %% Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 shape = handles.shape; [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
@@ -125,6 +126,9 @@ pause(2)
     attenDisks, thickness, diameter, cutoffs, pixelSpacing);
 [aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
 %% Export images/data as .mats
+% IQF
+% IQF.Small;
+% pause
 formatOut = 'dd-mmm-yyyy_HH-MM-SS';
 str = datestr(now, formatOut);
 A1 = char(part1{j}); A2 = char(part2{j});
@@ -135,8 +139,41 @@ fileForSaving = sprintf(formatSpec,A1,A2, A3, A4, A5, A6)
 save(fileForSaving, 'levels')
 A4_2 = 'IQFMap';
 formatSpec2 = '%s_%s_%s_%s_%s%s';
+IQFFull = IQF.Full;
 fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_2, A5, A6)
-save(fileForSaving, 'IQF')
+save(fileForSaving, 'IQFFull')
+A4_3 = 'IQFSmallDisks';
+IQFSmall2 = IQF.Small;
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_3, A5, A6)
+save(fileForSaving, 'IQFSmall2')
+A4_4 = 'IQFMediumDisks';
+IQFMed = IQF.Med;
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_4, A5, A6)
+save(fileForSaving, 'IQFMed')
+A4_5 = 'IQFLargeDisks';
+IQFLarge2 = IQF.Large;
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_5, A5, A6)
+save(fileForSaving, 'IQFLarge2')
+A4_6 = 'A_ValueOfFit';
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_6, A5, A6)
+save(fileForSaving, 'aMat')
+A4_7 = 'B_ValueOfFit';
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_7, A5, A6)
+save(fileForSaving, 'bMat')
+A4_8 = 'RSquareOfFit';
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_8, A5, A6)
+save(fileForSaving, 'RSquare')
+A4_9 = 'IQF_Statistics';
+IQFStats2 = IQF.Stats;
+formatSpec2 = '%s_%s_%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_9, A5, A6)
+save(fileForSaving, 'IQFStats2')
 end %Going through set of images
 guidata(hObject,handles);
 
@@ -154,6 +191,7 @@ j=1;
 pixelSpacing = DICOMData.PixelSpacing(1);
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 [SigmaPixels] = determineMTF(IDicomOrig);
+[attenuation] = getSpectraAttens(DICOMData, thickness);
 % Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
@@ -219,6 +257,7 @@ figure; imshow(IDicomOrig, []);
 [xSel,ySel] = ginput(1); close; 
 %Calculate disks
 [SigmaPixels] = determineMTF(IDicomOrig)
+[attenuation] = getSpectraAttens(DICOMData, thickness);
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 %Calculate necessary amount of padding
@@ -356,7 +395,8 @@ j=1;
 pixelSpacing = DICOMData.PixelSpacing(1);
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
-[SigmaPixels] = determineMTF(IDicomOrig)
+[SigmaPixels] = determineMTF(IDicomOrig);
+[attenuation] = getSpectraAttens(DICOMData, thickness);
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 [q1, q2] = size(attenDisk(:,:,1));
@@ -505,6 +545,7 @@ dt = round(radius.*2) + 1;
 rt = dt./2;
 shape = 'Round'
 [SigmaPixels] = determineMTF(full_file_dicomread)
+[attenuation] = getSpectraAttens(DICOMData, thickness)
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 rowNum=3;
 [q1, q2] = size(attenDisk(:,:,1));
@@ -661,6 +702,7 @@ pixelSpacing = DICOMData.PixelSpacing(1);
 %Remove blank top rows (Important for padding)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 [SigmaPixels] = determineMTF(IDicomOrig)
+[attenuation] = getSpectraAttens(DICOMData, thickness)
 IDCMExpanded = IDicomOrig;
 %Open Image and Obtain Point
 figure; imshow(IDCMExpanded, []);
@@ -698,209 +740,7 @@ function getSpectraAttens_Callback(hObject, eventdata, handles)
 % hObject    handle to getSpectraAttens (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global DICOMData
-if isempty(DICOMData)
-    msg = 'no DICOM Data imported' 
-    error(msg)
-end
-
-    kVp = DICOMData.KVP;
-    anodeTargetMaterial = DICOMData.AnodeTargetMaterial;
-    mAs = DICOMData.ExposureInuAs;
-    energies0=[1:0.1:150];
-    
-initcoef;
-initcoef2;
-initcoef3;
-    
-    
-    if anodeTargetMaterial == 'MOLYBDENUM'
-        coef = SimulationX.data.coefMoly
-        energies = SimulationX.data.energiesMoly
-    elseif anodeTargetMaterial == 'TUNGSTEN'
-        coef = SimulationX.data.coefTungsten
-        energies = SimulationX.data.energiesTungsten
-    elseif anodeTargetMaterial == 'RHODIUM'
-        coef = SimulationX.data.coefRhodium
-        energies = SimulationX.data.energiesRhodium
-    end
-    
-    if isempty(coef)|isempty(energies)
-       error('no proper attenuant selected') 
-    end
-    
-    
-    %Calculate the original spectrum
-    %From funspectre.m in Simux
-    mask=(energies<=kVp);  %to prevent the negative value for E>kVp
-    degre=[ones(size(coef,1),1) 2*ones(size(coef,1),1) 3*ones(size(coef,1),1) 4*ones(size(coef,1),1)];
-    tempspectre=sum(((kVp*ones(size(degre))).^degre.*coef)');
-    spectre=mAs.*tempspectre.*mask;
- 
-%     spectre=funcspectre(1,kVp,SimulationX.data.coefMoly,SimulationX.data.energiesMoly);
-    energies0=[1:0.1:kVp];
-    spectre0=interp1(SimulationX.data.energiesMoly,spectre,energies0,'pchip')
-    figure(2)
-    plot(energies0,spectre0)
-    
-
-%     Now calculate the attenuated spectrum. (After going through filter)
-    filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2;
-    filterMaterial = DICOMData.FilterMaterial;
-    
-    numbermaterialAttenuant = 1
-    AttenuantList = SimulationX.FiltrationAttenuant
-    attenuationData = SimulationX.data
-    Filtration=0*energies0;
-    Filtration=0*energies0;
-for index=1:numbermaterialAttenuant
-        
-        filtrationID=filterMaterial
-        thickness=filterThickness/10
-        strcmp(filtrationID,'ADIPOSE')
-        if strcmp(filtrationID,'ADIPOSE')==1
-            Filtration=Filtration+interp1(attenuationData.Adipous(:,1),attenuationData.Adipous(:,2),energies0,'pchip')*thickness*0.95;
-        elseif strcmp(filtrationID,'ALUMINUM')==1
-            Filtration=Filtration+interp1(attenuationData.Aluminum(:,1),attenuationData.Aluminum(:,2),energies0,'pchip')*thickness*2.669;
-        elseif strcmp(filtrationID,'BREAST')==1
-            Filtration=Filtration+interp1(attenuationData.Breast(:,1),attenuationData.Breast(:,2),energies0,'pchip')*thickness*1.02;
-        elseif strcmp(filtrationID,'MOLYBDENUM')==1
-            Filtration=Filtration+interp1(attenuationData.Molybdenum(:,1),attenuationData.Molybdenum(:,2),energies0,'pchip')*thickness*10.22;
-        elseif strcmp(filtrationID,'RHODIUM')==1
-            Filtration=Filtration+interp1(attenuationData.Rhodium(:,1),attenuationData.Rhodium(:,2),energies0,'pchip')*thickness*12.4;
-        elseif strcmp(filtrationID,'COPPER')==1
-            Filtration=Filtration+interp1(attenuationData.Copper(:,1),attenuationData.Copper(:,2),energies0,'pchip')*thickness*8.96;
-        elseif strcmp(filtrationID,'WATER')==1
-            Filtration=Filtration+interp1(attenuationData.Water(:,1),attenuationData.Water(:,2),energies0,'pchip')*thickness*SimulationX.rho.Fat;
-        elseif strcmp(filtrationID,'CorticalBone')==1
-            Filtration=Filtration+interp1(attenuationData.CorticalBone(:,1),attenuationData.CorticalBone(:,2),energies0,'pchip')*thickness*1.92;
-        elseif strcmp(filtrationID,'BERYLLIUM')==1
-            Filtration=Filtration+interp1(attenuationData.Beryllium(:,1),attenuationData.Beryllium(:,2),energies0,'pchip')*thickness*SimulationX.rho.Beryllium;
-        elseif strcmp(filtrationID,'PMMA')==1
-            Filtration=Filtration+interp1(attenuationData.PMMA(:,1),attenuationData.PMMA(:,2),energies0,'pchip')*thickness*SimulationX.rho.PMMA;
-        elseif strcmp(filtrationID,'PE')==1
-            Filtration=Filtration+interp1(attenuationData.PE(:,1),attenuationData.PE(:,2),energies0,'pchip')*thickness*SimulationX.rho.PE;
-        elseif strcmp(filtrationID,'CesiumIodide')==1
-            Filtration=Filtration+interp1(attenuationData.CesiumIodide(:,1),attenuationData.CesiumIodide(:,2),energies0,'pchip')*thickness*SimulationX.rho.CesiumIodide;
-        elseif strcmp(filtrationID,'Cerium')==1
-            Filtration=Filtration+interp1(attenuationData.Cerium(:,1),attenuationData.Cerium(:,2),energies0,'pchip')*thickness*SimulationX.rho.Cerium;
-        elseif strcmp(filtrationID,'POLYSTYRENE')==1
-            Filtration=Filtration+interp1(attenuationData.Polystyrene(:,1),attenuationData.Polystyrene(:,2),energies0,'pchip')*thickness*SimulationX.rho.Polystyrene;
-        elseif strcmp(filtrationID,'MUSCLE')==1
-            Filtration=Filtration+interp1(attenuationData.Muscle(:,1),attenuationData.Muscle(:,2),energies0,'pchip')*thickness*SimulationX.rho.Muscle;
-        elseif strcmp(filtrationID,'PVC')==1
-            Filtration=Filtration+interp1(attenuationData.PVC(:,1),attenuationData.PVC(:,2),energies0,'pchip')*thickness*SimulationX.rho.PVC;
-        elseif strcmp(filtrationID,'Sn')==1
-            Filtration=Filtration+interp1(attenuationData.Sn(:,1),attenuationData.Sn(:,2),energies0,'pchip')*thickness*SimulationX.rho.Sn;
-        elseif strcmp(filtrationID,'Se')==1
-            Filtration=Filtration+interp1(attenuationData.Se(:,1),attenuationData.Se(:,2),energies0,'pchip')*thickness*SimulationX.rho.Se;
-        elseif strcmp(filtrationID,'PROTEIN')==1
-            Filtration=Filtration+interp1(attenuationData.Protein(:,1),attenuationData.Protein(:,2),energies0,'pchip')*thickness*SimulationX.rho.Protein;
-        elseif strcmp(filtrationID,'FAT')==1
-            Filtration=Filtration+interp1(attenuationData.Fat(:,1),attenuationData.Fat(:,2),energies0,'pchip')*thickness*SimulationX.rho.Fat;
-        elseif strcmp(filtrationID,'GOLD')==1
-            Filtration=Filtration+interp1(attenuationData.Gold(:,1),attenuationData.Gold(:,2),energies0,'pchip')*thickness*19.3;    
-        end
-end
-
-        %%%% Source Filtration
-    spectre1=spectre0.*exp(-Filtration);
-    hold on
-    plot(energies0,spectre1)
-%     
-    
-thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
-    .05, .04, .03];
-    %Now calculate the spectrum after going through gold disks
-    numbermaterialAttenuant = 1
-    AttenuantList = SimulationX.FiltrationAttenuant
-    attenuationData = SimulationX.data
-    Filtration=0*energies0;
-for index=1:length(thickness)
-        Filtration=0*energies0;
-        filtrationID='GOLD';   %Change this to include diff material types.
-        thicknessCurrent=thickness(index)/10
-        if strcmp(filtrationID,'ADIPOSE')==1
-            Filtration=Filtration+interp1(attenuationData.Adipous(:,1),attenuationData.Adipous(:,2),energies0,'pchip')*thicknessCurrent*0.95;
-        elseif strcmp(filtrationID,'ALUMINUM')==1
-            Filtration=Filtration+interp1(attenuationData.Aluminum(:,1),attenuationData.Aluminum(:,2),energies0,'pchip')*thicknessCurrent*2.669;
-        elseif strcmp(filtrationID,'BREAST')==1
-            Filtration=Filtration+interp1(attenuationData.Breast(:,1),attenuationData.Breast(:,2),energies0,'pchip')*thicknessCurrent*1.02;
-        elseif strcmp(filtrationID,'MOLYBDENUM')==1
-            Filtration=Filtration+interp1(attenuationData.Molybdenum(:,1),attenuationData.Molybdenum(:,2),energies0,'pchip')*thicknessCurrent*10.22;
-        elseif strcmp(filtrationID,'RHODIUM')==1
-            Filtration=Filtration+interp1(attenuationData.Rhodium(:,1),attenuationData.Rhodium(:,2),energies0,'pchip')*thicknessCurrent*12.4;
-        elseif strcmp(filtrationID,'COPPER')==1
-            Filtration=Filtration+interp1(attenuationData.Copper(:,1),attenuationData.Copper(:,2),energies0,'pchip')*thicknessCurrent*8.96;
-        elseif strcmp(filtrationID,'WATER')==1
-            Filtration=Filtration+interp1(attenuationData.Water(:,1),attenuationData.Water(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Fat;
-        elseif strcmp(filtrationID,'CorticalBone')==1
-            Filtration=Filtration+interp1(attenuationData.CorticalBone(:,1),attenuationData.CorticalBone(:,2),energies0,'pchip')*thicknessCurrent*1.92;
-        elseif strcmp(filtrationID,'BERYLLIUM')==1
-            Filtration=Filtration+interp1(attenuationData.Beryllium(:,1),attenuationData.Beryllium(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Beryllium;
-        elseif strcmp(filtrationID,'PMMA')==1
-            Filtration=Filtration+interp1(attenuationData.PMMA(:,1),attenuationData.PMMA(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PMMA;
-        elseif strcmp(filtrationID,'PE')==1
-            Filtration=Filtration+interp1(attenuationData.PE(:,1),attenuationData.PE(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PE;
-        elseif strcmp(filtrationID,'CesiumIodide')==1
-            Filtration=Filtration+interp1(attenuationData.CesiumIodide(:,1),attenuationData.CesiumIodide(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.CesiumIodide;
-        elseif strcmp(filtrationID,'Cerium')==1
-            Filtration=Filtration+interp1(attenuationData.Cerium(:,1),attenuationData.Cerium(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Cerium;
-        elseif strcmp(filtrationID,'POLYSTYRENE')==1
-            Filtration=Filtration+interp1(attenuationData.Polystyrene(:,1),attenuationData.Polystyrene(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Polystyrene;
-        elseif strcmp(filtrationID,'MUSCLE')==1
-            Filtration=Filtration+interp1(attenuationData.Muscle(:,1),attenuationData.Muscle(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Muscle;
-        elseif strcmp(filtrationID,'PVC')==1
-            Filtration=Filtration+interp1(attenuationData.PVC(:,1),attenuationData.PVC(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PVC;
-        elseif strcmp(filtrationID,'Sn')==1
-            Filtration=Filtration+interp1(attenuationData.Sn(:,1),attenuationData.Sn(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Sn;
-        elseif strcmp(filtrationID,'Se')==1
-            Filtration=Filtration+interp1(attenuationData.Se(:,1),attenuationData.Se(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Se;
-        elseif strcmp(filtrationID,'PROTEIN')==1
-            Filtration=Filtration+interp1(attenuationData.Protein(:,1),attenuationData.Protein(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Protein;
-        elseif strcmp(filtrationID,'FAT')==1
-            Filtration=Filtration+interp1(attenuationData.Fat(:,1),attenuationData.Fat(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Fat;
-        elseif strcmp(filtrationID,'GOLD')==1
-            Filtration=Filtration+interp1(attenuationData.Gold(:,1),attenuationData.Gold(:,2),energies0,'pchip')*thicknessCurrent*19.3;    
-        end
-        
-        
-        spectre2=spectre1.*exp(-Filtration);
-        hold on
-        plot(energies0,spectre2)
-        
-        attenuationMeasure(index)=-log(sum(energies0.*spectre2)./sum(energies0.*spectre1))
-        attenuationMeasurev2(index)=(sum(energies0.*spectre2)./sum(energies0.*spectre1))
-        I_signal(index) = sum(energies0.*spectre2)/10e6*0.680878613
-        I0_signal(index) = sum(energies0.*spectre1)/10e6*0.680878613  %signal before attenuant  
-        I_I0ratio(index) = sum(energies0.*spectre2)./sum(energies0.*spectre1) %I/I0 ratio
-end
-
-
-
-% Filtration=funcComputeFiltration(SimulationX.numbermaterialAttenuant,SimulationX.FiltrationAttenuant,SimulationX.data,energies0);
-% if (ResultChoice==3)
-%     spectre2=spectre1.*exp(-Filtration);
-% end
-
-%compute the attenuation; assume the detector respons is proportional to the energy
-% if (ResultChoice==3) % RESULTS->Detector Spectrum
-%     attenuation=-log(sum(energies0.*spectre2)./sum(energies0.*spectre1)); %-ln(I/I0) attenuation
-% %     SimulationX.result.attenuation=attenuation;
-%     I_signal = sum(energies0.*spectre2)/10e6*0.680878613;  %signal of the detector after attenuant              *0.699540498*1.025697674
-%     set(SimulationX.ctrl.result,'string',num2str(attenuation));
-% %     set(SimulationX.ctrl.result,'string',num2str(I_signal));
-%     I0_signal = sum(energies0.*spectre1)/10e6*0.680878613;  %signal before attenuant  
-%     I_I0ratio = sum(energies0.*spectre2)./sum(energies0.*spectre1); %I/I0 ratio
-%     output = [I_I0ratio;I_signal; I0_signal; attenuation]
-% end
-
-
-
-    %Now calculate the attenuation from the OG and attenuated spectrum.
-    %Prolly do this for each thickness of gold that is likely.
-    
-  
-
-
+global DICOMData thickness attenuation
+thickness;
+[attenuation] = getSpectraAttens(DICOMData, thickness)
 guidata(hObject,handles);

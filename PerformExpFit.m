@@ -23,4 +23,4 @@ for i = mm+1:2*mm:nRows
     end
 end
 toc
-pause
+% pause

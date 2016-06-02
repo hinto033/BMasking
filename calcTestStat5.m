@@ -65,31 +65,31 @@ for m = 1:pMax
    A(:,:,m) = aBase*diameter(m);
 end
 IQFdenom = dot(A,convImage2, 3);
-IQF = sum(diameter(:))./IQFdenom;  %originally pMax./IQFdenom;, but this way normalizes for different ranges
+IQFFull = sum(diameter(:))./IQFdenom;  %originally pMax./IQFdenom;, but this way normalizes for different ranges
 %% Calculate Subset IQFs
-IQFLargeDenom = dot(A(:,:,1:6),convImage2(:,:,1:6), 3);
-IQFMedDenom = dot(A(:,:,7:12),convImage2(:,:,7:12), 3);
-IQFSmallDenom = dot(A(:,:,13:20),convImage2(:,:,13:20), 3);
-IQFLarge = sum(diameter(1:6))./IQFLargeDenom;
-IQFMed = sum(diameter(7:12))./IQFMedDenom;
-IQFSmall = sum(diameter(13:20))./IQFSmallDenom;
+IQFLargeDenom = dot(A(:,:,1:8),convImage2(:,:,1:8), 3);
+IQFMedDenom = dot(A(:,:,9:16),convImage2(:,:,9:16), 3);
+IQFSmallDenom = dot(A(:,:,16:24),convImage2(:,:,16:24), 3);
+IQFLarge = sum(diameter(1:8))./IQFLargeDenom;
+IQFMed = sum(diameter(9:16))./IQFMedDenom;
+IQFSmall = sum(diameter(17:24))./IQFSmallDenom;
 %% Set areas where i'll do calculations
 maskingMap = IDicomOrig;
 % threshold 
 maskingMap= maskingMap./max(maskingMap(:));
 maskingMap = im2bw(maskingMap,0.2);
 maskingMap = imcomplement(maskingMap);
-IQF.IQF = IQF .* maskingMap;
+IQF.Full = IQFFull .* maskingMap;
 IQF.Large = IQFLarge .* maskingMap;
 IQF.Med = IQFMed .* maskingMap;
 IQF.Small = IQFSmall .* maskingMap;
 levels = convImage2;
 %% Calculate IQFAverage
 %Flawed because it doesnt account for the muscle tissue
-IQFVector = IQF.IQF(:);
+IQFVector = IQF.Full(:);
 IQFVectorNoZeros = IQFVector(IQFVector~=0);
-IQF.avgIQF = mean(IQFVectorNoZeros);
-IQF.stdevIQF = std(IQFVectorNoZeros);
+IQFavgIQF = mean(IQFVectorNoZeros);
+IQFstdevIQF = std(IQFVectorNoZeros);
 %%
 %Calculate the percent of the IQF above a certain value (Look at John
 %notes0
@@ -104,3 +104,12 @@ stdIQF10 = std(IQF10Area);
 IQF25Area = IQFVectorNoZerosSorted(num*0.75:end);
 avgIQF25 = mean(IQF25Area);
 stdIQF25 = std(IQF25Area);
+IQF.Stats = [IQFavgIQF, avgIQF10, avgIQF25;IQFstdevIQF, stdIQF10, stdIQF25]
+figure
+imshow(IQF.Full,[])
+figure
+imshow(IQF.Large,[])
+figure
+imshow(IQF.Med,[])
+figure
+imshow(IQF.Small,[])

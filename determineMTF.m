@@ -47,6 +47,9 @@ xData = linspace(1,SignalLength, SignalLength)';
 rSquared = gof.rsquare; coeffs = coeffvalues(zeroLocations);
 Scaling = coeffs(1); OffSet = coeffs(2); SigmaPixels = coeffs(3);
 Sigmamm = SigmaPixels* .07;
+if SigmaPixels >=5 %If the MTF finding function didn't work...
+    SigmaPixels = 1;
+end
 
 
 
