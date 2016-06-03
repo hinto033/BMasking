@@ -30,7 +30,7 @@ spectre=mAs.*tempspectre.*mask;
 energies0=[1:0.1:kVp];
 spectre0=interp1(SimulationX.data.energiesMoly,spectre,energies0,'pchip');
 %Plot original Spectrum
-figure(2); plot(energies0,spectre0);
+% figure(2); plot(energies0,spectre0);
 %% Now calculate the attenuated spectrum. (After going through filter)
 filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2;
 filterMaterial = DICOMData.FilterMaterial;
@@ -86,7 +86,7 @@ for index=1:numbermaterialAttenuant
 end
 spectre1=spectre0.*exp(-Filtration);
 %Plot filtered Spectrum
-hold on; plot(energies0,spectre1);
+% hold on; plot(energies0,spectre1);
 %% Plot spectrum after going thru gold disks
 % thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
 %     .05, .04, .03]; %This is in um
@@ -141,7 +141,7 @@ for index=1:length(thickness)
     end
     %Calculate post-gold spectrum and plot
     spectre2=spectre1.*exp(-Filtration);
-    hold on; plot(energies0,spectre2);
+%     hold on; plot(energies0,spectre2);
     attenuationMeasure(index)=-log(sum(energies0.*spectre2)./sum(energies0.*spectre1));
     attenuationMeasurev2(index)=(sum(energies0.*spectre2)./sum(energies0.*spectre1));
 end

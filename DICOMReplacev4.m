@@ -22,7 +22,7 @@ function varargout = DICOMReplace(varargin)
 
 % Edit the above text to modify the response to help DICOMReplace
 
-% Last Modified by GUIDE v2.5 27-May-2016 10:28:52
+% Last Modified by GUIDE v2.5 03-Jun-2016 13:16:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -743,4 +743,39 @@ function getSpectraAttens_Callback(hObject, eventdata, handles)
 global DICOMData thickness attenuation
 thickness;
 [attenuation] = getSpectraAttens(DICOMData, thickness)
+guidata(hObject,handles);
+
+
+% --- Executes on button press in YesNoSituation.
+function YesNoSituation_Callback(hObject, eventdata, handles)
+% hObject    handle to YesNoSituation (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
+global levels PathName_Naming FilterIndex_Naming extension cutoffs %IQF
+global diameter thickness attenuation SigmaPixels spacing
+%Import an image    
+j = 1
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
+%Remove blank top rows (Important for padding)
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+[SigmaPixels] = determineMTF(IDicomOrig);
+[attenuation] = getSpectraAttens(DICOMData, thickness);
+
+%% Calculate the blurred disks and store them
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
+shape = handles.shape; [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+%%
+figure; imshow(IDicomOrig, []);
+[xSel,ySel] = ginput(1); close; % [x, y]]
+%% Calculate the blurred disks and store them
+[q1, q2] = size(attenDisks(:,:,1));
+padAmnt = floor((q1)/2)
+centerImage = IDicomOrig(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
+%Calculate IQF and Detectability at different diameter levels 
+[results] = seeTestStat5(centerImage,attenuation, radius,...
+    attenDisks, thickness, diameter, cutoffs, pixelSpacing);
+% [aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
 guidata(hObject,handles);
