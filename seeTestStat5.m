@@ -23,6 +23,7 @@ for p = 1:pMax %All diameters
         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
         attenDisks = negDisk.*((centerImage-50)'*(attenuation(k) - 1));
         imgWDisk = attenDisks+centerImage;%Is my gtest
+        figure; imshow(attenDisks,[])
         wnpw = attenDisks(:);
         gTest = imgWDisk(:);
         lambda = wnpw'*gTest;
@@ -35,17 +36,17 @@ for p = 1:pMax %All diameters
         
 %         figure(1)
 %         imshow(centerImage, [])
-%         figure(2)
-%         imshow(imgWDisk, [])
-% %         [xSel,ySel] = ginput(1);
-%         if xSel <=500 & ySel <=500
-%             results(p,k) = 1
-%         elseif xSel >=500 & ySel >=500
-%            results(p,k) = 0
-%         else
-%             results(p,k) = -1
-%         end
-%         
+        figure(2)
+        imshow(imgWDisk, [])
+        [xSel,ySel] = ginput(1);
+        if xSel <=500 & ySel <=500
+            results(p,k) = 1
+        elseif xSel >=500 & ySel >=500
+           results(p,k) = 0
+        else
+            results(p,k) = -1
+        end
+        
 %         results(p,k) = 
         
     end

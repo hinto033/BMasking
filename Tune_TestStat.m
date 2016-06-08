@@ -531,7 +531,7 @@ for j = 1:a
     for k = 1:b
         if j==center(2) && k == center(1)
         else
-            frequencyMap(j,k) = frequencyMap(j,k)/(sqrt((j-center(2))^2 + (k-center(1))^2))^2.8;
+            frequencyMap(j,k) = frequencyMap(j,k)/(sqrt((j-center(2))^2 + (k-center(1))^2))^(3/2);
         end
     end
 end

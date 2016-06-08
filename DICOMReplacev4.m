@@ -22,7 +22,7 @@ function varargout = DICOMReplace(varargin)
 
 % Edit the above text to modify the response to help DICOMReplace
 
-% Last Modified by GUIDE v2.5 03-Jun-2016 13:16:38
+% Last Modified by GUIDE v2.5 08-Jun-2016 11:30:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -121,6 +121,7 @@ IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 shape = handles.shape; [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+[cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation);
 %% set guess of time to calculate
 timePerImage = 6; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1)
@@ -199,6 +200,7 @@ IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 % Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+[cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation)
 %Calculate necessary amount of padding
 [q1, q2] = size(attenDisks(:,:,1)); padAmnt = (q1+1)/2;
 %Open Image and Obtain Point
@@ -264,6 +266,7 @@ figure; imshow(IDicomOrig, []);
 [attenuation] = getSpectraAttens(DICOMData, thickness);
 radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
+[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
 %Calculate necessary amount of padding
 [q1, q2] = size(attenDisk(:,:,1));
 padAmnt = floor((q1)/2);
@@ -403,6 +406,7 @@ IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 [attenuation] = getSpectraAttens(DICOMData, thickness);
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
+[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
 [q1, q2] = size(attenDisk(:,:,1));
 padAmnt = floor((q1)/2);
 % Expand image s.t. the edges go out 250 pixel worth of the reflection
@@ -551,6 +555,7 @@ shape = 'Round'
 [SigmaPixels] = determineMTF(full_file_dicomread)
 [attenuation] = getSpectraAttens(DICOMData, thickness)
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
+[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
 rowNum=3;
 [q1, q2] = size(attenDisk(:,:,1));
 padamnt = round((q1)/2)-1
@@ -716,6 +721,7 @@ figure; imshow(IDCMExpanded, []);
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 shape = handles.shape;
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
 [q1, q2] = size(attenDisks(:,:,1));
 padAmnt = floor((q1)/2);
 centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
@@ -771,6 +777,7 @@ IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 %% Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 shape = handles.shape; [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+% [cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
 %%
 figure; imshow(IDicomOrig, []);
 [xSel,ySel] = ginput(1); close; % [x, y]]
@@ -782,4 +789,167 @@ centerImage = IDicomOrig(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
 [results] = seeTestStat5(centerImage,attenuation, radius,...
     attenDisks, thickness, diameter, cutoffs, pixelSpacing);
 % [aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
+guidata(hObject,handles);
+
+
+% --- Executes on button press in CalcThresh2AFC.
+function CalcThresh2AFC_Callback(hObject, eventdata, handles)
+% hObject    handle to CalcThresh2AFC (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%% Import Variables
+global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
+global levels PathName_Naming FilterIndex_Naming extension cutoffs %IQF
+global diameter thickness attenuation SigmaPixels spacing
+j=1
+%% Import Image
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
+%Take away blank rows
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+%Calculate MTF and generate discs
+[SigmaPixels] = determineMTF(IDicomOrig);
+[attenuation] = getSpectraAttens(DICOMData, thickness);
+% Calculate the blurred disks and store them
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
+shape = handles.shape; 
+[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
+
+
+[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
+
+
+% pause
+
+% 
+% [r,c] = size(attenDisks(:,:,1));
+% %% Determine Statistics
+% %Create Mask
+% maskingMap = IDicomOrig;
+% % threshold 
+% maskingMap= maskingMap./max(maskingMap(:));
+% maskingMap = im2bw(maskingMap,0.1);
+% maskingMap = imcomplement(maskingMap);
+% IDicomOrig = IDicomOrig .* maskingMap;
+% 
+% 
+% %Remove the Phantom**************************DO THIS******************
+% %Calculate mean and stdev
+% IDicomVector = IDicomOrig(:);
+% IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
+% length(IDicomVector)
+% length(IDicomVectorNoZeros)
+% %May need to adjust thresholding so I just get the main part of the breast
+% %******************DO THIS*************************
+% IDicomAvg = mean(IDicomVectorNoZeros);
+% IDicomStdev = std(IDicomVectorNoZeros);
+% % Determine the noise amount or 
+% 
+% 
+% % figure
+% % imshow(IDicomOrig, [])
+% % pause
+% 
+% frequencyMap = ones(r,c);
+% center = [round((r/2)+1), round((c/2)+1)];
+% for j = 1:r
+%     for h = 1:c
+%         if j==center(2) && h == center(1)
+%         else
+%             frequencyMap(j,h) = frequencyMap(j,h)/ ...
+%                 (sqrt((j-center(2))^2+(h-center(1))^2))^(3/2);
+%         end
+%     end
+% end
+% %% Calculate Thresholds
+% for p = 1:length(diameter) %For each Diam
+%     negDisk = attenDisks(:,:,p);
+%     for k = 1:length(attenuation) %For each Thickness
+%         numCorrect = 0;
+%         for numTries = 1:40% Number of times to do
+%             %% Create 1st patch
+%             imNoise1 = randn(r,c); imFFT1 = fftshift(fft2(imNoise1));
+%             %Multiply IFFT by 1/f3 map
+%             imFFTf3Noise1 = frequencyMap.*imFFT1;
+%             %IFFT to make 1/f3 noise image
+%             imf3Noise1 = ifft2(ifftshift(imFFTf3Noise1)); 
+%             Avg1 = mean(imf3Noise1(:)); stDev1 = std(imf3Noise1(:));
+%             %Adjust this noise to have same mean/stdev as mammogram
+%             im1StdevAdj = (imf3Noise1-Avg1)*(IDicomStdev/stDev1);
+%             im1Final = real(im1StdevAdj + IDicomAvg);
+%             %Calculate the disk (which is my signal to detect)
+%             img1Avg = mean2(im1Final);
+%             attenDisk = negDisk.*((img1Avg-50)'*(attenuation(k) - 1));
+%             %Insert Disk into that image
+%             imgWDisk = attenDisk+im1Final;
+%             %Perform NPWMF for the signal-present image
+%             wnpw = attenDisk(:); gTest = imgWDisk(:);
+%             lambda_1 = wnpw'*gTest;
+%             %% Create 2nd patch
+%             imNoise2 = randn(r,c); imFFT2 = fftshift(fft2(imNoise2));
+%             %Multiply IFFT by 1/f3 map
+%             imFFTf3Noise2 = frequencyMap.*imFFT2;
+%             %IFFT to make 1/f3 noise image
+%             imf3Noise2 = ifft2(ifftshift(imFFTf3Noise2));
+%             Avg2 = mean(imf3Noise2(:));stDev2 = std(imf3Noise2(:));
+%             %Adjust this noise to have same mean/stdev as mammogram
+%             im2StdevAdj = (imf3Noise2-Avg2)* (IDicomStdev/stDev2);
+%             im2Final = real(im2StdevAdj + IDicomAvg);
+%             %Perform NPWMF for the signal-Absent image
+%             wnpw = attenDisk(:); gTest = im2Final(:);
+%             lambda_2 = wnpw'*gTest;
+%             %Make choice of larger lambda value as my guess
+%             if lambda_1 > lambda_2 %if the Correct guess
+%                 numCorrect = numCorrect + 1;
+%                 percentCorrect = numCorrect/numTries;
+%             else  %If the Incorrect guess
+%             end
+%             %Store lambda values
+%             lambSignal(numTries) = lambda_1;
+%             lambNoSignal(numTries) = lambda_2;
+% 
+%         end
+%         percentCorrect = numCorrect/numTries
+%         if percentCorrect >= .75%If guessed correctly enough .625?
+%         elseif percentCorrect < .75%If was too inaccurate .625?
+%             disp('set the thresholdvalue')
+%             thresh1 = mean(lambSignal); thresh2 = mean(lambNoSignal);
+%             thresh3 = (thresh1+thresh2) / 2;
+%             cutoff(p) = thresh3
+%             break
+%         end
+%     end
+% end
+guidata(hObject,handles);
+
+
+% --- Executes on button press in AFCBothMethods.
+function AFCBothMethods_Callback(hObject, eventdata, handles)
+% hObject    handle to AFCBothMethods (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%% Import Variables
+global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
+global levels PathName_Naming FilterIndex_Naming extension cutoffs %IQF
+global diameter thickness attenuation SigmaPixels spacing
+j=1
+%% Import Image
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
+pixelSpacing = DICOMData.PixelSpacing(1);
+%Take away blank rows
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
+%Calculate MTF and generate discs
+[SigmaPixels] = determineMTF(IDicomOrig);
+[attenuation] = getSpectraAttens(DICOMData, thickness);
+% Calculate the blurred disks and store them
+radius = ((diameter.*0.5)./(pixelSpacing*magn));
+shape = handles.shape; 
+[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
+
+
+[cutoffs] = calcAFC(IDicomOrig,attenDisk,diameter, attenuation)
 guidata(hObject,handles);
