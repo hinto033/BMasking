@@ -131,9 +131,6 @@ pause(2)
     attenDisks, thickness, diameter, cutoffs, pixelSpacing);
 [aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
 %% Export images/data as .mats
-% IQF
-% IQF.Small;
-% pause
 formatOut = 'dd-mmm-yyyy_HH-MM-SS';
 str = datestr(now, formatOut);
 A1 = char(part1{j}); A2 = char(part2{j});
@@ -200,7 +197,32 @@ IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 % Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
-[cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation)
+% [cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation)
+cutoffs = 1e9*[-5.363525407
+-5.269316425
+-3.655514047
+-1.331311528
+-0.399359308
+-0.499311868
+-0.09815175
+-0.099971131
+-0.032943851
+-0.011177329
+-0.007549159
+-0.006333946
+-0.003903288
+-0.002911465
+-0.002364156
+-0.001803376
+-0.001851931
+-0.000727157
+-0.000860384
+-0.000813444
+-0.000603193
+-0.000479478
+-0.000331111
+-0.00045629]
+
 %Calculate necessary amount of padding
 [q1, q2] = size(attenDisks(:,:,1)); padAmnt = (q1+1)/2;
 %Open Image and Obtain Point
@@ -212,7 +234,9 @@ centerImage = IDicomOrig(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt);
 [cdThickness, cdDiam] = calcTestStatPoint(centerImage,attenuation, radius,...
     attenDisks, thickness, diameter, cutoffs, pixelSpacing);%Calculate CD Curve
 %% Do the Linear Fit Here
-y = cdThickness(8:20)'; x = cdDiam(8:20)';
+y = cdThickness(:); x = cdDiam(:);
+size(y)
+size(x)
 [f, gof] = fit(x,y,'power1');
 r2 = gof.rsquare; coeffs = coeffvalues(f);
 a = coeffs(1); b = coeffs(2);
@@ -359,14 +383,16 @@ function Plot_IsoContour_Callback(hObject, eventdata, handles)
 %Plots a contour image of the IQF Image
 %Load and flip
 global IQF
-imageArray = flipud(IQF); 
+% IQF
+imageArray = flipud(IQF.IQFFull); 
 figure
-imshow(IQF, [])
+imshow(IQF.IQFFull, [])
 %Plot
-contourSizes = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34];
+contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
 figure
 contourf(imageArray, contourSizes)
-colormap(gray)
+% colormap(jet)
+% colormap(gray)
 colorbar
 guidata(hObject,handles);
 
@@ -378,12 +404,12 @@ global levels IQF
 [FileName,PathName,FilterIndex] = uigetfile;
 full_file_mat = [PathName,'\',FileName];
 storedStructure = load(full_file_mat,'-mat');
-IQF = (storedStructure.IQF(:,:,1)); 
-
-[FileName,PathName,FilterIndex] = uigetfile;
-full_file_mat = [PathName,'\',FileName];
-storedStructure = load(full_file_mat,'-mat');
-levels = (storedStructure.levels); 
+IQF = (storedStructure(:,:,1)); 
+% IQF = (storedStructure.IQF(:,:,1)); 
+% [FileName,PathName,FilterIndex] = uigetfile;
+% full_file_mat = [PathName,'\',FileName];
+% storedStructure = load(full_file_mat,'-mat');
+% levels = (storedStructure.levels); 
 guidata(hObject,handles);
 
 
@@ -672,15 +698,16 @@ function DICOMDATA_Callback(hObject, eventdata, handles)
 global magn FileName_Naming NumImageAnalyze part1 part2 shape
 global levels IQF PathName_Naming FilterIndex_Naming extension cutoff
 global DICOMData
-j=1;
+% j=1;
+for j = 1:NumImageAnalyze
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
     
     bodyPartThickness= DICOMData.BodyPartThickness;
     anodeTargetMaterial = DICOMData.AnodeTargetMaterial;
     spacing = DICOMData.PixelSpacing(1)
-    spacingTest = DICOMData.ImagerPixelSpacing
-    spacingTest2 = DICOMData.DetectorActiveDimensions
-    pixelAspectRatio = DICOMData.PixelAspectRatio
+    spacingTest = DICOMData.ImagerPixelSpacing;
+    spacingTest2 = DICOMData.DetectorActiveDimensions;
+    pixelAspectRatio = DICOMData.PixelAspectRatio;
     KVP = DICOMData.KVP;
     exposureInuAs = DICOMData.ExposureInuAs;
     filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2;
@@ -690,7 +717,11 @@ j=1;
     exposure = DICOMData.Exposure;
     exposureTime = DICOMData.ExposureTime;
     DICOMData;
-    
+    j
+    spacing = DICOMData.PixelSpacing(1)
+    Position = DICOMData.ViewPosition
+    pause
+end
     figure
     imshow(IDicomOrig, [])
 guidata(hObject,handles);

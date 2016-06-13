@@ -23,13 +23,21 @@ for p = 1:r %Every Row
     %derivAtValBelow = deriv(TruIDXBelow);
    
     %Calculate difference in intensity and the slope during in that region
+%     p
+    TruIDXAbove = TruIDXAbove(1);
+    TruIDXBelow = TruIDXBelow(1);
+%     r
+%     c
+    if TruIDXBelow<1 | TruIDXAbove>c
+        continue
+    end
     maxDiffTest = abs(IDicomOrig(p,TruIDXAbove) - IDicomOrig(p,TruIDXBelow));
     SlopeTest = maxDiffTest/(TruIDXAbove - TruIDXBelow);
     slopeLength = (TruIDXAbove-TruIDXBelow)+1;
     %Saves this row and relevant data if the slope in this row is larger
     %than any other row I've seen.
     if SlopeTest >=Slope
-        rowNumber = p
+        rowNumber = p;
         maxDiff = maxDiffTest; SignalLength = slopeLength;
         Signal = IDicomOrig(p,TruIDXBelow:TruIDXAbove);
         DerivSignal = deriv(TruIDXBelow:TruIDXAbove);
@@ -47,7 +55,7 @@ xData = linspace(1,SignalLength, SignalLength)';
 rSquared = gof.rsquare; coeffs = coeffvalues(zeroLocations);
 Scaling = coeffs(1); OffSet = coeffs(2); SigmaPixels = coeffs(3);
 Sigmamm = SigmaPixels* .07;
-if SigmaPixels >=5 %If the MTF finding function didn't work...
+if SigmaPixels >=5 || SigmaPixels <=.25%If the MTF finding function didn't work...
     SigmaPixels = 1;
 end
 

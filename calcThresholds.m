@@ -1,115 +1,44 @@
 function [cutoffs] = calcThresholds(IDicomOrig, attenDisks,...
     diameter, attenuation)
 [r,c] = size(attenDisks(:,:,1));
-
-%% Test Region
 maskingMap = IDicomOrig;
 maskingMap= maskingMap./max(maskingMap(:));
 maskingMap1 = im2bw(maskingMap,0.20);
-maskingMap2 = im2bw(maskingMap,0.05);
+maskingMap1 = imcomplement(maskingMap1);
 
-avgtest1 = mean2(IDicomOrig(700:2500,1:1200))
-stdevtest1 = std2(IDicomOrig(700:2500,1:1200))
-% 
-% figure
-% imshow(IDicomOrig,[])
-% figure
-% imshow(maskingMap1,[])
-% figure
-% imshow(maskingMap2,[])
+[labeledImage, numberOfBlobs] = bwlabel(maskingMap1);
+blobMeasurements = regionprops(labeledImage, 'area', 'Centroid');
+allAreas = [blobMeasurements.Area]; numToExtract = 1;
 
+[sortedAreas, sortIndexes] = sort(allAreas, 'descend');
+biggestBlob = ismember(labeledImage, sortIndexes(1:numToExtract));
+% Convert from integer labeled image into binary (logical) image.
+maskingMap1 = biggestBlob > 0; maxArea = max(sortedAreas);
+maskingMap1(1,:) = 0; maskingMap1(:,1) = 0;
+maskingMap1(end,:) = 0; maskingMap1(:,end) = 0;
 
-maskingMap = im2bw(maskingMap,0.06);
-maskingMap = imcomplement(maskingMap);
-IDicomOrig = IDicomOrig .* maskingMap;
+IDicomOrig = IDicomOrig .* maskingMap1;
 
+se = strel('disk',5,6);
+count = 1; trigger = 0;
+while trigger == 0
+maskingMap1 = imerode(maskingMap1,se);
+IDicomOrig = IDicomOrig .* maskingMap1;
 IDicomVector = IDicomOrig(:);
 IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
-
-IDicomAvg = mean(IDicomVectorNoZeros)
-IDicomStdev = std(IDicomVectorNoZeros)
-
-
-IDicomAvg = avgtest1
-IDicomStdev = stdevtest1
-% pause
-%% Determine Statistics
-% %Create Mask & Threshold 
-% maskingMap = IDicomOrig;
-% maskingMap= maskingMap./max(maskingMap(:));
-% maskingMap = im2bw(maskingMap,0.10);
-% maskingMap = imcomplement(maskingMap);
-% IDicomOrig = IDicomOrig .* maskingMap;
-% [a,b] = size(IDicomOrig)
-% %**************************DO THIS******************
-% %Remove the Phantom
-% %**************************DO THIS******************
-% %Calculate mean and stdev
-% IDicomVector = IDicomOrig(:);
-% IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
-% 
-
-
-
-% %% Test Region
-% %May need to adjust thresholding so I just get the main part of the breast
-% IDicomAvg = mean(IDicomVectorNoZeros)
-% IDicomStdev = std(IDicomVectorNoZeros)
-% 
-% avgtest1 = mean2(IDicomOrig(1200:2000,400:1200))
-% stdevtest1 = std2(IDicomOrig(1200:2000,400:1200))
-% [B,L,N,A] = bwboundaries(maskingMap);
-% N;
-% maxSize = 0;
-% for u = 1:N
-%     sizePatch = length(B{u});
-%     if sizePatch >= maxSize
-%         segmentNum = u;
-%         maxSize = sizePatch;
-%     end
-% end
-% length(B{segmentNum});
-% maxSize;
-% 
-% 
-% testTemplate = zeros(a,b);
-% pixelsWOnes = B{segmentNum};
-% 
-% for u = 1:maxSize
-%     ind = pixelsWOnes(u,:);
-%     testTemplate(ind(1),ind(2)) = 1;
-% end
-% testTemplate2 = imfill(testTemplate);
-% figure
-% imshow(testTemplate)
-% figure
-% imshow(testTemplate2)
-% 
-% 
-% IDicomOrig = IDicomOrig .* testTemplate2;
-% %Calculate mean and stdev
-% IDicomVector = IDicomOrig(:);
-% IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
-% %May need to adjust thresholding so I just get the main part of the breast
-% IDicomAvg = mean(IDicomVectorNoZeros)
-% IDicomStdev = std(IDicomVectorNoZeros)
-% 
-% avgtest1 = mean2(IDicomOrig(1200:2000,400:1200))
-% stdevtest1 = std2(IDicomOrig(1200:2000,400:1200))
-% 
-% figure
-% imshow(IDicomOrig,[])
-% 
-% 
-% % length(B)
-% % length(B{1})
-% % length(B{2})
-% % B{2}
-% % figure
-% % imshow(IDicomOrig, [])
-% pause
-%%
-
+reducedArea = length(IDicomVectorNoZeros);
+if reducedArea/maxArea <=0.5
+    trigger=1;
+end
+IDicomAvg = mean(IDicomVectorNoZeros);
+IDicomStdev = std(IDicomVectorNoZeros);
+% scatter(count, IDicomAvg)
+% hold on
+% scatter(count, IDicomStdev)
+% count = count+1
+% hold on
+% drawnow
+end
 % Determine the noise amount or just assume it is 1/f3
 % For now I am doing 1/f3
 endingPercentages = zeros(length(diameter),length(attenuation));
@@ -128,7 +57,7 @@ for p = 1:length(diameter) %For each Diam
     negDisk = attenDisks(:,:,p);
     for k = 1:length(attenuation) %For each Thickness
         numCorrect = 0;
-        for numTries = 1:40% Number of times to do
+        for numTries = 1:50% Number of times to do
             %% Create 1st patch
             imNoise1 = randn(r,c); imFFT1 = fftshift(fft2(imNoise1));
             %Multiply IFFT by 1/f3 map
@@ -143,10 +72,7 @@ for p = 1:length(diameter) %For each Diam
             %Calculate the disk (which is my signal to detect)
             img1Avg = mean2(im1Final);
             attenDisk = negDisk.*((img1Avg-50)'*(attenuation(k) - 1));
-%             figure; imshow(attenDisk,[])
             attenDisk = negDisk.*((im1Final-50)'*(attenuation(k) - 1));
-%             figure; imshow(attenDisk,[])
-%             pause
             %Insert Disk into that image
             imgWDisk = attenDisk+im1Final;
             %Perform NPWMF for the signal-present image
@@ -166,8 +92,6 @@ for p = 1:length(diameter) %For each Diam
             %Perform NPWMF for the signal-Absent image
             wnpw = attenDisk(:); gTest = im2Final(:);
             lambda_2 = wnpw'*gTest;
-%             figure; imshow(im2Final,[])
-%             pause
             %Make choice of larger lambda value as my guess
             if lambda_1 > lambda_2 %if the Correct guess
                 numCorrect = numCorrect + 1;
@@ -180,7 +104,7 @@ for p = 1:length(diameter) %For each Diam
 
         end
         percentCorrect = numCorrect/numTries;
-        endingPercentages(p,k) = percentCorrect
+        endingPercentages(p,k) = percentCorrect;
         fprintf('%1.2f percent correct at column %1.1f\n', percentCorrect, k)
         if percentCorrect >= .65%If guessed correctly enough .625?
         elseif percentCorrect < .65%If was too inaccurate .625?

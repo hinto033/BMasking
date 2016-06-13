@@ -1,7 +1,7 @@
 function [aMat, bMat, RSquare] = PerformExpFit(levels, spacing,diameter)
 %Do exponential fit of the data and produce a and b values
 cdDiam = diameter;
-x = cdDiam(8:20)';
+x = cdDiam(:);
 halfmm = ceil(.5/spacing);
 mm = halfmm*2;
 [nRows,nCols,p] = size(levels);
@@ -13,7 +13,7 @@ tic
 for i = mm+1:2*mm:nRows
     for j = mm+1:2*mm:nCols
         cdThickness = reshape(levels(i,j,:), [1,p]);
-        y = cdThickness(8:20)';
+        y = cdThickness(:);
         [f, gof] = fit(x,y,'power1');
         RSquare(i-mm:i+mm,j-mm:j+mm) = gof.rsquare;
         coeffs = coeffvalues(f);

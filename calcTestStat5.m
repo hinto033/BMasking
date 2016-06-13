@@ -69,7 +69,7 @@ IQFFull = sum(diameter(:))./IQFdenom;  %originally pMax./IQFdenom;, but this way
 %% Calculate Subset IQFs
 IQFLargeDenom = dot(A(:,:,1:8),convImage2(:,:,1:8), 3);
 IQFMedDenom = dot(A(:,:,9:16),convImage2(:,:,9:16), 3);
-IQFSmallDenom = dot(A(:,:,16:24),convImage2(:,:,16:24), 3);
+IQFSmallDenom = dot(A(:,:,17:24),convImage2(:,:,17:24), 3);
 IQFLarge = sum(diameter(1:8))./IQFLargeDenom;
 IQFMed = sum(diameter(9:16))./IQFMedDenom;
 IQFSmall = sum(diameter(17:24))./IQFSmallDenom;
@@ -105,11 +105,11 @@ IQF25Area = IQFVectorNoZerosSorted(num*0.75:end);
 avgIQF25 = mean(IQF25Area);
 stdIQF25 = std(IQF25Area);
 IQF.Stats = [IQFavgIQF, avgIQF10, avgIQF25;IQFstdevIQF, stdIQF10, stdIQF25]
-figure
-imshow(IQF.Full,[])
-figure
-imshow(IQF.Large,[])
-figure
-imshow(IQF.Med,[])
-figure
-imshow(IQF.Small,[])
+% figure
+% imshow(IQF.Full,[])
+% figure
+% imshow(IQF.Large,[])
+% figure
+% imshow(IQF.Med,[])
+% figure
+% imshow(IQF.Small,[])
