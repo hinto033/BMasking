@@ -21,13 +21,8 @@ for p = 1:r %Every Row
     TruIDXAbove = DerivInd+closestAbove; TruIDXBelow = DerivInd-idxBelow;
     %derivAtVal = deriv(TruIDXAbove);
     %derivAtValBelow = deriv(TruIDXBelow);
-   
-    %Calculate difference in intensity and the slope during in that region
-%     p
     TruIDXAbove = TruIDXAbove(1);
     TruIDXBelow = TruIDXBelow(1);
-%     r
-%     c
     if TruIDXBelow<1 | TruIDXAbove>c
         continue
     end
@@ -58,24 +53,3 @@ Sigmamm = SigmaPixels* .07;
 if SigmaPixels >=5 || SigmaPixels <=.25%If the MTF finding function didn't work...
     SigmaPixels = 1;
 end
-
-
-
-
-%MTF = FFT of LineSpreadFunction
-% xMTF = linspace(-10, 10, 100);
-% LSF = Scaling*exp(-((xMTF-OffSet)./SigmaPixels).^2);
-% MTF = fft(LSF);
-
-%Plots to check that the function worked well
-% figure(1)
-% plot(1:c, IDicomOrig(rowNumber,:))
-% figure(2)
-% plot(1:SignalLength, Signal)
-%This is my lineSpreadFunction (The derivative)
-% figure(3)
-% plot(1:SignalLength, DerivSignal)
-% figure(4)
-% plot(zeroLocations,xData,yData)
-% figure(5)
-% plot(abs(MTF))

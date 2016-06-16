@@ -3,7 +3,7 @@ clear all
 
 %Generalize these for the future.
 %1 = MLO, 2 = CC
-pos = ones(1,39)
+pos = ones(1,39);
 pos(2) = 2;
 pos(24) = 2;
 pos(33) =2;
@@ -11,14 +11,14 @@ pos(34) =2;
 pos(35) =2;
 pos(36) =2;
 pos(37) = 2;
-spacing = .07
+spacing = .07;
 DCMS = [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 ...
     17 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 39];
 for i = 1:37
-    %Determine if CC or MLO Image and check if the respective annotation
-    %exists
-    %%%***************GENERALIZE
     cd('W:\Breast Studies\3C_data\RO1_3Cimages\UCSF\UCSF_Annotation_images\AnnotationsUCSF_Bonnie')
+%     cd('C:\Users\Ben Hinton\Desktop\IWDMMaskingData')
+%Check if the image that I saved is MLO or CC and upload/update the image
+
     if i <=9
     if pos(i) == 1
     formatSpec = '3C0100%d_ML_annotation.mat';
@@ -40,8 +40,9 @@ for i = 1:37
     elseif A==2
         disp('The annotations exist')
         file = str;
-        load(file)
+        load(file);
         cd('Z:\Breast Studies\CBCRP Masking\Analysis Code\Matlab\BMaskingCode') 
+%         cd('C:\Users\Ben Hinton\Desktop\IWDMMaskingData')
         if i <=9
             formatSpecSmall5 = 'UCSF_3C0100%d_DCM5_IQFSmallDisks.mat';
             formatSpecMedium5 = 'UCSF_3C0100%d_DCM5_IQFMediumDisks.mat';
@@ -77,11 +78,9 @@ for i = 1:37
         end
         trigger = 0;
         if B1 == 2 && B2 == 2 && B3 == 2
-            disp('DO IT 5')
             trigger = 1;
             stringcase = 1;
         elseif C1 ==2 && C2 ==2 && C3==2
-            disp('DO IT 7')
             trigger = 1;
             stringcase = 2;
         end  
@@ -104,21 +103,18 @@ for i = 1:37
            elseif times == 2;IQFImage = IQFMed;
            elseif times == 3;IQFImage = IQFLarge2;
            end 
-            %Do calc here
+            %Derive Points of Lesion - DONE
             ratio = size(IQFImage)./size(image);
             lesionPoints = FreeForm.FreeFormCluster.face;
             lesionArea = FreeForm.Area; lesionHandle = FreeForm.handle;
             [numPoints,c] = size(lesionPoints);
 
-            %Convert to dimensions of IQF Image
+            %Convert to dimensions of IQF Image -DONE
             lesionPointsIQFDims = lesionPoints;
             lesionPointsIQFDims(:,1) = round(lesionPointsIQFDims(:,1)*ratio(1));
             lesionPointsIQFDims(:,2) = round(lesionPointsIQFDims(:,2)*ratio(2));
             lesionAreaIQF = lesionArea * mean(ratio);
-            %Not sure if this is mm2 or not
-            lesionAreamm2 = lesionAreaIQF/(spacing^2);  
-            lesionAreacm2 = lesionAreamm2/100;
-            %Get stats on Tumor Region
+            %Get stats on Tumor Region - DONE
             BWLesionArea = roipoly(IQFImage,  lesionPointsIQFDims(:,1), lesionPointsIQFDims(:,2));
             IQFLargeONLYLESION = IQFImage.*BWLesionArea;
             lesionRegionIQFVect = IQFLargeONLYLESION(:);
@@ -132,86 +128,70 @@ for i = 1:37
             medianLesionRegion = median(lesionRegionIQFVectNoZeros);
 
             %Need to remove the phantom before doing this quantitatively
-    %**********************
-    %*******************
+            % - DONE
+            numberToExtract =1;
+            IQFBinary = im2bw(IQFImage, .001);
+            [labeledImage, numberOfBlobs] = bwlabel(IQFBinary);
+            blobMeasurements = regionprops(labeledImage, 'area');
+            allAreas = [blobMeasurements.Area];
+            [sortedAreas, sortIndexes] = sort(allAreas, 'descend');
+            biggestBlob = ismember(labeledImage, sortIndexes(1:numberToExtract));
+            binaryImage = biggestBlob > 0;
+            IQFImage = IQFImage.*binaryImage;
             IQFImgVect = IQFImage(:);
             IQFImgVectNoZero =  IQFImgVect(IQFImgVect~=0);
 
-            
-            %Make subplots here
-            figure(1)
-            subplot(1,3,times); imshow(IQFImage,[])
-%             imshow(IQFImage, [])
-            
-            
-            
-            figure(2)
-            subplot(3,1,times)
+            %Make subplots here - DONE
+            figure
+%             subplot(1,3,times);
+            imshow(IQFImage,[])
+            titleSpec = sprintf('Image Number %d',DCMS(i));
+            title(titleSpec)
+            figure
+%             subplot(3,1,times)
             histogram(IQFImgVectNoZero)
+            title(titleSpec)
             hold on
-            %Need to get max line or to top of axes or whatever
-            %*************************%
-            line([medianLesionRegion,medianLesionRegion],[0,100000],'color', 'red') 
-            
-
-
+            yl = ylim;
+            line([medianLesionRegion,medianLesionRegion],[0,max(yl)],'color', 'red') 
+            %**********ADD TITLES BASED ON IMAGE NUMBER!!!!!!!!!!
             end
-            
-            
-            %Need an image here that clearly shows where the tumo ris. 
-            %So that I can locate it and stuff like that.
-            figure(4)
-            imshow(image,[])
-            figure(5)
-            bwOpp = imcomplement(BWLesionArea)
-%             imWOTumor = image.*
-            pause
+
+            bwLesOpp = imcomplement(BWLesionArea);
+            imgwoTumor = bwLesOpp.*IQFImage;
+            figure
+            imshow(imgwoTumor,[])
+            title(titleSpec)
+            imageLarger = imresize(image,size(IQFImage));
+            imageLargerNoTumor = imageLarger.*bwLesOpp;
+            figure
+            imshow(imageLarger,[])
+            title(titleSpec)
+            figure
+            imshow(imageLargerNoTumor,[])
+            title(titleSpec)
         end
+        i
         trigger = 0;
-
-
-            
-        %Store rest of Data 
-        DiamLarge = [50, 40, 30, 20, 10, 8, 5, 3]
-        DiamMed = [2, 1.6, 1.25, 1, .8, .63, .5, .4]
-        DiamSmall = [.31, .25, .2, .16, .13, .1, .08, .06]
-
+        DiamLarge = [50, 40, 30, 20, 10, 8, 5, 3];
+        DiamMed = [2, 1.6, 1.25, 1, .8, .63, .5, .4];
+        DiamSmall = [.31, .25, .2, .16, .13, .1, .08, .06];
         LesionDiamCm(i) = LesDiamCm
         LesionAreaCmSquared(i) = LesAreamm2/100
         if LesDiamCm >=3
-            sizeClass(i) = 'Large'
+            sizeClass(i) = 1 %Large
         elseif LesDiamCm < 3 && LesDiamCm > 0.4
-            sizeClass(i) = 'Medium'
-        elseif LesDiamCm < .4
-            sizeClass(i) = 'Small'
+            sizeClass(i) = 2 %Medium
+        elseif LesDiamCm < .4 && LesDiamCm > 0
+            sizeClass(i) = 3 %Small
         end
+        LesDiamCm = 0;
+        LesAreamm2 = 0;
         %NEED TO STORE DATA HERE
         %**********************
-%Save image of the Tumor Location
-
-        
-        %Need to check if I have the file for both IQF and the 
-        
-        %Do it 3 times for (large, med, small)
-        
-        %Save all relevant data.
+        %NEED TITLE FOR THE DIFFERENT GRAPHS (Whivh image number it is
+        %working on
     end
     pause 
+    close all
 end
-
-
-
-
-
-%Need to save 
-% area from annotation file, 
-% the area in pixels (once scaled up to my IQF image scale) -done
-% the area in cm^2 -done
-% create a figure (Subplot, 1,3) for all three IQF scales
-% create a histogram for all three and match up the IQF values for all
-%     Indicate which one has an area 
- 
-err('forced stop')
-
-
-
