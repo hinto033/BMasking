@@ -1,21 +1,21 @@
 function [attenuation] = getSpectraAttens(DICOMData, thickness)
 if isempty(DICOMData)
-    msg = 'no DICOM Data imported' 
+    msg = 'no DICOM Data imported'; 
     error(msg)
 end
 %% Initializing data
 kVp = DICOMData.KVP;
 anodeTargetMaterial = DICOMData.AnodeTargetMaterial;
-mAs = DICOMData.ExposureInuAs;
-energies0=[1:0.1:150];
+mAs = DICOMData.ExposureInuAs / 1e3;
+% energies0=[1:0.1:150];
 initcoef; initcoef2; initcoef3;
-if anodeTargetMaterial == 'MOLYBDENUM'
+if anodeTargetMaterial == 'MOLYBDENUM';
     coef = SimulationX.data.coefMoly;
     energies = SimulationX.data.energiesMoly;
-elseif anodeTargetMaterial == 'TUNGSTEN'
+elseif anodeTargetMaterial == 'TUNGSTEN';
     coef = SimulationX.data.coefTungsten;
     energies = SimulationX.data.energiesTungsten;
-elseif anodeTargetMaterial == 'RHODIUM'
+elseif anodeTargetMaterial == 'RHODIUM';
     coef = SimulationX.data.coefRhodium;
     energies = SimulationX.data.energiesRhodium;
 end

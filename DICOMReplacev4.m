@@ -6,7 +6,7 @@ function varargout = DICOMReplace(varargin)
 %      instance to run (singleton)".
 % See also: GUIDE, GUIDATA, GUIHANDLES
 % Edit the above text to modify the response to help DICOMReplace
-% Last Modified by GUIDE v2.5 08-Jun-2016 11:30:55
+% Last Modified by GUIDE v2.5 08-Jul-2016 11:17:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -30,127 +30,212 @@ end
 % --- Executes just before DICOMReplace is made visible.
 function DICOMReplace_OpeningFcn(hObject, eventdata, handles, varargin)
 %Sets Initial Variables.
-global magn cutoffs diameter attenuation thickness
-global NumImageAnalyze
+global magn diameter thickness NumImageAnalyze shape
 NumImageAnalyze=1;
 thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
     .05, .04, .03]; %um
 diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
     .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
-% attenuation = [0.8128952,0.862070917,0.900130881,0.927690039,0.948342287,...
-%     0.962465394,0.973737644,0.978903709,0.983080655,0.986231347,0.989380904,...
-%     0.991486421,0.993610738,0.994672709,0.995734557,0.996796281];
-magn = 1; %1.082;
-% cutoffs = 1e5*[-.4*1e5, -.32*1e5, -.16*1e5, -.06*1e5,-.02*1e5,-.013*1e5,...
-%     -.006*1e5,-.0025*1e5,-.00145*1e5,-.0009*1e5,-.0007*1e5, -.0005*1e5,-.0004*1e5,...
-%     -2.3610,-1.7207,-1.5966,-1.2005,-1.5624,-1.3016,-1.2426,...
-%     -1.6839,-1.3971,-1.9411, -1.9411];
-handles.shape = 'Round';
+magn = 1;
+shape = 'Round';
 handles.output = hObject;
 guidata(hObject, handles);
 
-% --- Outputs from this function are returned to the command line.
+% --- NA
 function varargout = DICOMReplace_OutputFcn(hObject, eventdata, handles) 
 varargout{1} = handles.output;
 
-% --- Executes on button press in SelectFile.
+% --- Allows you to select the number of images you want analyzed.
+function NumImageImport_Callback(hObject, eventdata, handles)
+%Allows you to say how many images you want to analyze
+global NumImageAnalyze
+NumImageAnalyze = str2double(get(hObject,'String'));
+guidata(hObject,handles);
+
+% --- Allows you to select the shape of the lesion you want to insert
+function ShapeSelect_Callback(hObject, eventdata, handles)
+%Allows you to select a type of shape for the inserted disk
+%Will be useful for making different lesion sizes
+global shape
+contents = cellstr(get(hObject,'String'));
+shape = contents{get(hObject,'Value')};
+guidata(hObject,handles);
+
+% --- Allows you to select unanalyzed files to analyze.
 function SelectFile_Callback(hObject, eventdata, handles)
 %Selects a certain number of files and stores the path for use later
 %This will allow you to analyze these files later
 global NumImageAnalyze FileName PathName FilterIndex ext
 global FileName_Naming parts part1 part2 PathName_Naming FilterIndex_Naming extension
-for j = 1:NumImageAnalyze
 %%Opens up dialogue box to import a DICOM file of your choosing
-[FileName,PathName,FilterIndex] = uigetfile;
+[FileName,PathName,FilterIndex] = uigetfile('*.*', 'Select Multiple Files', 'MultiSelect', 'on')
 %Stores filepath
-FileName_Naming{j} = FileName; PathName_Naming{j} = PathName;
-FilterIndex_Naming{j} = FilterIndex;
-[pathstr,name,ext] = fileparts([PathName,'\',FileName]);
-extension{j} = ext; s=pathstr;
-parts=regexp(s,'\','split');
-parts = fliplr(parts); part1{j} = parts(3); part2{j} = parts(2);
+NumImageAnalyze = length(FileName);
+FileName_Naming = FileName; PathName_Naming = PathName
+FilterIndex_Naming = FilterIndex;
+for j = 1:NumImageAnalyze
+    [pathstr,name,ext] = fileparts([PathName,'\',FileName{j}])
+    extension{j} = ext; s=pathstr;
+    parts=regexp(s,'\','split');
+    parts = fliplr(parts); part1{j} = parts(3); part2{j} = parts(2);
 end
 guidata(hObject,handles);
 
-% --- Executes on button press in InsertDisks.
+% --- allows you to select Masking Maps (The full masking map so far..
+function ImportMATs_Callback(hObject, eventdata, handles)
+%Allows you to import previous data files to analyze them later on
+global IQFFull
+[FileName,PathName,FilterIndex] = uigetfile;
+full_file_mat = [PathName,'\',FileName];
+storedStructure = load(full_file_mat,'-mat');
+IQFFull = (storedStructure.IQFFull(:,:,1)); 
+guidata(hObject,handles);
+
+
+% --- Main analyzing function -- Creates IQF maps and saves them.
 function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
-global magn FileName_Naming NumImageAnalyze part1 part2 %shape %I_dicom_orig
-global levels PathName_Naming FilterIndex_Naming extension cutoffs %IQF
-global diameter thickness attenuation SigmaPixels spacing
-for j = 1:NumImageAnalyze %Does calculation for each image that was selected
+global magn FileName_Naming NumImageAnalyze part1 part2
+global levels PathName_Naming FilterIndex_Naming extension cutoffs
+global diameter thickness attenuation SigmaPixels shape
+for j = 2:NumImageAnalyze %Does calculation for each image that was selected
 %% Pre-processing data
 %Import the image & DICOMData    
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
     PathName_Naming, FilterIndex_Naming, extension);
-%Remove blank top rows (Important for padding)
-IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-%Determine MTF and get the attenuation values for disks
+disp('Calculating the MTF...')
 [SigmaPixels] = determineMTF(IDicomOrig);
+disp('Calculating the disk attenuations based on KVP, mAs...')
 [attenuation] = getSpectraAttens(DICOMData, thickness);
 % set guess of time to calculate
-timePerImage = 30; %Min
+timePerImage = 20; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1)
 pause(2)
-% Calculate the blurred disks of different diameters and store them
+disp('Calculating lesions of appropriate attenuations/shapes...')
 pixelSpacing = DICOMData.PixelSpacing(1);
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
-shape = handles.shape;
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
 %% Doing Calculations
-%Calculate the thresholds for the breast image (Takes most time
+disp('Calculating thresholds for each lesion diameter...')
 [cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation);
-%Calculate IQF and Detectability at different diameter levels 
+disp('Calculating all IQF values and IQF Maps...')
 [levels, IQF] = calcTestStat5(IDicomOrig,attenuation, radius,...
     attenDisks, thickness, diameter, cutoffs, pixelSpacing);
-%Perform Exp fit of the detectability data at each pixel
+disp('Performing Exponential fit on the C/D Curves...')
 [aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
+%% Calculate Statistics that are relevant to test
+% mean, stdev, sum, entropy, kurtosis, skewness, 5th percentile, 25th
+% percentile, 75th percentile, 95th percentile, GLCM Contrast, GLCM
+% correlation, GLCM Energy, (All for full, small, med, large)
+% GLCM Homogeneity, BIRADS, VBD
+disp('Calculating the statistics of the IQF levels...')
+stats = zeros(15,5); 
+A1 = char(part1{j});
+A2 = char(part2{j});
+A3 = char(FileName_Naming{j});
+
+aMatVector = aMat(:);
+aMatVectorNoZeros = aMatVector(aMatVector~=0);
+aVals = aMatVectorNoZeros;
+bMatVector = bMat(:);
+bMatVectorNoZeros = bMatVector(bMatVector~=0);
+bVals = bMatVectorNoZeros;
+
+imgAMean = mean(aVals); stats(1,5) = imgAMean;
+imgAMedian = median(aVals); stats(2,5) = imgAMedian;
+imgASum = sum(aVals); stats(3,5) = imgASum;
+imgA10thPercentile = prctile(aVals,10); stats(4,5) = imgA10thPercentile;
+imgA25thPercentile = prctile(aVals,25); stats(5,5) = imgA25thPercentile;
+imgA75thPercentile = prctile(aVals,75); stats(6,5) = imgA75thPercentile;
+imgA90thPercentile = prctile(aVals,90); stats(7,5) = imgA90thPercentile;
+imgBMean = mean(bVals); stats(8,5) = imgBMean;
+imgBMedian = median(bVals); stats(9,5) = imgBMedian;
+imgBSum = sum(bVals); stats(10,5) = imgBSum;
+imgB10thPercentile = prctile(bVals,10); stats(11,5) = imgB10thPercentile;
+imgB25thPercentile = prctile(bVals,25); stats(12,5) = imgB25thPercentile;
+imgB75thPercentile = prctile(bVals,75); stats(13,5) = imgB75thPercentile;
+imgB90thPercentile = prctile(bVals,90); stats(14,5) = imgB90thPercentile;
+
+%1 = full, 2=small, 3=medium, 4=large
+for y = 1:4
+    if y==1; img = IQF.Full;
+    elseif y==2; img = IQF.Small;
+    elseif y==3; img = IQF.Med;
+    elseif y==4; img = IQF.Large;
+    end
+    imgVector = img(:);
+    imgVectorNoZeros = imgVector(imgVector~=0);
+    IQFvals = imgVectorNoZeros;
+    imgMean = mean(IQFvals); stats(1,y) = imgMean;
+    imgMedian = median(IQFvals); stats(2,y) = imgMedian;
+    imgStDev = std(IQFvals); stats(3,y) = imgStDev;
+    imgSum = sum(IQFvals); stats(4,y) = imgSum;
+    imgEntropy = entropy(IQFvals); stats(5,y) = imgEntropy;
+    imgKurtosis = kurtosis(IQFvals); stats(6,y) = imgKurtosis;
+    imgSkewness = skewness(IQFvals); stats(7,y) = imgSkewness;
+    img10thPercentile = prctile(IQFvals,10); stats(8,y) = img10thPercentile;
+    img25thPercentile = prctile(IQFvals,25); stats(9,y) = img25thPercentile;
+    img75thPercentile = prctile(IQFvals,75); stats(10,y) = img75thPercentile;
+    img90thPercentile = prctile(IQFvals,90); stats(11,y) = img90thPercentile;
+    %Calculate GLCM
+    numBins = 64;
+    glcm = graycomatrix(IQF.Full, 'NumLevels',numBins, 'GrayLimits', []);
+    statsGLCM = graycoprops(glcm);
+    imgGLCMContrast = statsGLCM.Contrast; stats(12,y) = imgGLCMContrast;
+    imgGLCMCorrelation = statsGLCM.Correlation; stats(13,y) = imgGLCMCorrelation;
+    imgGLCMEnergy = statsGLCM.Energy; stats(14,y) = imgGLCMEnergy;
+    imgGLCMHomogeneity = statsGLCM.Homogeneity; stats(15,y) = imgGLCMHomogeneity;
+end
+
 %% Export images/data as .mats
-formatOut = 'dd-mmm-yyyy_HH-MM-SS';
-str = datestr(now, formatOut);
+disp('Saving all Data...')
+
+A4 = 'GeneratedStatistics';
+A5 = '.mat';
+formatSpec = '%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A2,A3, A4, A5)
+save(fileForSaving, 'stats')
+%Save the DICOMData
+DICOMData.ScanNumber = char(FileName_Naming{j});
+DICOMData.Study = char(part1{j});
+DICOMData.Patient = char(part2{j});
+A4 = 'DICOMData';
+A5 = '.mat';
+formatSpec = '%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A2,A3,A4, A5)
+save(fileForSaving, 'DICOMData')
+
 A1 = char(part1{j}); A2 = char(part2{j});
 A3 = char(FileName_Naming{j}); A4 = 'ThicknessEachDiam';
-A5 = str; A6 = '.mat';
-formatSpec = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4, A5, A6)
+A6 = '.mat';
+formatSpec = '%s_%s_%s%s';
+fileForSaving = sprintf(formatSpec,A2,A3,  A4, A6)
 save(fileForSaving, 'levels') %Large file before processing it
-A4_2 = 'IQFMap';
-formatSpec2 = '%s_%s_%s_%s_%s%s';
+A4_2 = 'IQFAllDisks';
 IQFFull = IQF.Full;
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_2, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3,  A4_2,  A6)
 save(fileForSaving, 'IQFFull') %IQF Image
 A4_3 = 'IQFSmallDisks';
 IQFSmall = IQF.Small;
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_3, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3,A4_3,  A6)
 save(fileForSaving, 'IQFSmall') %IQF Image of small disks
 A4_4 = 'IQFMediumDisks';
 IQFMed = IQF.Med;
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_4, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3, A4_4, A6)
 save(fileForSaving, 'IQFMed') % IQF Image of medium disks
 A4_5 = 'IQFLargeDisks';
 IQFLarge = IQF.Large;
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_5, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3, A4_5, A6)
 save(fileForSaving, 'IQFLarge') % IQF Image of large disks
 A4_6 = 'A_ValueOfFit';
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_6, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3, A4_6, A6)
 save(fileForSaving, 'aMat')% a value from exponential fit at each point
 A4_7 = 'B_ValueOfFit';
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_7, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3, A4_7, A6)
 save(fileForSaving, 'bMat')% b value from exponential fit at each point
 A4_8 = 'RSquareOfFit';
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_8, A5, A6)
+fileForSaving = sprintf(formatSpec,A2,A3, A4_8, A6)
 save(fileForSaving, 'RSquare')% r^2 value from exp fit at each point
-A4_9 = 'IQF_Statistics';
-IQFStats = IQF.Stats;
-formatSpec2 = '%s_%s_%s_%s_%s%s';
-fileForSaving = sprintf(formatSpec,A1,A2, A3, A4_9, A5, A6)
-save(fileForSaving, 'IQFStats')% Statistics of IQF Value (Mean,stdev etc)
 end %Going through set of images
 guidata(hObject,handles);
 
@@ -167,13 +252,12 @@ j=1;
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
     PathName_Naming, FilterIndex_Naming, extension);
 pixelSpacing = DICOMData.PixelSpacing(1);
-IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 [SigmaPixels] = determineMTF(IDicomOrig);
 [attenuation] = getSpectraAttens(DICOMData, thickness);
 % Calculate the blurred disks and store them
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
-[cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation)
+[cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation);
 %Calculate necessary amount of padding
 [q1, q2] = size(attenDisks(:,:,1)); padAmnt = (q1+1)/2;
 %Open Image and Obtain Point
@@ -196,15 +280,6 @@ set(gca,'xscale','log'); set(gca,'yscale','log')
 axis([ 10^-2 10 0.01 10])  
 hold on; formatSpec = 'R^2 = %f';
 textBox = sprintf(formatSpec, r2); text(1,1,textBox)
-guidata(hObject,handles);
-
-% --- Executes on selection change in ShapeSelect.
-function ShapeSelect_Callback(hObject, eventdata, handles)
-%Allows you to select a type of shape for the inserted disk
-%Will be useful for making different lesion sizes
-contents = cellstr(get(hObject,'String'));
-%returns ShapeSelect contents as cell array
-handles.shape = contents{get(hObject,'Value')};
 guidata(hObject,handles);
 
 % --- Executes during object creation, after setting all properties.
@@ -265,8 +340,6 @@ v.FrameRate = fps; open(v)
 close(v)
 guidata(hObject,handles);
 
-
-
 % --- Executes on button press in Thicknesses_Slider.
 function Thicknesses_Slider_Callback(hObject, eventdata, handles)
 %Takes Levels and IQF and makes a slider where you can look at the
@@ -297,14 +370,7 @@ function plotterfcn(vars)
     % Plots the image
     imshow(vars.B(:,:,get(vars.slider1_handle,'Value')));
     title(num2str(get(vars.slider1_handle,'Value')));
-function NumImageImport_Callback(hObject, eventdata, handles)
-%Allows you to say how many images you want to analyze
-global NumImageAnalyze
-NumImageAnalyze = str2double(get(hObject,'String'));
-guidata(hObject,handles);
-
-
-
+   
 % --- Executes during object creation, after setting all properties.
 function NumImageImport_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
@@ -313,130 +379,13 @@ end
 
 % --- Executes on button press in Plot_IsoContour.
 function Plot_IsoContour_Callback(hObject, eventdata, handles)
-%Plots a contour image of the IQF Image
-%Load and flip
-global IQF
-imageArray = flipud(IQF.IQFFull);
-%Plot
-%Right now this is arbitrary
+global IQFFull
+imageArray = flipud(IQFFull);
 contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
 figure
 contourf(imageArray, contourSizes)
 % colormap(gray)
 colorbar
-guidata(hObject,handles);
-
-
-% --- Executes on button press in ImportMATs.
-function ImportMATs_Callback(hObject, eventdata, handles)
-%Allows you to import previous data files to analyze them later on
-global levels IQF
-[FileName,PathName,FilterIndex] = uigetfile;
-full_file_mat = [PathName,'\',FileName];
-storedStructure = load(full_file_mat,'-mat');
-IQF = (storedStructure(:,:,1)); 
-IQF = (storedStructure.IQF(:,:,1)); 
-[FileName,PathName,FilterIndex] = uigetfile;
-full_file_mat = [PathName,'\',FileName];
-storedStructure = load(full_file_mat,'-mat');
-levels = (storedStructure.levels); 
-guidata(hObject,handles);
-
-
-
-% --- Executes on button press in GenLambdasAtPoint.
-function GenLambdasAtPoint_Callback(hObject, eventdata, handles)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%Generate Lambda of point and compare with lambda of region with white
-%noise added in
-%Doesn't do anything useful yet
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-global magn pixel FileName_Naming NumImageAnalyze part1 part2 shape %I_dicom_orig
-global levels IQF PathName_Naming FilterIndex_Naming extension cutoffs
-global attenuation thickness diameter SigmaPixels
-j=1;
-[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-pixelSpacing = DICOMData.PixelSpacing(1);
-IDicomOrig(all(IDicomOrig>10000,2),:)=[];
-%% Calculate the blurred disks and store them
-[SigmaPixels] = determineMTF(IDicomOrig);
-[attenuation] = getSpectraAttens(DICOMData, thickness);
-radius = ((diameter.*0.5)./(pixelSpacing*magn));
-[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
-[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
-[q1, q2] = size(attenDisk(:,:,1));
-padAmnt = floor((q1)/2);
-% Expand image s.t. the edges go out 250 pixel worth of the reflection
-IDCMExpanded = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
-%Obtain Point
-figure; imshow(IDCMExpanded, []);
-[xSel,ySel] = ginput(1); close;  % [x, y]]
-% Expand image s.t. the edges go out 250 pixel worth of the reflection
-centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt) ;
-%Add in disk
-nDiam = length(diameter);
-nThickness = length(attenuation);
-meanImg = mean2(centerImage);
-noiseAmplitude = [0*meanImg, .005*meanImg, .01*meanImg, .05*meanImg,...
-    .1*meanImg, .2*meanImg, .3*meanImg, .5*meanImg, .6*meanImg,...
-    .8*meanImg, 1*meanImg];
-%Scrolls through different levels of noise
-for i = 1:11
-noiseAmnt = noiseAmplitude(i);
-lambda = zeros(nDiam, nThickness);
-lambdaNoise = zeros(nDiam, nThickness);
-%Creates test statistic for each thickness/diameter
- for j = 1:nDiam
-     for k = 1:nThickness
-        negDisk = attenDisk(:,:,j);
-         avgROI = mean2(centerImage);
-         attenDisks = negDisk*((avgROI-50)'*(attenuation(k) - 1)); %Is my w=gs-gn
-         imgWDisk = attenDisks+centerImage;
-         imgWDiskNoise = imgWDisk+(noiseAmnt * 2*(rand(size(imgWDisk))-.5));  %Is my gtest
-         centerImageNoise = centerImage + (noiseAmnt * 2*(rand(size(centerImage))-.5));
-         w = attenDisks(:);
-         wNoise = attenDisks(:) + (noiseAmnt * 2*(rand(size(attenDisks(:)))-.5));
-         gTest = imgWDisk(:);
-         gTestNoise = imgWDiskNoise(:);
-
-         lambda(j,k) = w'*gTest;
-         lambdaNoise(j,k) = wNoise'*gTestNoise;
-         %To do a T test
-%          h(j,k) = ttest2(imgWDisk(:), centerImage(:));
-%          if h(j,k) == 0
-            %Shows the image if the t-test said it was undetectable
-%              figure
-%              imshow(imgWDisk,[])
-%              pause
-%              close
-%          end
-%          hNoise(j,k) = ttest2(imgWDiskNoise(:), centerImageNoise(:));     
-     end
- end
-%Lets you see test stat for each level of noise
-lambda;
-lambdaNoise
-% h;
-% hNoise;
-lambda2_2(i) = lambdaNoise(1,1);
-lambdasmall_small(i) = lambdaNoise(9,9);
-% pause
-end
-avgArea = mean2(centerImage)
-stDevArea = std2(centerImage)
-%Generate other 50 features here! :)
-%Figure out what to save and what to compare and things like that.
-figure
-scatter(noiseAmplitude./meanImg, lambda2_2)
-xlabel('Noise Amount (as fraction of Average image Value')
-ylabel('Threshold Lambda Values')
-title('Threshold Lambda Values for 2 cm diam and 2 mm thick disk')
-figure
-scatter(noiseAmplitude./meanImg, lambdasmall_small)
-xlabel('Noise Amount (as fraction of Average image Value')
-ylabel('Threshold Lambda Values')
-title('Threshold Lambda Values for small diam and small thickness')
-%Calculate IQF Values and table and stuff.
 guidata(hObject,handles);
 
 % --- Executes on button press in ConfirmCorrectCalcs.
@@ -471,8 +420,6 @@ centerImage = IDCMExpanded(ySel-padAmnt:ySel+padAmnt, xSel-padAmnt:xSel+padAmnt)
 [lambdaNPW, lambdaFFT,lambdaConv] = confirmCalcs(centerImage,attenuation, radius,...
     attenDisks, thickness, diameter, cutoffs, pixelSpacing)
 guidata(hObject,handles);
-
-
 
 % --- Executes on button press in YesNoSituation.
 function YesNoSituation_Callback(hObject, eventdata, handles)
@@ -530,4 +477,114 @@ shape = handles.shape;
 [attenDisk] = circle_roi4(radius, shape, SigmaPixels);
 
 [cutoffs] = calcAFC(IDicomOrig,attenDisk,diameter, attenuation)
+guidata(hObject,handles);
+
+% --- Executes on button press in pushbutton20.
+function pushbutton20_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton20 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global magn FileName_Naming NumImageAnalyze part1 part2
+global levels PathName_Naming FilterIndex_Naming extension cutoffs
+global diameter thickness attenuation SigmaPixels shape
+j = 1 %Does calculation for each image that was selected
+%% Pre-processing data
+%Import the image & DICOMData    
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
+
+
+
+%Take out the phantom
+maskingMap = IDicomOrig;
+maskingMap= maskingMap./max(maskingMap(:));
+maskingMap1 = im2bw(maskingMap,0.20);
+maskingMap1 = imcomplement(maskingMap1);
+
+[labeledImage, numberOfBlobs] = bwlabel(maskingMap1);
+blobMeasurements = regionprops(labeledImage, 'area', 'Centroid');
+allAreas = [blobMeasurements.Area]; numToExtract = 1;
+
+[sortedAreas, sortIndexes] = sort(allAreas, 'descend');
+biggestBlob = ismember(labeledImage, sortIndexes(1:numToExtract));
+% Convert from integer labeled image into binary (logical) image.
+maskingMap1 = biggestBlob > 0; maxArea = max(sortedAreas);
+maskingMap1(1,:) = 0; maskingMap1(:,1) = 0;
+maskingMap1(end,:) = 0; maskingMap1(:,end) = 0;
+
+IDicomOrig = IDicomOrig .* maskingMap1;
+%Erode the image
+se = strel('disk',5,6);
+count = 1; trigger = 0;
+while trigger == 0
+maskingMap1 = imerode(maskingMap1,se);
+IDicomOrig = IDicomOrig .* maskingMap1;
+IDicomVector = IDicomOrig(:);
+IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
+reducedArea = length(IDicomVectorNoZeros);
+if reducedArea/maxArea <=0.5
+    trigger=1;
+end
+IDicomAvg = mean(IDicomVectorNoZeros);
+IDicomStdev = std(IDicomVectorNoZeros);
+end
+%See how far it's been eroded
+figure
+imshow(IDicomOrig,[])
+
+IDicomOrig(all(IDicomOrig==0,2),:)=[];
+IDicomOrig(:,all(IDicomOrig==0,1))=[];
+figure
+imshow(IDicomOrig,[])
+
+im = IDicomOrig;
+LargestInscribedImage(im)
+
+
+
+
+pause
+
+
+
+
+% 
+% [labeledImage, numberOfBlobs] = bwlabel(maskingMap1);
+% blobMeasurements = regionprops(labeledImage, 'area', 'Centroid', 'BoundedBox', 'FilledImage');
+% allAreas = [blobMeasurements.Area]; numToExtract = 1;
+% 
+% %Find way to get only the nonzero section
+% something like the bounded box
+% or filledimage
+% %And then erode from the top,L/R, bot, in order to get rid of all zero
+% %values.
+% 
+% Or... Delete any row / column that is all zero... because then I would have my bounding box
+%     
+% or any row column that contains a zero
+out1 = IDicomOrig(all(IDicomOrig,2),:);
+figure
+imshow(out1,[])
+out2 = out1(all(out1,1),:); % Probably for columns. 
+figure
+imshow(out2, [])
+%Then take FFT of this, and then turn to 2d and then find slope. 
+
+
+%In this....
+%Take image, erode it, Take FFT of it... that is my NPS
+
+%average that NPS to a 1D NPS
+
+guidata(hObject,handles);
+
+
+
+% --- Executes on button press in pushbutton21.
+function pushbutton21_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton21 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
 guidata(hObject,handles);
