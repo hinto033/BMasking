@@ -67,17 +67,30 @@ function SelectFile_Callback(hObject, eventdata, handles)
 %This will allow you to analyze these files later
 global NumImageAnalyze FileName PathName FilterIndex ext
 global FileName_Naming parts part1 part2 PathName_Naming FilterIndex_Naming extension
+global isMultipleFiles
 %%Opens up dialogue box to import a DICOM file of your choosing
 [FileName,PathName,FilterIndex] = uigetfile('*.*', 'Select Multiple Files', 'MultiSelect', 'on')
 %Stores filepath
-NumImageAnalyze = length(FileName);
-FileName_Naming = FileName; PathName_Naming = PathName
+NumImageAnalyze = length(FileName)
+PathName_Naming = PathName
+isMultipleFiles = iscellstr(FileName)
 FilterIndex_Naming = FilterIndex;
-for j = 1:NumImageAnalyze
-    [pathstr,name,ext] = fileparts([PathName,'\',FileName{j}])
-    extension{j} = ext; s=pathstr;
+if iscellstr(FileName) == 0
+    [pathstr,name,ext] = fileparts([PathName,'\',FileName])
+    extension{1} = ext; s=pathstr;
     parts=regexp(s,'\','split');
-    parts = fliplr(parts); part1{j} = parts(3); part2{j} = parts(2);
+    parts = fliplr(parts); part1{1} = parts(3); part2{1} = parts(2);
+    FileName_Naming = cell(1)
+    FileName_Naming{1} = FileName
+    NumImageAnalyze = 1
+else
+    for j = 1:NumImageAnalyze
+        FileName_Naming = FileName
+        [pathstr,name,ext] = fileparts([PathName,'\',FileName{j}])
+        extension{j} = ext; s=pathstr;
+        parts=regexp(s,'\','split');
+        parts = fliplr(parts); part1{j} = parts(3); part2{j} = parts(2);
+    end
 end
 guidata(hObject,handles);
 
@@ -98,15 +111,21 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 global magn FileName_Naming NumImageAnalyze part1 part2
 global levels PathName_Naming FilterIndex_Naming extension cutoffs
 global diameter thickness attenuation SigmaPixels shape
-for j = 2:NumImageAnalyze %Does calculation for each image that was selected
+for j = 1:NumImageAnalyze %Does calculation for each image that was selected
 %% Pre-processing data
-%Import the image & DICOMData    
+%Import the image & DICOMData   
+tic
 [IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
     PathName_Naming, FilterIndex_Naming, extension);
+toc
 disp('Calculating the MTF...')
+tic
 [SigmaPixels] = determineMTF(IDicomOrig);
+toc
 disp('Calculating the disk attenuations based on KVP, mAs...')
+tic
 [attenuation] = getSpectraAttens(DICOMData, thickness);
+toc
 % set guess of time to calculate
 timePerImage = 20; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1)
@@ -114,22 +133,33 @@ pause(2)
 disp('Calculating lesions of appropriate attenuations/shapes...')
 pixelSpacing = DICOMData.PixelSpacing(1);
 radius = ((diameter.*0.5)./(pixelSpacing*magn));
+tic
 [attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+toc
 %% Doing Calculations
+tic
 disp('Calculating thresholds for each lesion diameter...')
-[cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation);
+% [cutoffs] = calcThresholds(IDicomOrig,attenDisks,diameter, attenuation);
+toc
 disp('Calculating all IQF values and IQF Maps...')
-[levels, IQF] = calcTestStat5(IDicomOrig,attenuation, radius,...
+tic
+% [levels, IQF] = calcTestStat5(IDicomOrig,attenuation, radius,...
+%     attenDisks, thickness, diameter, cutoffs, pixelSpacing);
+% cutoffs = ones(24,1)*1e-10
+[levels, IQF] = calcTestStat7(IDicomOrig,attenuation, radius,...
     attenDisks, thickness, diameter, cutoffs, pixelSpacing);
+toc
 disp('Performing Exponential fit on the C/D Curves...')
+tic
 [aMat, bMat, RSquare] = PerformExpFit(levels, pixelSpacing, diameter);
+toc
+pause
 %% Calculate Statistics that are relevant to test
 % mean, stdev, sum, entropy, kurtosis, skewness, 5th percentile, 25th
 % percentile, 75th percentile, 95th percentile, GLCM Contrast, GLCM
 % correlation, GLCM Energy, (All for full, small, med, large)
 % GLCM Homogeneity, BIRADS, VBD
 disp('Calculating the statistics of the IQF levels...')
-stats = zeros(15,5); 
 A1 = char(part1{j});
 A2 = char(part2{j});
 A3 = char(FileName_Naming{j});
@@ -141,22 +171,23 @@ bMatVector = bMat(:);
 bMatVectorNoZeros = bMatVector(bMatVector~=0);
 bVals = bMatVectorNoZeros;
 
-imgAMean = mean(aVals); stats(1,5) = imgAMean;
-imgAMedian = median(aVals); stats(2,5) = imgAMedian;
-imgASum = sum(aVals); stats(3,5) = imgASum;
-imgA10thPercentile = prctile(aVals,10); stats(4,5) = imgA10thPercentile;
-imgA25thPercentile = prctile(aVals,25); stats(5,5) = imgA25thPercentile;
-imgA75thPercentile = prctile(aVals,75); stats(6,5) = imgA75thPercentile;
-imgA90thPercentile = prctile(aVals,90); stats(7,5) = imgA90thPercentile;
-imgBMean = mean(bVals); stats(8,5) = imgBMean;
-imgBMedian = median(bVals); stats(9,5) = imgBMedian;
-imgBSum = sum(bVals); stats(10,5) = imgBSum;
-imgB10thPercentile = prctile(bVals,10); stats(11,5) = imgB10thPercentile;
-imgB25thPercentile = prctile(bVals,25); stats(12,5) = imgB25thPercentile;
-imgB75thPercentile = prctile(bVals,75); stats(13,5) = imgB75thPercentile;
-imgB90thPercentile = prctile(bVals,90); stats(14,5) = imgB90thPercentile;
+stats.imgA.Mean = mean(aVals);
+stats.imgA.Median = median(aVals); 
+stats.imgA.Sum = sum(aVals); 
+stats.imgA.Pctile10 = prctile(aVals,10);
+stats.imgA.Pctile25 = prctile(aVals,25); 
+stats.imgA.Pctile75 = prctile(aVals,75);
+stats.imgA.Pctile90 = prctile(aVals,90);
+stats.imgB.Mean = mean(bVals);
+stats.imgB.Median = median(bVals); 
+stats.imgB.Sum = sum(bVals); 
+stats.imgB.Pctile10 = prctile(bVals,10); 
+stats.imgB.Pctile25 = prctile(bVals,25);
+stats.imgB.Pctile75 = prctile(bVals,75); 
+stats.imgB.Pctile90 = prctile(bVals,90); 
 
 %1 = full, 2=small, 3=medium, 4=large
+names = {'Full', 'Small', 'Medium','Large'};
 for y = 1:4
     if y==1; img = IQF.Full;
     elseif y==2; img = IQF.Small;
@@ -166,26 +197,40 @@ for y = 1:4
     imgVector = img(:);
     imgVectorNoZeros = imgVector(imgVector~=0);
     IQFvals = imgVectorNoZeros;
-    imgMean = mean(IQFvals); stats(1,y) = imgMean;
-    imgMedian = median(IQFvals); stats(2,y) = imgMedian;
-    imgStDev = std(IQFvals); stats(3,y) = imgStDev;
-    imgSum = sum(IQFvals); stats(4,y) = imgSum;
-    imgEntropy = entropy(IQFvals); stats(5,y) = imgEntropy;
-    imgKurtosis = kurtosis(IQFvals); stats(6,y) = imgKurtosis;
-    imgSkewness = skewness(IQFvals); stats(7,y) = imgSkewness;
-    img10thPercentile = prctile(IQFvals,10); stats(8,y) = img10thPercentile;
-    img25thPercentile = prctile(IQFvals,25); stats(9,y) = img25thPercentile;
-    img75thPercentile = prctile(IQFvals,75); stats(10,y) = img75thPercentile;
-    img90thPercentile = prctile(IQFvals,90); stats(11,y) = img90thPercentile;
+    imgMean = mean(IQFvals); stats.(names{y}).Mean = imgMean;
+    imgMedian = median(IQFvals); stats.(names{y}).Median = imgMedian;
+    imgStDev = std(IQFvals); stats.(names{y}).StDev = imgStDev;
+    imgSum = sum(IQFvals); stats.(names{y}).Sum = imgSum;
+    imgEntropy = entropy(IQFvals); stats.(names{y}).Entropy = imgEntropy;
+    imgKurtosis = kurtosis(IQFvals); stats.(names{y}).Kurtosis = imgKurtosis;
+    imgSkewness = skewness(IQFvals); stats.(names{y}).Skewness = imgSkewness;
+    img10thPercentile = prctile(IQFvals,10); stats.(names{y}).Pctile10 = img10thPercentile;
+    img25thPercentile = prctile(IQFvals,25); stats.(names{y}).Pctile25 = img25thPercentile;
+    img75thPercentile = prctile(IQFvals,75); stats.(names{y}).Pctile75 = img75thPercentile;
+    img90thPercentile = prctile(IQFvals,90); stats.(names{y}).Pctile90 = img90thPercentile;
     %Calculate GLCM
     numBins = 64;
     glcm = graycomatrix(IQF.Full, 'NumLevels',numBins, 'GrayLimits', []);
     statsGLCM = graycoprops(glcm);
-    imgGLCMContrast = statsGLCM.Contrast; stats(12,y) = imgGLCMContrast;
-    imgGLCMCorrelation = statsGLCM.Correlation; stats(13,y) = imgGLCMCorrelation;
-    imgGLCMEnergy = statsGLCM.Energy; stats(14,y) = imgGLCMEnergy;
-    imgGLCMHomogeneity = statsGLCM.Homogeneity; stats(15,y) = imgGLCMHomogeneity;
+    imgGLCMContrast = statsGLCM.Contrast; stats.(names{y}).GLCMContrast = imgGLCMContrast;
+    imgGLCMCorrelation = statsGLCM.Correlation; stats.(names{y}).GLCMCorr = imgGLCMCorrelation;
+    imgGLCMEnergy = statsGLCM.Energy; stats.(names{y}).GLCMEnergy = imgGLCMEnergy;
+    imgGLCMHomogeneity = statsGLCM.Homogeneity; stats.(names{y}).GLCMHomog = imgGLCMHomogeneity;
 end
+
+stats.DICOMData.KVP = DICOMData.KVP;
+stats.DICOMData.AnodeTargetMat = DICOMData.AnodeTargetMaterial;
+stats.DICOMData.Spacing = DICOMData.PixelSpacing(1);
+stats.DICOMData.ExposureuAs = DICOMData.ExposureInuAs;
+stats.DICOMData.Position = DICOMData.ViewPosition;
+stats.DICOMData.XRayCurrent = DICOMData.XrayTubeCurrent;
+stats.DICOMData.ImageOrientation = DICOMData.SeriesDescription;
+stats.DICOMData.FilterMaterial = DICOMData.FilterMaterial;
+stats.DICOMData.FilterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2; 
+
+stats.Data.Thresholds = cutoffs;
+stats.Data.MTFSigmaPixels = SigmaPixels;
+stats.Data.Attenuations = attenuation;
 
 %% Export images/data as .mats
 disp('Saving all Data...')

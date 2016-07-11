@@ -32,12 +32,6 @@ if reducedArea/maxArea <=0.5
 end
 IDicomAvg = mean(IDicomVectorNoZeros);
 IDicomStdev = std(IDicomVectorNoZeros);
-% scatter(count, IDicomAvg)
-% hold on
-% scatter(count, IDicomStdev)
-% count = count+1
-% hold on
-% drawnow
 end
 % Determine the noise amount or just assume it is 1/f3
 % For now I am doing 1/f3
@@ -54,44 +48,41 @@ for j = 1:r
         end
     end
 end
+%Create several patches
+tic
+nPatches = 50;
+patches = zeros(r,c,nPatches);
+for j = 1:nPatches
+    % Create patch
+    imNoise = randn(r,c); imFFT = fftshift(fft2(imNoise));
+    imFFTf3Noise = frequencyMap.*imFFT;
+    imf3Noise = ifft2(ifftshift(imFFTf3Noise));
+    Avg = mean(imf3Noise(:)); stDev = std(imf3Noise(:));
+    %Adjust this noise to have same mean/stdev as mammogram
+    im1StdevAdj = (imf3Noise-Avg)*(IDicomStdev/stDev);
+    im1Final = real(im1StdevAdj + IDicomAvg);
+    patches(:,:,j) = im1Final;
+end
+toc
+
+tic
 for p = 1:length(diameter) %For each Diam
     negDisk = attenDisks(:,:,p);
     for k = 1:length(attenuation) %For each Thickness
         numCorrect = 0;
         for numTries = 1:10% Number of times to do
-            %% Create 1st patch
-            imNoise1 = randn(r,c); imFFT1 = fftshift(fft2(imNoise1));
-            %Multiply IFFT by 1/f3 map
-            imFFTf3Noise1 = frequencyMap.*imFFT1;
-            %IFFT to make 1/f3 noise image
-            imf3Noise1 = ifft2(ifftshift(imFFTf3Noise1)); 
-%             figure; imshow(imf3Noise1,[])
-            Avg1 = mean(imf3Noise1(:)); stDev1 = std(imf3Noise1(:));
-            %Adjust this noise to have same mean/stdev as mammogram
-            im1StdevAdj = (imf3Noise1-Avg1)*(IDicomStdev/stDev1);
-            im1Final = real(im1StdevAdj + IDicomAvg);
-            %Calculate the disk (which is my signal to detect)
-            img1Avg = mean2(im1Final);
-            attenDisk = negDisk.*((img1Avg-50)'*(attenuation(k) - 1));
-            attenDisk = negDisk.*((im1Final-50)'*(attenuation(k) - 1));
+            p1 = randi([1,nPatches]);
+            p2 = randi([1,nPatches]);
+            img1 = patches(:,:,p1);
+            img2 = patches(:,:,p2);
             %Insert Disk into that image
-            imgWDisk = attenDisk+im1Final;
+            attenDisk = negDisk.*((img1-50)'*(attenuation(k) - 1));
+            imgWDisk = attenDisk+img1;
+            imgWoDisk = img2;
             %Perform NPWMF for the signal-present image
             wnpw = attenDisk(:); gTest = imgWDisk(:);
             lambda_1 = wnpw'*gTest;
-%             figure; imshow(imgWDisk,[])
-            %% Create 2nd patch
-            imNoise2 = randn(r,c); imFFT2 = fftshift(fft2(imNoise2));
-            %Multiply IFFT by 1/f3 map
-            imFFTf3Noise2 = frequencyMap.*imFFT2;
-            %IFFT to make 1/f3 noise image
-            imf3Noise2 = ifft2(ifftshift(imFFTf3Noise2));
-            Avg2 = mean(imf3Noise2(:));stDev2 = std(imf3Noise2(:));
-            %Adjust this noise to have same mean/stdev as mammogram
-            im2StdevAdj = (imf3Noise2-Avg2)* (IDicomStdev/stDev2);
-            im2Final = real(im2StdevAdj + IDicomAvg);
-            %Perform NPWMF for the signal-Absent image
-            wnpw = attenDisk(:); gTest = im2Final(:);
+            gTest = imgWoDisk(:);
             lambda_2 = wnpw'*gTest;
             %Make choice of larger lambda value as my guess
             if lambda_1 > lambda_2 %if the Correct guess
@@ -99,10 +90,8 @@ for p = 1:length(diameter) %For each Diam
                 percentCorrect = numCorrect/numTries;
             else  %If the Incorrect guess
             end
-            %Store lambda values
             lambSignal(numTries) = lambda_1;
             lambNoSignal(numTries) = lambda_2;
-
         end
         percentCorrect = numCorrect/numTries;
         endingPercentages(p,k) = percentCorrect;
@@ -111,50 +100,27 @@ for p = 1:length(diameter) %For each Diam
         elseif percentCorrect <= .7%.65%If was too inaccurate .625?
             numCorrect = 0;
             for numTries = 1:40% Number of times to do
-                %% Create 1st patch
-                imNoise1 = randn(r,c); imFFT1 = fftshift(fft2(imNoise1));
-                %Multiply IFFT by 1/f3 map
-                imFFTf3Noise1 = frequencyMap.*imFFT1;
-                %IFFT to make 1/f3 noise image
-                imf3Noise1 = ifft2(ifftshift(imFFTf3Noise1)); 
-    %             figure; imshow(imf3Noise1,[])
-                Avg1 = mean(imf3Noise1(:)); stDev1 = std(imf3Noise1(:));
-                %Adjust this noise to have same mean/stdev as mammogram
-                im1StdevAdj = (imf3Noise1-Avg1)*(IDicomStdev/stDev1);
-                im1Final = real(im1StdevAdj + IDicomAvg);
-                %Calculate the disk (which is my signal to detect)
-                img1Avg = mean2(im1Final);
-                attenDisk = negDisk.*((img1Avg-50)'*(attenuation(k) - 1));
-                attenDisk = negDisk.*((im1Final-50)'*(attenuation(k) - 1));
-                %Insert Disk into that image
-                imgWDisk = attenDisk+im1Final;
-                %Perform NPWMF for the signal-present image
-                wnpw = attenDisk(:); gTest = imgWDisk(:);
-                lambda_1 = wnpw'*gTest;
-    %             figure; imshow(imgWDisk,[])
-                %% Create 2nd patch
-                imNoise2 = randn(r,c); imFFT2 = fftshift(fft2(imNoise2));
-                %Multiply IFFT by 1/f3 map
-                imFFTf3Noise2 = frequencyMap.*imFFT2;
-                %IFFT to make 1/f3 noise image
-                imf3Noise2 = ifft2(ifftshift(imFFTf3Noise2));
-                Avg2 = mean(imf3Noise2(:));stDev2 = std(imf3Noise2(:));
-                %Adjust this noise to have same mean/stdev as mammogram
-                im2StdevAdj = (imf3Noise2-Avg2)* (IDicomStdev/stDev2);
-                im2Final = real(im2StdevAdj + IDicomAvg);
-                %Perform NPWMF for the signal-Absent image
-                wnpw = attenDisk(:); gTest = im2Final(:);
-                lambda_2 = wnpw'*gTest;
-                %Make choice of larger lambda value as my guess
-                if lambda_1 > lambda_2 %if the Correct guess
-                    numCorrect = numCorrect + 1;
-                    percentCorrect = numCorrect/numTries;
-                else  %If the Incorrect guess
-                end
-                %Store lambda values
-                lambSignal(numTries) = lambda_1;
-                lambNoSignal(numTries) = lambda_2;
-
+            p1 = randi([1,nPatches]);
+            p2 = randi([1,nPatches]);
+            img1 = patches(:,:,p1);
+            img2 = patches(:,:,p2);
+            %Insert Disk into that image
+            attenDisk = negDisk.*((img1-50)'*(attenuation(k) - 1));
+            imgWDisk = attenDisk+img1;
+            imgWoDisk = img2;
+            %Perform NPWMF for the signal-present image
+            wnpw = attenDisk(:); gTest = imgWDisk(:);
+            lambda_1 = wnpw'*gTest;
+            gTest = imgWoDisk(:);
+            lambda_2 = wnpw'*gTest;
+            %Make choice of larger lambda value as my guess
+            if lambda_1 > lambda_2 %if the Correct guess
+                numCorrect = numCorrect + 1;
+                percentCorrect = numCorrect/numTries;
+            else  %If the Incorrect guess
+            end
+            lambSignal(numTries) = lambda_1;
+            lambNoSignal(numTries) = lambda_2;
             end
             
             percentCorrect = numCorrect/numTries;
@@ -172,6 +138,4 @@ for p = 1:length(diameter) %For each Diam
         end
     end
 end
-format short
-
-format long
+toc

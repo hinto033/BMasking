@@ -19,9 +19,9 @@ for p = 1:pMax %All diameters
     for k = 1:kMax %All attenuations
         attenImg = ((IDicomOrig-50)'*(attenuation(k) - 1))';
         attenImgSquared = attenImg.*attenImg;    
-        %If diameter of disk is greater or equal to 2 mm ->Do FFT
-        if diameter(p)>=2
-%             tic
+        %If diameter of disk is greater than 2 mm ->Do FFT
+        if diameter(p)>2
+            tic
             origPad = padarray(IDicomOrig,[padAmnt padAmnt],'symmetric','both');
             [a,b] = size(origPad);
             %Tissue Image
@@ -40,16 +40,16 @@ for p = 1:pMax %All diameters
             D4 = ifft2(D3);%.^2;
             tissueImg2b = D4(padAmnt+1:padAmnt+l, padAmnt+1:padAmnt+w);
             testStatImg = tissueImg2a + tissueImg2b;
-%             toc
-        %Do Conv if diameter less than 2 mm 
-        elseif diameter(p)<2
+            toc
+        %Do Conv if diameter less or equal to 2 mm 
+        elseif diameter(p)<=2
             %(Because faster than fft for small signals)
-%             tic            
+            tic            
             convTissue = attenImg.*IDicomOrig;
             tissue_img = conv2(convTissue,binDisk, 'same' );
             diskImg = conv2(attenImgSquared,binDisk, 'same' ); %Maybe Valid
             testStatImg = tissue_img + diskImg;  
-%             toc
+            toc
         end
         j = convImage2(:,:, p);
         j(testStatImg<=cutoffs(p))=thickness(k);
@@ -84,31 +84,3 @@ IQF.Large = IQFLarge .* maskingMap;
 IQF.Med = IQFMed .* maskingMap;
 IQF.Small = IQFSmall .* maskingMap;
 levels = convImage2;
-% figure
-% imshow(IQF.Full,[])
-% figure
-% imshow(IQF.Large,[])
-% figure
-% imshow(IQF.Med,[])
-% figure
-% imshow(IQF.Small,[])
-% 
-% IQFVector = IQF.Full(:);
-% IQFVectorNoZeros = IQFVector(IQFVector~=0);
-% IQFavgIQF = mean(IQFVectorNoZeros);
-% IQFstdevIQF = std(IQFVectorNoZeros);
-% %%
-% %Calculate the percent of the IQF above a certain value (Look at John
-% %notes0
-% %Area that has the top 10% of IQF Values
-% num = length(IQFVectorNoZeros);
-% tenPercentCutoff = num*0.9;
-% IQFVectorNoZerosSorted = sort(IQFVectorNoZeros);
-% IQF10Area = IQFVectorNoZerosSorted(num*0.9:end);
-% avgIQF10 = mean(IQF10Area);
-% stdIQF10 = std(IQF10Area);
-% %Area that has the top 25% of IQF Values
-% IQF25Area = IQFVectorNoZerosSorted(num*0.75:end);
-% avgIQF25 = mean(IQF25Area);
-% stdIQF25 = std(IQF25Area);
-% IQF.Stats = [IQFavgIQF, avgIQF10, avgIQF25;IQFstdevIQF, stdIQF10, stdIQF25]
