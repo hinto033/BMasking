@@ -45,6 +45,8 @@ else
     error(errmsg)
 end
 
+%Remove blank top rows (Important for padding)
+IDicomOrig(all(IDicomOrig>10000,2),:)=[];
 
 global shape
 shape = 'Round';

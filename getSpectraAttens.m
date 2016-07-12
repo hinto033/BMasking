@@ -1,4 +1,5 @@
 function [attenuation] = getSpectraAttens(DICOMData, thickness)
+global SimulationX
 if isempty(DICOMData)
     msg = 'no DICOM Data imported'; 
     error(msg)
@@ -8,7 +9,9 @@ kVp = DICOMData.KVP;
 anodeTargetMaterial = DICOMData.AnodeTargetMaterial;
 mAs = DICOMData.ExposureInuAs / 1e3;
 % energies0=[1:0.1:150];
-initcoef; initcoef2; initcoef3;
+initcoef;
+initcoef2;
+initcoef3;
 if anodeTargetMaterial == 'MOLYBDENUM';
     coef = SimulationX.data.coefMoly;
     energies = SimulationX.data.energiesMoly;
@@ -19,7 +22,7 @@ elseif anodeTargetMaterial == 'RHODIUM';
     coef = SimulationX.data.coefRhodium;
     energies = SimulationX.data.energiesRhodium;
 end
-if isempty(coef)|isempty(energies)
+if isempty(coef)|isempty(energies);
    error('no proper attenuant selected') 
 end
 %% Calculate the original unfiltered spectrum (From funcspectre)

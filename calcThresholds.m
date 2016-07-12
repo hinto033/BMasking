@@ -1,44 +1,10 @@
-function [cutoffs] = calcThresholds(IDicomOrig, attenDisks,...
-    diameter, attenuation)
+function [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisks,...
+    diameter, attenuation,beta)
+%% Create Frequency Map based on beta
 [r,c] = size(attenDisks(:,:,1));
-maskingMap = IDicomOrig;
-maskingMap= maskingMap./max(maskingMap(:));
-maskingMap1 = im2bw(maskingMap,0.20);
-maskingMap1 = imcomplement(maskingMap1);
-
-[labeledImage, numberOfBlobs] = bwlabel(maskingMap1);
-blobMeasurements = regionprops(labeledImage, 'area', 'Centroid');
-allAreas = [blobMeasurements.Area]; numToExtract = 1;
-
-[sortedAreas, sortIndexes] = sort(allAreas, 'descend');
-biggestBlob = ismember(labeledImage, sortIndexes(1:numToExtract));
-% Convert from integer labeled image into binary (logical) image.
-maskingMap1 = biggestBlob > 0; maxArea = max(sortedAreas);
-maskingMap1(1,:) = 0; maskingMap1(:,1) = 0;
-maskingMap1(end,:) = 0; maskingMap1(:,end) = 0;
-
-IDicomOrig = IDicomOrig .* maskingMap1;
-
-se = strel('disk',5,6);
-count = 1; trigger = 0;
-while trigger == 0
-maskingMap1 = imerode(maskingMap1,se);
-IDicomOrig = IDicomOrig .* maskingMap1;
-IDicomVector = IDicomOrig(:);
-IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
-reducedArea = length(IDicomVectorNoZeros);
-if reducedArea/maxArea <=0.5
-    trigger=1;
-end
-IDicomAvg = mean(IDicomVectorNoZeros);
-IDicomStdev = std(IDicomVectorNoZeros);
-end
-% Determine the noise amount or just assume it is 1/f3
-% For now I am doing 1/f3
 endingPercentages = zeros(length(diameter),length(attenuation));
 frequencyMap = ones(r,c);
 center = [round((r/2)+1), round((c/2)+1)];
-beta = 3;
 for j = 1:r
     for h = 1:c
         if j==center(2) && h == center(1)
@@ -48,8 +14,7 @@ for j = 1:r
         end
     end
 end
-%Create several patches
-tic
+%% Create several patches to use for the thresholding
 nPatches = 50;
 patches = zeros(r,c,nPatches);
 for j = 1:nPatches
@@ -63,79 +28,52 @@ for j = 1:nPatches
     im1Final = real(im1StdevAdj + IDicomAvg);
     patches(:,:,j) = im1Final;
 end
-toc
-
-tic
+%% Perform 2AFC Method
 for p = 1:length(diameter) %For each Diam
     negDisk = attenDisks(:,:,p);
+    kk = sprintf('Calculating threshold at diameter = %0.2f mm', diameter(p));
+    disp(kk)
     for k = 1:length(attenuation) %For each Thickness
-        numCorrect = 0;
-        for numTries = 1:10% Number of times to do
-            p1 = randi([1,nPatches]);
-            p2 = randi([1,nPatches]);
-            img1 = patches(:,:,p1);
-            img2 = patches(:,:,p2);
-            %Insert Disk into that image
-            attenDisk = negDisk.*((img1-50)'*(attenuation(k) - 1));
-            imgWDisk = attenDisk+img1;
-            imgWoDisk = img2;
-            %Perform NPWMF for the signal-present image
-            wnpw = attenDisk(:); gTest = imgWDisk(:);
-            lambda_1 = wnpw'*gTest;
-            gTest = imgWoDisk(:);
-            lambda_2 = wnpw'*gTest;
-            %Make choice of larger lambda value as my guess
-            if lambda_1 > lambda_2 %if the Correct guess
-                numCorrect = numCorrect + 1;
-                percentCorrect = numCorrect/numTries;
-            else  %If the Incorrect guess
-            end
-            lambSignal(numTries) = lambda_1;
-            lambNoSignal(numTries) = lambda_2;
-        end
-        percentCorrect = numCorrect/numTries;
+        numAttempts = 10;
+        [percentCorrect, lambSignal, lambNoSignal] = doGuesses(numAttempts,...
+            patches, nPatches, negDisk, attenuation, k);
         endingPercentages(p,k) = percentCorrect;
-        fprintf('%1.2f percent correct at column %1.1f\n', percentCorrect, k)
         if percentCorrect > .7%.65%If guessed correctly enough .625?
         elseif percentCorrect <= .7%.65%If was too inaccurate .625?
-            numCorrect = 0;
-            for numTries = 1:40% Number of times to do
-            p1 = randi([1,nPatches]);
-            p2 = randi([1,nPatches]);
-            img1 = patches(:,:,p1);
-            img2 = patches(:,:,p2);
-            %Insert Disk into that image
-            attenDisk = negDisk.*((img1-50)'*(attenuation(k) - 1));
-            imgWDisk = attenDisk+img1;
-            imgWoDisk = img2;
-            %Perform NPWMF for the signal-present image
-            wnpw = attenDisk(:); gTest = imgWDisk(:);
-            lambda_1 = wnpw'*gTest;
-            gTest = imgWoDisk(:);
-            lambda_2 = wnpw'*gTest;
-            %Make choice of larger lambda value as my guess
-            if lambda_1 > lambda_2 %if the Correct guess
-                numCorrect = numCorrect + 1;
-                percentCorrect = numCorrect/numTries;
-            else  %If the Incorrect guess
-            end
-            lambSignal(numTries) = lambda_1;
-            lambNoSignal(numTries) = lambda_2;
-            end
-            
-            percentCorrect = numCorrect/numTries;
+            numCorrect = 0;  numAttempts = 40;
+            [percentCorrect, lambSignal, lambNoSignal] = doGuesses(numAttempts,...
+                patches, nPatches, negDisk, attenuation, k);
             endingPercentages(p,k) = percentCorrect;
-            fprintf('%1.2f percent correct after trying again at column %1.1f\n', percentCorrect, k)
-            
-            if percentCorrect <=0.65
-            disp('set the thresholdvalue')
-            thresh1 = mean(lambSignal); thresh2 = mean(lambNoSignal);
-            thresh3 = (thresh1+thresh2) / 2;
-            format long
-            cutoffs(p) = thresh3
-            break
+            if percentCorrect <=0.65 %set the thresholdvalue
+                thresh1 = mean(lambSignal); thresh2 = mean(lambNoSignal);
+                thresh3 = (thresh1+thresh2) / 2; cutoffs(p) = thresh3;
+                break
             end
         end
     end
 end
-toc
+end
+%%The function that does the 2AFC procedure
+function [percentCorrect, lambSignal, lambNoSignal] = doGuesses(numAttempts,...
+    patches, nPatches, negDisk, attenuation, k)
+    numCorrect = 0;
+    for numTries = 1:numAttempts% Number of times to do
+        p1 = randi([1,nPatches]); p2 = randi([1,nPatches]);
+        img1 = patches(:,:,p1); img2 = patches(:,:,p2);
+        %Insert Disk into one image
+        attenDisk = negDisk.*((img1-50)'*(attenuation(k) - 1));
+        imgWDisk = attenDisk+img1; imgWoDisk = img2;
+        %Perform NPWMF for the signal-present image
+        wnpw = attenDisk(:);
+        gTest = imgWDisk(:);  lambda_1 = wnpw'*gTest;
+        gTest = imgWoDisk(:); lambda_2 = wnpw'*gTest;
+        %Make choice of larger lambda value as my guess
+        if lambda_1 > lambda_2 %if the Correct guess
+            numCorrect = numCorrect + 1;
+            percentCorrect = numCorrect/numTries;
+        else  %If the Incorrect guess
+        end
+        lambSignal(numTries) = lambda_1; lambNoSignal(numTries) = lambda_2;
+    end
+    percentCorrect = numCorrect/numTries;
+end

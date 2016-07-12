@@ -24,5 +24,3 @@ for i = twopointfiveMm+1:2*twopointfiveMm:nRows
     end
 end
 toc
-pause
-% pause
