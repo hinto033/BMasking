@@ -38,16 +38,27 @@ for p = 1:length(diameter) %For each Diam
         [percentCorrect, lambSignal, lambNoSignal] = doGuesses(numAttempts,...
             patches, nPatches, negDisk, attenuation, k);
         endingPercentages(p,k) = percentCorrect;
-        if percentCorrect > .7%.65%If guessed correctly enough .625?
-        elseif percentCorrect <= .7%.65%If was too inaccurate .625?
+        if percentCorrect > .8%.65%If guessed correctly enough .625?
+            if k == length(attenuation); %Set threshold if at last atten
+                thresh1 = mean(lambSignal); thresh2 = mean(lambNoSignal);
+                thresh3 = (thresh1+thresh2) / 2; cutoffs(p) = thresh3;
+                break
+            end
+        elseif percentCorrect <= .8%.65%If was too inaccurate .625?
             numCorrect = 0;  numAttempts = 40;
             [percentCorrect, lambSignal, lambNoSignal] = doGuesses(numAttempts,...
                 patches, nPatches, negDisk, attenuation, k);
             endingPercentages(p,k) = percentCorrect;
-            if percentCorrect <=0.65 %set the thresholdvalue
+            if percentCorrect <=0.7 %set the thresholdvalue
                 thresh1 = mean(lambSignal); thresh2 = mean(lambNoSignal);
                 thresh3 = (thresh1+thresh2) / 2; cutoffs(p) = thresh3;
                 break
+            else
+                if k == length(attenuation); %Set threshold if at last atten
+                    thresh1 = mean(lambSignal); thresh2 = mean(lambNoSignal);
+                    thresh3 = (thresh1+thresh2) / 2; cutoffs(p) = thresh3;
+                    break
+                end
             end
         end
     end

@@ -1,4 +1,4 @@
-function [attenDisk] = circle_roi4(radius, shape, SigmaPixels)
+function [attenDisk, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags)
 diam = round(radius.*2) + 1;
 rt = diam./2;
 searchArea = ceil(max(diam.*sqrt(2)))+1;
@@ -16,6 +16,7 @@ if isequal(shape, 'Round')%shape == 'Round'
     attenDisk = zeros(searchArea,searchArea,length(radius));
     PSF = fspecial('gaussian',6,SigmaPixels); 
     attenDisk(:,:,:) = imfilter(smallDisk(:,:,:),PSF,'symmetric','conv');
+    errFlags.Lesions = 'No Error';
 elseif isequal(shape, 'Gaussian')%shape == 'Gaussian'
         %Creates Gaussian that is centered and 3*sigma = radius
     smallDisk = zeros(searchArea, searchArea, length(radius));
@@ -30,8 +31,11 @@ elseif isequal(shape, 'Gaussian')%shape == 'Gaussian'
     attenDisk = zeros(searchArea,searchArea,length(radius));
     PSF = fspecial('gaussian',6, SigmaPixels); 
     attenDisk(:,:,:) = imfilter(smallDisk(:,:,:),PSF,'symmetric','conv');
+    errFlags.Lesions = 'No Error';
 else
-    error('No currently made shape selected')
+    disp('The shape you selected is not currently supported...');
+    disp('Calculating as gaussian disks instead...');
+    errFlags.Lesions = 'No Shape Selected. Gaussian was assumed';
 end
 end
 

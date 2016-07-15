@@ -38,7 +38,6 @@ guidata(hObject, handles);
 function varargout = DICOMReplace_OutputFcn(hObject, eventdata, handles) 
 varargout{1} = handles.output;
 
-
 % --- Allows you to select the shape of the lesion you want to insert
 function ShapeSelect_Callback(hObject, eventdata, handles)
 %Allows you to select a type of shape for the inserted disk
@@ -79,17 +78,6 @@ else
 end
 guidata(hObject,handles);
 
-% --- allows you to select Masking Maps (The full masking map so far..
-function ImportMATs_Callback(hObject, eventdata, handles)
-%Allows you to import previous data files to analyze them later on
-global IQFFull
-[FileName,PathName,FilterIndex] = uigetfile;
-full_file_mat = [PathName,'\',FileName];
-storedStructure = load(full_file_mat,'-mat');
-IQFFull = (storedStructure.IQFFull(:,:,1)); 
-guidata(hObject,handles);
-
-
 % --- Main analyzing function -- Creates IQF maps and saves them.
 function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
@@ -105,26 +93,27 @@ timePerImage = 7; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
 str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
 disp('Importing the image...'); tic
-[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+[IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
     PathName_Naming, FilterIndex_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Pre-processing data
 disp('Calculating the MTF...'); tic
-[SigmaPixels] = determineMTF(IDicomOrig);
+[SigmaPixels, errFlags] = determineMTF(IDicomOrig);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating the disk attenuations based on KVP, mAs...'); tic
-[attenuation] = getSpectraAttens(DICOMData, thickness);
+[attenuation, errFlags] = getSpectraAttens(DICOMData, thickness, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Calculate the disk attenuations
 disp('Calculating lesions of appropriate attenuations/shapes...'); tic
 pixelSpacing = DICOMData.PixelSpacing(1);
 radius = ((diameter.*0.5)./(pixelSpacing));
-[attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+[attenDisks, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Remove the phantom itself
 disp('Removing the phantom and unnecessary artifacts...'); tic
 [maskingMap1, IDicomOrig, maxArea] = removePhantom(IDicomOrig);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+binaryOutline = maskingMap1;
 %% Remove excess material
 disp('Removing the outer Breast edge and Muscle...'); tic
 [maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea);
@@ -135,20 +124,21 @@ IDicomStdev = std(IDicomVectorNoZeros);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Calculate the beta value (Used for thresholding)
 disp('Calculating Beta Value...'); tic
-[beta] = deriveBeta(IDicomEroded);
+PatchSize = 256;
+[beta, errFlags] = deriveBeta(IDicomEroded, pixelSpacing, PatchSize, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Doing Calculations
 disp('Calculating thresholds for each lesion diameter...');tic
 [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisks,...
     diameter, attenuation,beta);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-disp('Calculating all IQF values and IQF Maps...'); tic
-[IQF, aMat, bMat, RSquare] = calcTestStat7(IDicomOrig,attenuation, radius,...
-    attenDisks, thickness, diameter, cutoffs, pixelSpacing);
+disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
+[IQF, aMat, bMat, RSquare, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
+    attenDisks, thickness, diameter, cutoffs, pixelSpacing,binaryOutline, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
-    part1, part2, FileName_Naming, beta, RSquare, j);
+    part1, part2, FileName_Naming, beta, RSquare, j, errFlags);
 end %Going through set of images
 guidata(hObject,handles);
 
@@ -195,6 +185,83 @@ hold on; formatSpec = 'R^2 = %f';
 textBox = sprintf(formatSpec, r2); text(1,1,textBox)
 guidata(hObject,handles);
 
+
+% --- allows you to select Masking Maps (The full masking map so far..
+function ImportMATs_Callback(hObject, eventdata, handles)
+%Allows you to import previous data files to analyze them later on
+global SelectedData multipleImagesYesNo FileName_Naming IQFSizeType
+[FileName,PathName,FilterIndex] = uigetfile('*.*', 'Select Multiple Files', 'MultiSelect', 'on');
+%Stores filepath
+disp('Importing the .mat file(s)...')
+tic
+NumImageAnalyze = length(FileName);
+PathName_Naming = PathName;
+FilterIndex_Naming = FilterIndex;
+% clear SelectedData
+if iscellstr(FileName) == 0
+    [pathstr,name,ext] = fileparts([PathName,'\',FileName]);
+    extension{1} = ext; s=pathstr;
+    parts=regexp(s,'\','split');
+    parts = fliplr(parts); part1{1} = parts(3); part2{1} = parts(2);
+    FileName_Naming = cell(1);
+    FileName_Naming{1} = FileName;
+    NumImageAnalyze = 1;
+    full_file_mat = [PathName,'\',FileName];
+    SelectedData = load(full_file_mat,'-mat')
+    multipleImagesYesNo = 0;
+    splitUp=regexp(FileName_Naming{1},'_','split');
+    IQFSizeType = splitUp{3};
+    IQFSizeType = IQFSizeType(1:end-9);
+elseif iscellstr(FileName) == 1
+    SelectedData = cell(1,NumImageAnalyze);
+    IQFSizeType = cell(1,NumImageAnalyze);
+    for j = 1:NumImageAnalyze
+        imageNum{j} = j;
+        FileName_Naming = FileName;
+        [pathstr,name,ext] = fileparts([PathName,'\',FileName{j}]);
+        extension{j} = ext; s=pathstr;
+        parts=regexp(s,'\','split');
+        parts = fliplr(parts); part1{j} = parts(3);
+        part2{j} = parts(2);
+        full_file_mat = [PathName,'\',FileName{j}];
+        SelectedData{j} = load(full_file_mat,'-mat');
+        multipleImagesYesNo = 1;
+        splitUp=regexp(FileName_Naming{j},'_','split');
+        IQFSizeType{j} = splitUp{3};
+        IQFSizeType{j} = IQFSizeType{j}(1:end-9);
+    end
+end
+toc
+disp('Finished and ready to plot.')
+guidata(hObject,handles);
+
+% --- Executes on button press in Plot_IsoContour.
+function Plot_IsoContour_Callback(hObject, eventdata, handles)
+global SelectedData multipleImagesYesNo IQFSizeType
+disp('Working on plotting the isocontour image(s)...')
+if multipleImagesYesNo == 0
+    figure
+    imageArray = SelectedData.(IQFSizeType);
+    imageArray = flipud(imageArray);
+    contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
+    contourf(imageArray, contourSizes)
+    % colormap(gray)
+    colorbar
+    title(IQFSizeType)
+else
+    for j = 1:length(IQFSizeType)
+    figure
+    imageArray = SelectedData{j}.(IQFSizeType{j});
+    imageArray = flipud(imageArray);
+    contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
+    contourf(imageArray, contourSizes)
+    % colormap(gray)
+    colorbar
+    title(IQFSizeType{j})
+    end
+end
+guidata(hObject,handles);
+
 % --- Executes during object creation, after setting all properties.
 function ShapeSelect_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
@@ -205,22 +272,40 @@ guidata(hObject,handles);
 % --- Executes on button press in MakeVideo.
 function MakeVideo_Callback(hObject, eventdata, handles)
 %Creates video of disks being inserted into the region that you select.
-global magn FileName_Naming part1 part2 shape
-global PathName_Naming FilterIndex_Naming extension cutoffs
-global attenuation thickness diameter SigmaPixels
-j=1;
-%% Preprocessing
-%Import Image
-[IDicomOrig, DICOMData] = import_image(j, FileName_Naming, PathName_Naming, FilterIndex_Naming, extension);
-pixelSpacing =DICOMData.PixelSpacing(1);
+global FileName_Naming NumImageAnalyze part1 part2
+global PathName_Naming FilterIndex_Naming extension shape
+thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
+    .05, .04, .03]; %um
+diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
+    .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
+j = 1
+%% Import the image & DICOMData   
+timePerImage = 7; %Min
+TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
+str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
+disp('Importing the image...'); tic
+[IDicomOrig, DICOMData] = import_image(j, FileName_Naming,...
+    PathName_Naming, FilterIndex_Naming, extension);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Pre-processing data
+disp('Calculating the MTF...'); tic
+[SigmaPixels] = determineMTF(IDicomOrig);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+disp('Calculating the disk attenuations based on KVP, mAs...'); tic
+[attenuation] = getSpectraAttens(DICOMData, thickness);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Calculate the disk attenuations
+disp('Calculating lesions of appropriate attenuations/shapes...'); tic
+pixelSpacing = DICOMData.PixelSpacing(1);
+radius = ((diameter.*0.5)./(pixelSpacing));
+[attenDisks] = circle_roi4(radius, shape, SigmaPixels);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Remove the phantom itself
+disp('Removing the phantom and unnecessary artifacts...'); tic
+[maskingMap1, IDicomOrig, maxArea] = removePhantom(IDicomOrig);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 figure; imshow(IDicomOrig, []);
 [xSel,ySel] = ginput(1); close; 
-%Calculate disks
-[SigmaPixels] = determineMTF(IDicomOrig);
-[attenuation] = getSpectraAttens(DICOMData, thickness);
-radius = ((handles.diameter.*0.5)./(pixelSpacing*magn));
-[attenDisk] = circle_roi4(radius, shape, SigmaPixels);
-[cutoffs] = calcThresholds(IDicomOrig,attenDisk,diameter, attenuation)
 %Pad Image and create a regional image
 [q1, q2] = size(attenDisk(:,:,1));
 padAmnt = floor((q1)/2);
@@ -252,18 +337,6 @@ v.FrameRate = fps; open(v)
  end
 close(v)
 guidata(hObject,handles);
-
-% --- Executes on button press in Plot_IsoContour.
-function Plot_IsoContour_Callback(hObject, eventdata, handles)
-global IQFFull
-imageArray = flipud(IQFFull);
-contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
-figure
-contourf(imageArray, contourSizes)
-% colormap(gray)
-colorbar
-guidata(hObject,handles);
-
 
 % --- Executes on button press in pushbutton21.
 function pushbutton21_Callback(hObject, eventdata, handles)

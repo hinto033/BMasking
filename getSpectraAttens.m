@@ -1,5 +1,6 @@
-function [attenuation] = getSpectraAttens(DICOMData, thickness)
+function [attenuation, errFlags] = getSpectraAttens(DICOMData, thickness, errFlags)
 global SimulationX
+errExist = 0;
 if isempty(DICOMData)
     msg = 'no DICOM Data imported'; 
     error(msg)
@@ -36,7 +37,21 @@ spectre0=interp1(SimulationX.data.energiesMoly,spectre,energies0,'pchip');
 % figure(2); plot(energies0,spectre0);
 %% Now calculate the attenuated spectrum. (After going through filter)
 filterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2;
+if isempty(filterThickness) == 1; filterThickness = .03;
+    disp('Error: No FilterThickness Value present in DICOMData.')
+    disp('Approximated as thickness of 0.03 mm')
+    errFlags.Thickness = 'Error: no Filter thickness present in DICOMData. Appx as 0.03 mm';
+    errExist = 1;
+else errFlags.Thickness = 'No Error';
+end
 filterMaterial = DICOMData.FilterMaterial;
+if isempty(filterMaterial) == 1; filterMaterial = 'MOLYBDENUM';
+    disp('Error: No FilterMaterial Value present in DICOMData.')
+    disp('Approximated as MOLYBDENUM')
+    errFlags.Thickness = 'Error: no Filter Material present in DICOMData. Appx as Moly';
+    errExist = 1;
+else errFlags.Material = 'No Error';
+end
 numbermaterialAttenuant = 1;
 attenuationData = SimulationX.data;
 Filtration=0*energies0;
@@ -150,3 +165,7 @@ for index=1:length(thickness)
 end
 %Set Attenuation
 attenuation = attenuationMeasurev2;
+if errExist == 0 
+    errFlags.Thickness = 'No Error';
+    errFlags.Material = 'No Error';
+end

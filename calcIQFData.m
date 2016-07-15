@@ -1,5 +1,5 @@
-function [IQF, aMat, bMat, RSquare] = calcTestStat7(IDicomOrig,...
-    attenuation, radius, attenDisk, thickness, diameter, cutoffs, spacing)
+function [IQF, aMat, bMat, RSquare, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
+    radius, attenDisk, thickness, diameter, cutoffs, spacing,binaryOutline, errFlags)
 %% Setting Parms
 pMax = length(radius); kMax = length(attenuation);
 [nRows,nCols] = size(IDicomOrig); [r,c] = size(attenDisk(:,:,1));
@@ -9,13 +9,21 @@ oneMm = ceil(1/spacing); fiveMm = ceil(oneMm*5);
 
 IQF.Full = zeros(nRows,nCols); IQF.Large= zeros(nRows,nCols);
 IQF.Medium= zeros(nRows,nCols); IQF.Small= zeros(nRows,nCols);
+errCount=0;
+timerMultiplier = 1;
+tic
 for i = fiveMm+1:2*fiveMm:nCols
     for j = fiveMm+1:2*fiveMm:nRows
+        if toc - (30*timerMultiplier) >0
+            timerMultiplier = timerMultiplier+1;
+            str = sprintf('30 seconds has elapsed. Still Calculating...');
+            disp(str)
+        end
         lx = j+padAmnt; ly = i+padAmnt;
         %Define Region
         region = IDicomOrig(lx-spread:lx+spread, ...
             ly-spread:ly+spread);
-        if IDicomOrig(lx,ly) > 7000
+        if binaryOutline(j,i) == 0
             IQFFull = 0; IQFLarge = 0;
             IQFMed = 0; IQFSmall = 0;
         else
@@ -30,15 +38,21 @@ for i = fiveMm+1:2*fiveMm:nCols
                     gTest = regionWDisk(:);
                     lambda = wnpw'*gTest;
                     lambdas(p,k) = lambda;
-                    if k == 1 && lambda > cutoffs(p)
+                    if k == 1 && lambda > cutoffs(p) %Hits cutoff at 1st iteration ; never detectable
                         threshThickness(p) = thickness(k);
-                    end
-                    if k == kMax && lambda < cutoffs(p)
+                        break
+                    elseif k == kMax && lambda < cutoffs(p) %never hits cutoff ; detectable at all thicknesses
                         threshThickness(p) = thickness(k);
-                    end
-                    if lambda > cutoffs(p)
-                        %Need to do the in between value here
-                        threshThickness(p) = thickness(k);
+                        errCount = errCount+1;
+                        str = sprintf('%0.0f discs where it was detectable at all thicknesses', errCount);
+                        errFlags.noCutoffHit = str;
+                        break
+                    elseif lambda > cutoffs(p) && k~=1 %&& k~=kMax
+                        distLambdas = lambdas(p,k-1) - lambdas(p,k);
+                        distCutoffLambda = cutoffs(p) - lambdas(p,k);
+                        fractionUp = distCutoffLambda/distLambdas;
+                        distThickness = thickness(k-1) - thickness(k);
+                        threshThickness(p) = thickness(k)+(fractionUp*distThickness);
                         break
                     end
                 end
@@ -62,5 +76,7 @@ for i = fiveMm+1:2*fiveMm:nCols
         IQF.Medium(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm)= IQFMed;
         IQF.Small(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm)= IQFSmall;
     end
+end
+if errCount == 0; errFlags.noCutoffHit = 'No Error';
 end
 end

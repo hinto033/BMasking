@@ -1,4 +1,4 @@
-function [beta] = deriveBeta(IDicomEroded)
+function [beta, errFlags] = deriveBeta(IDicomEroded, pixelSpacing, patchSize, errFlags)
 [r,c] = size(IDicomEroded);
 verticesx = 129:128:c-128; verticesy = 129:128:r-128; count = 0;
 for j = verticesx
@@ -33,11 +33,28 @@ for j = verticesx
                 Pf(1, r + 1) = nanmean( imgfp( i{r+1} ) );
             end
             %Adjust the xs             %Do linear fit
-            ys = Pf(1:15); xs = linspace(0,.839,15);
-            x_fit = log(xs(3:end)); y_fit = log(ys(3:end));
+            cyclePerMmPerPixel = 1/(patchSize*pixelSpacing);
+            fmin = 0.15; fmax = 0.9;  %Have seen fMax of 0.7 and 1
+            LoPixels = round(fmin/cyclePerMmPerPixel);
+            HiPixels = round(fmax/cyclePerMmPerPixel);
+            ys = Pf(LoPixels:HiPixels); y_fit = log(ys);
+            xs = 0:cyclePerMmPerPixel:1.5;
+            xs = xs(LoPixels:HiPixels); x_fit = log(xs); 
             P = polyfit(x_fit,y_fit,1); betas(count) = -P(1);
         else
         end
     end
 end
-beta = sum(betas)/count;
+if count ==0
+    errFlags.Beta = 'No region large enough to calculate Beta - Do not Trust';
+    errFlags.stop = 1;
+    beta = 3;
+else
+    beta = sum(betas)/count;
+end
+if beta >4 || beta<2
+    beta = 3;
+    disp('Error in Beta derivation. Value of 3 was assumed')
+    errFlags.Beta = 'Error in Beta derivation. Value of 3 was assumed';
+else errFlags.Beta = 'No Error';
+end

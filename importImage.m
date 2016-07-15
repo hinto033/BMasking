@@ -1,4 +1,4 @@
-function [IDicomOrig, DICOMData] = import_image(j, FileNameNaming, PathNameNaming, FilterIndexNaming, extension)
+function [IDicomOrig, DICOMData] = importImage(j, FileNameNaming, PathNameNaming, FilterIndexNaming, extension)
 
     handles.filename = FileNameNaming{j};
     handles.pathname = PathNameNaming;

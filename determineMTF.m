@@ -1,4 +1,4 @@
-function [SigmaPixels] = determineMTF(IDicomOrig)
+function [SigmaPixels, errFlags] = determineMTF(IDicomOrig)
 IDicomOrig(all(IDicomOrig>10000,2),:)=[]; %Delete Empty Rows
 [r,c] = size(IDicomOrig); 
 deriv = zeros(1,c);
@@ -52,4 +52,6 @@ Scaling = coeffs(1); OffSet = coeffs(2); SigmaPixels = coeffs(3);
 Sigmamm = SigmaPixels* .07;
 if SigmaPixels >=5 || SigmaPixels <=.25%If the MTF finding function didn't work...
     SigmaPixels = 1;
+    errFlags.MTF = 'MTF Function Unsuccessful. Approximated as 1 Pixel Sigma';
+else errFlags.MTF = 'No Error;';
 end
