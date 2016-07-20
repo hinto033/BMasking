@@ -211,12 +211,82 @@ print("DONE")
 setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
 write.table(fullData, file=sprintf("%s.CompiledData.txt","CaseControlAfter2009"))
 write.table(fullData, file=sprintf("%s.CompiledData.csv","CaseControlAfter2009"))
+
+
+#####
+relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "mediumMean",
+                                    "mediumMedian", "mediumSum", "mediumEntropy",
+                                    "mediumKurtosis", "mediumSkewness", "mediumPctile10",
+                                    "mediumPctile25", "mediumPctile75", "mediumPctile90",
+                                    "mediumGLCMContrast", "mediumGLCMCorr", "mediumGLCMEnergy",
+                                    "mediumGLCMHomog")]
+medCorVals <- cor(relevantData, relevantData, use="complete")
+
+
+relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "fullMean",
+                            "fullMedian", "fullSum", "fullEntropy",
+                            "fullKurtosis", "fullSkewness", "fullPctile10",
+                            "fullPctile25", "fullPctile75", "fullPctile90",
+                            "fullGLCMContrast", "fullGLCMCorr", "fullGLCMEnergy",
+                            "fullGLCMHomog")]
+fullCorVals <- cor(relevantData, relevantData, use="complete")
+
+relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "smallMean",
+                            "smallMedian", "smallSum", "smallEntropy",
+                            "smallKurtosis", "smallSkewness", "smallPctile10",
+                            "smallPctile25", "smallPctile75", "smallPctile90",
+                            "smallGLCMContrast", "smallGLCMCorr", "smallGLCMEnergy",
+                            "smallGLCMHomog")]
+smallCorVals <- cor(relevantData, relevantData, use="complete")
+
+relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "largeMean",
+                            "largeMedian", "largeSum", "largeEntropy",
+                            "largeKurtosis", "largeSkewness", "largePctile10",
+                            "largePctile25", "largePctile75", "largePctile90",
+                            "largeGLCMContrast", "largeGLCMCorr", "largeGLCMEnergy",
+                            "largeGLCMHomog")]
+LargeCorVals <- cor(relevantData, relevantData, use="complete")
+
+
+
+
+relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "imgAMean",
+                            "imgAMedian", "imgASum", "imgAPctile10",
+                            "imgAPctile25", "imgAPctile75", "imgAPctile90")]
+aMatrixCorVals <- cor(relevantData, relevantData, use="complete")
+
+
+relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "imgBMean",
+                            "imgBMedian", "imgBSum", "imgBPctile10",
+                            "imgBPctile25", "imgBPctile75", "imgBPctile90")]
+bMatrixCorVals <- cor(relevantData, relevantData, use="complete")
+
+setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
+write.table(medCorVals, file=sprintf("%s.CorrelationData.csv","medium"))
+write.table(fullCorVals, file=sprintf("%s.CorrelationData.csv","full"))
+write.table(smallCorVals, file=sprintf("%s.CorrelationData.csv","small"))
+write.table(LargeCorVals, file=sprintf("%s.CorrelationData.csv","Large"))
+write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData.csv","aMatrix"))
+write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData.csv","bMatrix"))
+
+write.table(medCorVals, file=sprintf("%s.CorrelationData.txt","medium"))
+write.table(fullCorVals, file=sprintf("%s.CorrelationData.txt","full"))
+write.table(smallCorVals, file=sprintf("%s.CorrelationData.txt","small"))
+write.table(LargeCorVals, file=sprintf("%s.CorrelationData.txt","Large"))
+write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData.txt","aMatrix"))
+write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData.txt","bMatrix"))
+
+
 #####
 
 #Plot the VBD Versus different values
 #Vs Medium IQF Feature
+comparison <- fullData$VPD_L
 feature <-fullData$mediumMean 
 plot(fullData$VPD_L, feature, main="VPD vs medium Mean IQF", xlab="Percent Density", ylab = "MediumMean IQF Value")
+comparison = fullData$VPD_L
+feature =fullData$mediumMean 
+cor(comparison, feature, use="complete")
 feature <-fullData$mediumMedian 
 plot(fullData$VPD_L, feature, main="VPD vs medium median IQF", xlab="Percent Density", ylab = "MediumMedian IQF Value")
 feature <-fullData$mediumStDev
