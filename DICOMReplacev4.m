@@ -134,7 +134,7 @@ disp('Calculating thresholds for each lesion diameter...');tic
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, RSquare, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
-    attenDisks, thickness, diameter, cutoffs, pixelSpacing,binaryOutline, errFlags);
+    attenDisks, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
