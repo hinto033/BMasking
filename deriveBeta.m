@@ -45,6 +45,8 @@ for j = verticesx
         end
     end
 end
+clear P xs ys HiPixels LoPixels fmin cyclePerMmPerPixel Pf X Y verticesx verticesy ...
+    patch img imgf
 if count ==0
     errFlags.Beta = 'No region large enough to calculate Beta - Do not Trust';
     errFlags.stop = 1;

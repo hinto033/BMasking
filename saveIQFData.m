@@ -1,5 +1,5 @@
 function [Done] = saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,...
-    SigmaPixels,attenuation,part1, part2, FileName_Naming, beta,RSquare, j, errFlags)
+    SigmaPixels,attenuation,part1, part2, FileName_Naming, beta, j, errFlags)
 % mean, stdev, sum, entropy, kurtosis, skewness, 5th percentile, 25th
 % percentile, 75th percentile, 95th percentile, GLCM Contrast, GLCM
 % correlation, GLCM Energy, (All for full, small, med, large)
@@ -102,10 +102,10 @@ save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'aMat')% a va
 A4_7 = 'B_ValueOfFit';
 fileForSaving = sprintf(formatSpec,A2,A3, A4_7, A5)
 save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'bMat')% b value from exponential fit at each point
-A4_8 = 'RSquareOfFit';
-fileForSaving = sprintf(formatSpec,A2,A3, A4_8, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'RSquare')% r^2 value from exp fit at each point
-t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+% A4_8 = 'RSquareOfFit';
+% fileForSaving = sprintf(formatSpec,A2,A3, A4_8, A5)
+% save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'RSquare')% r^2 value from exp fit at each point
+% t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 A4_8 = 'ErrorFlags';
 fileForSaving = sprintf(formatSpec,A2,A3, A4_8, A5)
 save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'errFlags')% r^2 value from exp fit at each point
