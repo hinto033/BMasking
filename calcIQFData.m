@@ -18,7 +18,8 @@ for i = iNums
     end
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-imgPatch = zeros(count, (spread*2+1)^2); %VERY GREEDY RAM
+% imgPatch = zeros(count, (spread*2+1)^2); %VERY GREEDY RAM
+imgPatch = zeros((spread*2+1)^2,count); %VERY GREEDY RAM
 imgInfo = zeros(count,4);
 count = 0;
 disp('Storing Image Patches...');tic
@@ -26,8 +27,10 @@ for i = iNums
     for j = jNums
         lx = j+padAmnt; ly = i+padAmnt;
         %Define Region
+%         tic
         region = IDicomOrig(lx-spread:lx+spread, ...
             ly-spread:ly+spread);
+%         toc
         if binaryOutline(j,i) == 0 %Do not store the location
         else
             %Do store the locaiton
@@ -36,7 +39,7 @@ for i = iNums
             imgInfo(count,2) = ly;
             imgInfo(count,3) = j;
             imgInfo(count,4) = i;
-            imgPatch(count,:) = region(:)';
+            imgPatch(:,count) = region(:);
         end
     end
 end
@@ -44,15 +47,17 @@ t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 clear IDicomOrig binaryOutline
 %Calculate the lambda for every disk/diameter
 disp('Calculating Lambda Values...');tic
-lambdaAll= zeros(count,kMax,pMax);
-attenMatrix = zeros( r*c,kMax);
+lambdaAll= zeros(kMax,count,pMax);
+% attenMatrix = zeros(kMax,r*c);
+attenMatrix = zeros(r*c,kMax);
 for j = 1:pMax
     negDisk = binDisk(:,:,j);
     for k = 1:kMax
-        attenDisk = negDisk.*((IDicomAvg-50)'*(attenuation(k) - 1));
+        attenDisk = negDisk.*((IDicomAvg-50)*(attenuation(k) - 1));
         attenMatrix(:,k) = attenDisk(:);
     end
-    lambdaAll(:,:,j) = imgPatch*attenMatrix(:,:);
+    attenMatrixFlipped = attenMatrix.';
+    lambdaAll(:,:,j) = attenMatrixFlipped*imgPatch;
 end
 clear imgPatch attenMatrix binDisk
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
@@ -62,7 +67,7 @@ for h = 1:pMax %For each diamter, find the cutoff thickness at each point
     lambdaDiam = lambdaAll(:,:,h);
     cutoffDiam = cutoffs(h);
     for m = 1:count
-        lambdaPatch = lambdaDiam(m,:);
+        lambdaPatch = lambdaDiam(:,m);
         idx = find(lambdaPatch>cutoffDiam, 1);
         if idx == 1 %Not detectable at thickest attenuation level
             threshThickness(m,h) = 2;

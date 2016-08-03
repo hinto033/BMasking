@@ -1,5 +1,5 @@
 function [maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea)
-se = strel('disk',5,6); trigger = 0;
+se = strel('disk',10,6); trigger = 0;
 while trigger == 0
     %Erodes
     maskingMap1 = imerode(maskingMap1,se);

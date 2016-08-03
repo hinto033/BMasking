@@ -1,6 +1,7 @@
-function [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,binDisk,...
+function [cutoffsFinal] = calcThresholds(IDicomAvg,IDicomStdev,binDisk,...
     diameter, attenuation,beta)
 %% Create Frequency Map based on beta
+for q = 1:3
 [r,c] = size(binDisk(:,:,1));
 frequencyMap = ones(r,c);
 center = [round((r/2)+1), round((c/2)+1)];
@@ -15,9 +16,8 @@ for j = 1:r
     end
 end
 %% Create several patches to use for the thresholding
-nPatches = 30;
+nPatches = 20;
 patches = zeros(nPatches,r*c);
-patches2 = zeros(nPatches,r*c);
 tic
 for j = 1:nPatches
     % Create patch
@@ -29,19 +29,9 @@ for j = 1:nPatches
     im1StdevAdj = (imf3Noise-Avg)*(IDicomStdev/stDev);
     im1Final = real(im1StdevAdj + IDicomAvg);
     patches(j,:) = im1Final(:)';
-    %Create 2nd patch
-    imNoise = randn(r,c); imFFT = fftshift(fft2(imNoise));
-    imFFTf3Noise = frequencyMap.*imFFT;
-    imf3Noise = ifft2(ifftshift(imFFTf3Noise));
-    Avg = mean(imf3Noise(:)); stDev = std(imf3Noise(:));
-    %Adjust this noise to have same mean/stdev as mammogram
-    im1StdevAdj = (imf3Noise-Avg)*(IDicomStdev/stDev);
-    im1Final = real(im1StdevAdj + IDicomAvg);
-    patches2(j,:) = im1Final(:)';
 end
 toc
 clear imFFTf3Noise imNoise imFFT imf3Noise im1Final im1StdevAdj frequencyMap
-
 %% Determine threshold at each Diameter
 wnpw = zeros(r*c,length(attenuation));
 for p = 1:length(diameter) %For each Diam
@@ -55,7 +45,7 @@ for p = 1:length(diameter) %For each Diam
     lambdasNoDisk = patches*wnpw;
     offsets = diag(wnpw'*wnpw)';
     offsetMatrix = repmat(offsets,nPatches,1);
-    lambdasWDisk = patches2*wnpw + offsetMatrix;
+    lambdasWDisk = patches*wnpw + offsetMatrix;
     for k = 1:length(attenuation)
         noDisk = lambdasNoDisk(:,k);
         wDisk = lambdasWDisk(:,k);
@@ -64,24 +54,27 @@ for p = 1:length(diameter) %For each Diam
         if percentCorrect >= .7%.65%If guessed correctly enough .625?
             if k == length(attenuation); %Set threshold if at last atten
                 thresh1 = mean(wDisk); thresh2 = mean(noDisk);
-                thresh3 = (thresh1+thresh2) / 2; cutoffs(p) = thresh3;
+                thresh3 = (thresh1+thresh2) / 2; cutoffs(q,p) = thresh3;
                 break
             end
         elseif percentCorrect < .7%.65%If was too inaccurate .625?
                 thresh1 = mean(wDisk); thresh2 = mean(noDisk);
-                thresh3 = (thresh1+thresh2) / 2; cutoffs(p) = thresh3;
+                thresh3 = (thresh1+thresh2) / 2; cutoffs(q,p) = thresh3;
                 break
         end
     end
 end
+end
+cutoffsMean = mean(cutoffs);
+cutoffsFinal = cutoffsMean;
 clear lambdasWDisk patchesWDisk lambdasNoDisk wnpw attenDisk negDisk
 end
-
 function [percentCorrect] = doGuesses(lambdasNoDisk, lambdasWDisk, nGuesses, nPatches)
     numCorrect = 0;
     for numTries = 1:nGuesses% Number of times to do
-        p1 = randi([1,nPatches]); p2 = randi([1,nPatches]);
-        
+        pp = randperm(nPatches, 2);
+        p1 = pp(1);
+        p2 = pp(2);
         if lambdasNoDisk(p1)<lambdasWDisk(p2)
             numCorrect = numCorrect + 1;
             percentCorrect = numCorrect/numTries;

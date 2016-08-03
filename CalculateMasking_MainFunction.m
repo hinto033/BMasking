@@ -87,11 +87,7 @@ thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
     .05, .04, .03]; %um
 diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
     .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
-for j = 1:NumImageAnalyze %Does calculation for each image that was selected
-    
-for y =1:40    
-    
-    
+for j = 1:NumImageAnalyze %Does calculation for each image that was selected    
 %% Import the image & DICOMData   
 timePerImage = 1.25; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
@@ -135,19 +131,14 @@ t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating thresholds for each lesion diameter...');tic
 [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisk,...
     diameter, attenuation,beta);
-
-
-betaSet(y) = beta
-cutoffSet(y,:) = cutoffs
-end
-% t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-% disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
-% [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
-%     attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
-% t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-% %% Calculate Statistics that are relevant to test
-% saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
-%     part1, part2, FileName_Naming, beta, j, errFlags);
+t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
+[IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
+    attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
+t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+%% Calculate Statistics that are relevant to test
+saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
+    part1, part2, FileName_Naming, beta, j, errFlags);
 end %Going through set of images
 guidata(hObject,handles);
 
