@@ -1,36 +1,34 @@
-function [attenDisk, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags)
-diam = round(radius.*2) + 1;
-rt = diam./2;
-searchArea = ceil(max(diam.*sqrt(2)))+1;
-attenDisk = 0;
-if isequal(shape, 'Round')%shape == 'Round'
-    centerX = round(searchArea+1)/2;
-    centerY = round(searchArea+1)/2;
-    smallDisk = zeros(searchArea, searchArea, length(radius));
-    cx=centerX;cy=centerY;ix=searchArea;iy=searchArea;
+function [binaryDiskBlurred, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags)
+diamVector = round(radius.*2) + 1;
+radiusVector = diamVector./2;
+diskRegionSize = ceil(max(diamVector.*sqrt(2)))+1;
+if isequal(shape, 'Round')  %shape == 'Round'
+    centerX = round(diskRegionSize+1)/2;
+    centerY = round(diskRegionSize+1)/2;
+    diskBinaryMask = zeros(diskRegionSize, diskRegionSize, length(radius));
     for j = 1:length(radius)
-    r=rt(j);
-    [x,y]=meshgrid(-(cx-1):(ix-cx),-(cy-1):(iy-cy));
-    smallDisk(:,:,j)=((x.^2+y.^2)<=r^2);
+        radCurrent = radiusVector(j);
+        [x,y]=meshgrid(-(centerX-1):(diskRegionSize-centerX),-(centerY-1):(diskRegionSize-centerY));
+        diskBinaryMask(:,:,j)=((x.^2+y.^2)<=radCurrent^2);
     end
-    attenDisk = zeros(searchArea,searchArea,length(radius));
     PSF = fspecial('gaussian',6,SigmaPixels); 
-    attenDisk(:,:,:) = imfilter(smallDisk(:,:,:),PSF,'symmetric','conv');
+    binaryDiskBlurred = zeros(diskRegionSize,diskRegionSize,length(radius));
+    binaryDiskBlurred(:,:,:) = imfilter(diskBinaryMask(:,:,:),PSF,'symmetric','conv');
     errFlags.Lesions = 'No Error';
-elseif isequal(shape, 'Gaussian')%shape == 'Gaussian'
-        %Creates Gaussian that is centered and 3*sigma = radius
-    smallDisk = zeros(searchArea, searchArea, length(radius));
-    size(smallDisk(:,:,1))
+elseif isequal(shape, 'Gaussian')  %shape == 'Gaussian'
+    %Creates Gaussian that is centered and 3*sigma = radius
+    diskBinaryMask = zeros(diskRegionSize, diskRegionSize, length(radius));
+    size(diskBinaryMask(:,:,1))
     for j = 1:length(radius)
-    r=rt(j);
-    g = fspecial('gaussian',searchArea, r/3);
-    gmax = max(max(g));
-    g = g./gmax;
-    smallDisk(:,:,j) = g;
+    radCurrent = radiusVector(j);
+    gaussianMask = fspecial('gaussian',diskRegionSize, radCurrent/3);
+    maxGaussian = max(max(gaussianMask));
+    gaussianMask = gaussianMask./maxGaussian;
+    diskBinaryMask(:,:,j) = gaussianMask;
     end
-    attenDisk = zeros(searchArea,searchArea,length(radius));
+    binaryDiskBlurred = zeros(diskRegionSize,diskRegionSize,length(radius));
     PSF = fspecial('gaussian',6, SigmaPixels); 
-    attenDisk(:,:,:) = imfilter(smallDisk(:,:,:),PSF,'symmetric','conv');
+    binaryDiskBlurred(:,:,:) = imfilter(diskBinaryMask(:,:,:),PSF,'symmetric','conv');
     errFlags.Lesions = 'No Error';
 else
     disp('The shape you selected is not currently supported...');

@@ -2,44 +2,42 @@ function [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
     radius, binDisk, thickness, diameter, cutoffs, spacing,binaryOutline,IDicomAvg,IDicomStdev, errFlags)
 %% Setting Parms
 pMax = length(radius); kMax = length(attenuation);
-[nRows,nCols] = size(IDicomOrig); [r,c] = size(binDisk(:,:,1));
-padAmnt = ceil(r/2); spread = padAmnt-1;
+[nRows,nCols] = size(IDicomOrig); [nRowPatch,nColPatch] = size(binDisk(:,:,1));
+padAmnt = ceil(nRowPatch/2); patchRadius = padAmnt-1;
 IDicomOrig = padarray(IDicomOrig, [padAmnt,padAmnt], 'symmetric');
-oneMm = ceil(1/spacing); fiveMm = ceil(oneMm*2.5);
-iNums = fiveMm+1:2*fiveMm:nCols; jNums = fiveMm+1:2*fiveMm:nRows;
-count = 0;
+oneMmPixels = ceil(1/spacing); pixelRadInIQFImg = ceil(oneMmPixels*2.5);
+rowIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nCols;
+colIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nRows;
+nValidPatches = 0;
 disp('Determining Locations to calculate...');tic
-for i = iNums
-    for j = jNums
-        if binaryOutline(j,i) == 0
+for rowIdx = rowIndices
+    for colIdx = colIndices
+        if binaryOutline(colIdx,rowIdx) == 0
         else
-            count = count+1;
+            nValidPatches = nValidPatches+1;
         end
     end
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-% imgPatch = zeros(count, (spread*2+1)^2); %VERY GREEDY RAM
-imgPatch = zeros((spread*2+1)^2,count); %VERY GREEDY RAM
-imgInfo = zeros(count,4);
-count = 0;
+imgPatch = zeros((patchRadius*2+1)^2,nValidPatches); %VERY GREEDY RAM
+imgInfo = zeros(nValidPatches,4);
+nValidPatches = 0;
 disp('Storing Image Patches...');tic
-for i = iNums
-    for j = jNums
-        lx = j+padAmnt; ly = i+padAmnt;
+for rowIdx = rowIndices
+    for colIdx = colIndices
+        paddedColIdx = colIdx+padAmnt;
+        paddedRowIdx = rowIdx+padAmnt;
         %Define Region
-%         tic
-        region = IDicomOrig(lx-spread:lx+spread, ...
-            ly-spread:ly+spread);
-%         toc
-        if binaryOutline(j,i) == 0 %Do not store the location
-        else
-            %Do store the locaiton
-            count = count+1;
-            imgInfo(count,1) = lx;
-            imgInfo(count,2) = ly;
-            imgInfo(count,3) = j;
-            imgInfo(count,4) = i;
-            imgPatch(:,count) = region(:);
+        region = IDicomOrig(paddedColIdx-patchRadius:paddedColIdx+patchRadius, ...
+            paddedRowIdx-patchRadius:paddedRowIdx+patchRadius);
+        if binaryOutline(colIdx,rowIdx) == 0 %Do not store the location
+        else  %Do store the location
+            nValidPatches = nValidPatches+1;
+            imgInfo(nValidPatches,1) = paddedColIdx;
+            imgInfo(nValidPatches,2) = paddedRowIdx;
+            imgInfo(nValidPatches,3) = colIdx;
+            imgInfo(nValidPatches,4) = rowIdx;
+            imgPatch(:,nValidPatches) = region(:);
         end
     end
 end
@@ -47,38 +45,38 @@ t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 clear IDicomOrig binaryOutline
 %Calculate the lambda for every disk/diameter
 disp('Calculating Lambda Values...');tic
-lambdaAll= zeros(kMax,count,pMax);
+lambdaAll= zeros(kMax,nValidPatches,pMax);
 % attenMatrix = zeros(kMax,r*c);
-attenMatrix = zeros(r*c,kMax);
-for j = 1:pMax
-    negDisk = binDisk(:,:,j);
+attenMatrix = zeros(nRowPatch*nColPatch,kMax);
+for colIdx = 1:pMax
+    negDisk = binDisk(:,:,colIdx);
     for k = 1:kMax
         attenDisk = negDisk.*((IDicomAvg-50)*(attenuation(k) - 1));
         attenMatrix(:,k) = attenDisk(:);
     end
     attenMatrixFlipped = attenMatrix.';
-    lambdaAll(:,:,j) = attenMatrixFlipped*imgPatch;
+    lambdaAll(:,:,colIdx) = attenMatrixFlipped*imgPatch;
 end
 clear imgPatch attenMatrix binDisk
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-threshThickness = zeros(count, pMax);
+threshThickness = zeros(nValidPatches, pMax);
 disp('Calculating threshold Thicknesses...');tic %CAN IMPROVE ON THIS IF CAN GET ALL INDICES IN ONE SWOOP
-for h = 1:pMax %For each diamter, find the cutoff thickness at each point
-    lambdaDiam = lambdaAll(:,:,h);
-    cutoffDiam = cutoffs(h);
-    for m = 1:count
+for currentDiam = 1:pMax %For each diamter, find the cutoff thickness at each point
+    lambdaDiam = lambdaAll(:,:,currentDiam);
+    cutoffDiam = cutoffs(currentDiam);
+    for m = 1:nValidPatches
         lambdaPatch = lambdaDiam(:,m);
         idx = find(lambdaPatch>cutoffDiam, 1);
         if idx == 1 %Not detectable at thickest attenuation level
-            threshThickness(m,h) = 2;
+            threshThickness(m,currentDiam) = 2;
         elseif isempty(idx)
-            threshThickness(m,h) = thickness(kMax);
+            threshThickness(m,currentDiam) = thickness(kMax);
         else
             distLambdas = lambdaPatch(idx-1) - lambdaPatch(idx);
-            distCutoffLambda = cutoffs(h) - lambdaPatch(idx);
-            fractionUp = distCutoffLambda/distLambdas;
+            distCutoffLambda = cutoffs(currentDiam) - lambdaPatch(idx);
+            fractionAbove = distCutoffLambda/distLambdas;
             distThickness = thickness(idx-1) - thickness(idx);
-            threshThickness(m, h) = thickness(idx)+(fractionUp*distThickness);
+            threshThickness(m, currentDiam) = thickness(idx)+(fractionAbove*distThickness);
         end
     end
 
@@ -87,14 +85,12 @@ t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating IQF Values...');tic
 %Now Calculate the IQF, EXP Fit, etc.
 x = diameter;
-IQFFull = zeros(1,count);IQFLarge = zeros(1,count);IQFMedium = zeros(1,count);
-IQFSmall = zeros(1,count);aVector = zeros(1,count);bVector = zeros(1,count);
-
+IQFFull = zeros(1,nValidPatches);IQFLarge = zeros(1,nValidPatches);IQFMedium = zeros(1,nValidPatches);
+IQFSmall = zeros(1,nValidPatches);aVector = zeros(1,nValidPatches);bVector = zeros(1,nValidPatches);
 %NEED TO INSERT AN ERROR FLAG HERE
 threshThickness(isnan(threshThickness)) = 0.03; %Replaces any nan values with 0.03
 threshThickness(isinf(threshThickness)) = 0.03; %Replaces any nan values with 0.03
-
-for m = 1:count
+for m = 1:nValidPatches
     y = threshThickness(m,:);
     IQFdenom = x*y';
     IQFFull(m) = sum(diameter(:))./IQFdenom;
@@ -102,13 +98,10 @@ for m = 1:count
     IQFMedium(m) = sum(diameter(9:16))./(x(9:16)*y(9:16)');
     IQFSmall(m) = sum(diameter(17:24))./(x(17:24)*y(17:24)');
    
-    A = ones(length(diameter),2);
-    B = zeros(length(diameter),1);
-    B(:,1) = log(y)';
-    A(:,2) = log(diameter');
+    A = ones(length(diameter),2); B = zeros(length(diameter),1);
+    B(:,1) = log(y)'; A(:,2) = log(diameter');
     test = A\B;
-    alpha = exp(test(1));
-    beta = test(2);
+    alpha = exp(test(1)); beta = test(2);
     aVector(m) = alpha;
     bVector(m) = beta;
 end
@@ -116,16 +109,16 @@ t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Plotting IQF Values...');tic
 IQF.Full = zeros(nRows,nCols); IQF.Large= zeros(nRows,nCols);
 IQF.Medium= zeros(nRows,nCols); IQF.Small= zeros(nRows,nCols);
-for m = 1:count
-    j = imgInfo(m,3);
-    i = imgInfo(m,4);
-    IQF.Full(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm) = IQFFull(m);
-    IQF.Large(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm)= IQFLarge(m);
-    IQF.Medium(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm)= IQFMedium(m);
-    IQF.Small(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm)= IQFSmall(m);
+for m = 1:nValidPatches
+    colIdx = imgInfo(m,3);
+    rowIdx = imgInfo(m,4);
+    IQF.Full(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg) = IQFFull(m);
+    IQF.Large(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg)= IQFLarge(m);
+    IQF.Medium(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg)= IQFMedium(m);
+    IQF.Small(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg)= IQFSmall(m);
 
-    aMat(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm) = aVector(m);
-    bMat(j-fiveMm:j+fiveMm,i-fiveMm:i+fiveMm) = bVector(m);
+    aMat(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg) = aVector(m);
+    bMat(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg) = bVector(m);
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 end

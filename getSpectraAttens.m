@@ -13,17 +13,17 @@ mAs = DICOMData.ExposureInuAs / 1e3;
 initcoef;
 initcoef2;
 initcoef3;
-if anodeTargetMaterial == 'MOLYBDENUM';
+if strcmp(anodeTargetMaterial,'MOLYBDENUM')==1
     coef = SimulationX.data.coefMoly;
     energies = SimulationX.data.energiesMoly;
-elseif anodeTargetMaterial == 'TUNGSTEN';
+elseif strcmp(anodeTargetMaterial,'TUNGSTEN')==1
     coef = SimulationX.data.coefTungsten;
     energies = SimulationX.data.energiesTungsten;
-elseif anodeTargetMaterial == 'RHODIUM';
+elseif strcmp(anodeTargetMaterial,'RHODIUM')==1;
     coef = SimulationX.data.coefRhodium;
     energies = SimulationX.data.energiesRhodium;
 end
-if isempty(coef)|isempty(energies);
+if isempty(coef)||isempty(energies);
    error('no proper attenuant selected') 
 end
 %% Calculate the original unfiltered spectrum (From funcspectre)
@@ -31,7 +31,7 @@ mask=(energies<=kVp);  %to prevent the negative value for E>kVp
 degre=[ones(size(coef,1),1) 2*ones(size(coef,1),1) 3*ones(size(coef,1),1) 4*ones(size(coef,1),1)];
 tempspectre=sum(((kVp*ones(size(degre))).^degre.*coef)');
 spectre=mAs.*tempspectre.*mask;
-energies0=[1:0.1:kVp];
+energies0=1:0.1:kVp;
 spectre0=interp1(SimulationX.data.energiesMoly,spectre,energies0,'pchip');
 %Plot original Spectrum
 % figure(2); plot(energies0,spectre0);

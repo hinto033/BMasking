@@ -82,7 +82,10 @@ guidata(hObject,handles);
 function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global FileName_Naming NumImageAnalyze part1 part2
-global PathName_Naming FilterIndex_Naming extension shape
+global PathName_Naming extension shape
+%%
+shape = 'Round'; %May need to change this!!!
+%%
 thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
     .05, .04, .03]; %um
 diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
@@ -94,7 +97,7 @@ TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
 str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
 disp('Importing the image...'); tic
 [IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
-    PathName_Naming, FilterIndex_Naming, extension);
+    PathName_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Pre-processing data
 disp('Calculating the MTF...'); tic

@@ -1,13 +1,12 @@
-function [cutoffsFinal] = calcThresholds(IDicomAvg,IDicomStdev,binDisk,...
+function [thresholdFinal] = calcThresholds(IDicomAvg,IDicomStdev,binDisk,...
     diameter, attenuation,beta)
 %% Create Frequency Map based on beta
-for q = 1:3
-[r,c] = size(binDisk(:,:,1));
-frequencyMap = ones(r,c);
-center = [round((r/2)+1), round((c/2)+1)];
+[nRows,nCols] = size(binDisk(:,:,1));
+frequencyMap = ones(nRows,nCols);
+center = [round((nRows/2)+1), round((nCols/2)+1)];
 %Creates 1/f^beta fourier space map
-for j = 1:r
-    for h = 1:c
+for j = 1:nRows
+    for h = 1:nCols
         if j==center(2) && h == center(1)
         else
             frequencyMap(j,h) = frequencyMap(j,h)/ ...
@@ -15,70 +14,76 @@ for j = 1:r
         end
     end
 end
+%% Perform the thresholding multiple times (2-3)
+for nTimes = 1:2
+str = sprintf('Performing Round %0.0f of Threshold Detection...', nTimes);
+disp(str)
 %% Create several patches to use for the thresholding
-nPatches = 20;
-patches = zeros(nPatches,r*c);
-tic
+nPatches = 15;
+noisePatches = zeros(nPatches,nRows*nCols);
 for j = 1:nPatches
     % Create patch
-    imNoise = randn(r,c); imFFT = fftshift(fft2(imNoise));
+    imNoise = randn(nRows,nCols); imFFT = fftshift(fft2(imNoise));
     imFFTf3Noise = frequencyMap.*imFFT;
     imf3Noise = ifft2(ifftshift(imFFTf3Noise));
-    Avg = mean(imf3Noise(:)); stDev = std(imf3Noise(:));
+    imAvg = mean(imf3Noise(:)); imStDev = std(imf3Noise(:));
     %Adjust this noise to have same mean/stdev as mammogram
-    im1StdevAdj = (imf3Noise-Avg)*(IDicomStdev/stDev);
-    im1Final = real(im1StdevAdj + IDicomAvg);
-    patches(j,:) = im1Final(:)';
+    imAdjusted = (imf3Noise-imAvg)*(IDicomStdev/imStDev);
+    imNoiseFinal = real(imAdjusted + IDicomAvg);
+    noisePatches(j,:) = imNoiseFinal(:)';
 end
-toc
-clear imFFTf3Noise imNoise imFFT imf3Noise im1Final im1StdevAdj frequencyMap
+clear imFFTf3Noise imNoise imFFT imf3Noise im1Final im1StdevAdj
 %% Determine threshold at each Diameter
-wnpw = zeros(r*c,length(attenuation));
+filterNPW = zeros(nRows*nCols,length(attenuation));
 for p = 1:length(diameter) %For each Diam
     negDisk = binDisk(:,:,p);
-    str = sprintf('Calculating threshold at diameter = %0.2f mm', diameter(p));
-    disp(str)
     for k = 1:length(attenuation)
-        attenDisk = negDisk.*((IDicomAvg-50)'*(attenuation(k) - 1));
-        wnpw(:,k) = attenDisk(:);
+        attenDisk = negDisk*((IDicomAvg-50)*(attenuation(k) - 1));
+        filterNPW(:,k) = attenDisk(:);
     end
-    lambdasNoDisk = patches*wnpw;
-    offsets = diag(wnpw'*wnpw)';
-    offsetMatrix = repmat(offsets,nPatches,1);
-    lambdasWDisk = patches*wnpw + offsetMatrix;
+    %Computes lambdas without disk for all attenuations and all patches
+    lambdasNoDisk = noisePatches*filterNPW; 
+    offsetWDisk = diag(filterNPW'*filterNPW)';
+    offsetMatrix = repmat(offsetWDisk,nPatches,1);
+    %Computes lambdas with disk for all attenuations and all patches
+    lambdasWDisk = lambdasNoDisk + offsetMatrix; 
     for k = 1:length(attenuation)
-        noDisk = lambdasNoDisk(:,k);
-        wDisk = lambdasWDisk(:,k);
-        nGuesses = 200;
-        percentCorrect = doGuesses(noDisk, wDisk, nGuesses, nPatches);
-        if percentCorrect >= .7%.65%If guessed correctly enough .625?
+        lambdasAtAttenNoDisk = lambdasNoDisk(:,k); %Separates lambdas of single attenuation
+        lambdasAtAttenWDisk = lambdasWDisk(:,k); %Separates lambdas of single attenuation
+        nGuesses = 100;
+        percentCorrect = doGuesses(lambdasAtAttenNoDisk, lambdasAtAttenWDisk, nGuesses, nPatches);
+        if percentCorrect >= .7 %If guessed correctly enough ->don't set threshold
             if k == length(attenuation); %Set threshold if at last atten
-                thresh1 = mean(wDisk); thresh2 = mean(noDisk);
-                thresh3 = (thresh1+thresh2) / 2; cutoffs(q,p) = thresh3;
+                threshWDisk = mean(lambdasAtAttenWDisk);
+                threshNoDisk = mean(lambdasAtAttenNoDisk);
+                threshAvg = (threshWDisk+threshNoDisk) / 2;
+                thresholdDetection(nTimes,p) = threshAvg;
                 break
             end
-        elseif percentCorrect < .7%.65%If was too inaccurate .625?
-                thresh1 = mean(wDisk); thresh2 = mean(noDisk);
-                thresh3 = (thresh1+thresh2) / 2; cutoffs(q,p) = thresh3;
+        elseif percentCorrect < .7 %If was too inaccurate -> Set threshold
+                threshWDisk = mean(lambdasAtAttenWDisk);
+                threshNoDisk = mean(lambdasAtAttenNoDisk);
+                threshAvg = (threshWDisk+threshNoDisk) / 2;
+                thresholdDetection(nTimes,p) = threshAvg;
                 break
         end
     end
 end
 end
-cutoffsMean = mean(cutoffs);
-cutoffsFinal = cutoffsMean;
+thresholdFinal = mean(thresholdDetection);
 clear lambdasWDisk patchesWDisk lambdasNoDisk wnpw attenDisk negDisk
 end
-function [percentCorrect] = doGuesses(lambdasNoDisk, lambdasWDisk, nGuesses, nPatches)
+function [percentCorrect] = doGuesses(lambdasAtAttenNoDisk, lambdasAtAttenWDisk,...
+    nGuesses, nPatches)
     numCorrect = 0;
     for numTries = 1:nGuesses% Number of times to do
-        pp = randperm(nPatches, 2);
-        p1 = pp(1);
-        p2 = pp(2);
-        if lambdasNoDisk(p1)<lambdasWDisk(p2)
+        patchSelection = randperm(nPatches, 2);
+        p1 = patchSelection(1);
+        p2 = patchSelection(2);
+        if lambdasAtAttenNoDisk(p1)<lambdasAtAttenWDisk(p2)
             numCorrect = numCorrect + 1;
             percentCorrect = numCorrect/numTries;
-        elseif lambdasNoDisk(p1)>lambdasWDisk(p2)
+        elseif lambdasAtAttenNoDisk(p1)>lambdasAtAttenWDisk(p2)
         end
     end
     percentCorrect = numCorrect/numTries;

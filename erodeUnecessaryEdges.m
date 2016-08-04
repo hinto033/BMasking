@@ -1,9 +1,9 @@
-function [maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea)
-se = strel('disk',10,6); trigger = 0;
+function [erodedMap] = erodeUnecessaryEdges(binaryBreast, maxArea)
+se = strel('disk',40,8); trigger = 0;
 while trigger == 0
     %Erodes
-    maskingMap1 = imerode(maskingMap1,se);
-    IDicomVector = maskingMap1(:);
+    binaryBreast = imerode(binaryBreast,se);
+    IDicomVector = binaryBreast(:);
     IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
     reducedArea = length(IDicomVectorNoZeros);
     %Stop eroding if area is 1/2 the original area
@@ -11,3 +11,4 @@ while trigger == 0
         trigger=1;
     end
 end
+erodedMap = binaryBreast;
