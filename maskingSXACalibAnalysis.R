@@ -279,6 +279,14 @@ write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData.txt","bMatrix"))
 
 #####
 
+setwd("Z:\\Breast Studies\\CBCRP Masking")
+baseData <- read.csv("CaseControlAfter2009.CompiledData8.7.16.csv", header=TRUE, sep=" ")
+baseData1 <- na.omit(baseData) #Clears any rows that have NA entries (Small number)
+
+fullData <- baseData1
+
+
+
 #Plot the VBD Versus different values
 #Vs Medium IQF Feature
 comparison <- fullData$VPD_L

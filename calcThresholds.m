@@ -15,7 +15,7 @@ for j = 1:nRows
     end
 end
 %% Perform the thresholding multiple times (2-3)
-for nTimes = 1:2
+for nTimes = 1:3
 str = sprintf('Performing Round %0.0f of Threshold Detection...', nTimes);
 disp(str)
 %% Create several patches to use for the thresholding

@@ -39,6 +39,18 @@ for y = 1:4
     imgVector = img(:);
     imgVectorNoZeros = imgVector(imgVector~=0);
     IQFvals = imgVectorNoZeros;
+    totPx = length(IQFvals);
+    pctPxBelow2 = length(IQFvals(IQFvals<2))/totPx;stats.(names{y}).pctBelow2 = pctPxBelow2;
+    pctPxBelow3 = length(IQFvals(IQFvals<3))/totPx;stats.(names{y}).pctBelow3 = pctPxBelow3;
+    pctPxBelow4 = length(IQFvals(IQFvals<4))/totPx;stats.(names{y}).pctBelow4 = pctPxBelow4;
+    pctPxBelow5 = length(IQFvals(IQFvals<5))/totPx;stats.(names{y}).pctBelow5 = pctPxBelow5;
+    pctPxBelow7 = length(IQFvals(IQFvals<7))/totPx;stats.(names{y}).pctBelow7 = pctPxBelow7;
+    pctPxBelow10 = length(IQFvals(IQFvals<10))/totPx;stats.(names{y}).pctBelow10 = pctPxBelow10;
+    pctPxBelow12 = length(IQFvals(IQFvals<12))/totPx;stats.(names{y}).pctBelow12 = pctPxBelow12;
+    pctPxBelow14 = length(IQFvals(IQFvals<14))/totPx;stats.(names{y}).pctBelow14 = pctPxBelow14;
+    pctPxBelow16 = length(IQFvals(IQFvals<16))/totPx;stats.(names{y}).pctBelow16 = pctPxBelow16;
+    pctPxBelow18 = length(IQFvals(IQFvals<18))/totPx;stats.(names{y}).pctBelow18 = pctPxBelow18;
+    pctPxBelow20 = length(IQFvals(IQFvals<20))/totPx;stats.(names{y}).pctBelow20 = pctPxBelow20;
     imgMean = mean(IQFvals); stats.(names{y}).Mean = imgMean;
     imgMedian = median(IQFvals); stats.(names{y}).Median = imgMedian;
     imgStDev = std(IQFvals); stats.(names{y}).StDev = imgStDev;
