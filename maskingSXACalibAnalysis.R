@@ -36,6 +36,17 @@ for (i in 1:nRows){
   fullData$largePctile25[i] <- imageStats$stats[,,1]$Large[,,1]$Pctile25[1,1]
   fullData$largePctile75[i] <- imageStats$stats[,,1]$Large[,,1]$Pctile75[1,1]
   fullData$largePctile90[i] <- imageStats$stats[,,1]$Large[,,1]$Pctile90[1,1]
+  fullData$largePctBelow2[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow2[1,1]
+  fullData$largePctBelow3[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow3[1,1]
+  fullData$largePctBelow4[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow4[1,1]
+  fullData$largePctBelow5[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow5[1,1]
+  fullData$largePctBelow7[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow7[1,1]
+  fullData$largePctBelow10[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow10[1,1]
+  fullData$largePctBelow12[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow12[1,1]
+  fullData$largePctBelow14[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow14[1,1]
+  fullData$largePctBelow16[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow16[1,1]
+  fullData$largePctBelow18[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow18[1,1]
+  fullData$largePctBelow20[i] <- imageStats$stats[,,1]$Large[,,1]$pctBelow20[1,1]
   fullData$largeGLCMContrast[i] <- imageStats$stats[,,1]$Large[,,1]$GLCMContrast[1,1]
   fullData$largeGLCMCorr[i] <- imageStats$stats[,,1]$Large[,,1]$GLCMCorr[1,1]
   fullData$largeGLCMEnergy[i] <- imageStats$stats[,,1]$Large[,,1]$GLCMEnergy[1,1]
@@ -52,6 +63,17 @@ for (i in 1:nRows){
   fullData$mediumPctile25[i] <- imageStats$stats[,,1]$Medium[,,1]$Pctile25[1,1]
   fullData$mediumPctile75[i] <- imageStats$stats[,,1]$Medium[,,1]$Pctile75[1,1]
   fullData$mediumPctile90[i] <- imageStats$stats[,,1]$Medium[,,1]$Pctile90[1,1]
+  fullData$mediumPctBelow2[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow2[1,1]
+  fullData$mediumPctBelow3[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow3[1,1]
+  fullData$mediumPctBelow4[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow4[1,1]
+  fullData$mediumPctBelow5[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow5[1,1]
+  fullData$mediumPctBelow7[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow7[1,1]
+  fullData$mediumPctBelow10[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow10[1,1]
+  fullData$mediumPctBelow12[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow12[1,1]
+  fullData$mediumPctBelow14[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow14[1,1]
+  fullData$mediumPctBelow16[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow16[1,1]
+  fullData$mediumPctBelow18[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow18[1,1]
+  fullData$mediumPctBelow20[i] <- imageStats$stats[,,1]$Medium[,,1]$pctBelow20[1,1]
   fullData$mediumGLCMContrast[i] <- imageStats$stats[,,1]$Medium[,,1]$GLCMContrast[1,1]
   fullData$mediumGLCMCorr[i] <- imageStats$stats[,,1]$Medium[,,1]$GLCMCorr[1,1]
   fullData$mediumGLCMEnergy[i] <- imageStats$stats[,,1]$Medium[,,1]$GLCMEnergy[1,1]
@@ -68,6 +90,17 @@ for (i in 1:nRows){
   fullData$smallPctile25[i] <- imageStats$stats[,,1]$Small[,,1]$Pctile25[1,1]
   fullData$smallPctile75[i] <- imageStats$stats[,,1]$Small[,,1]$Pctile75[1,1]
   fullData$smallPctile90[i] <- imageStats$stats[,,1]$Small[,,1]$Pctile90[1,1]
+  fullData$smallPctBelow2[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow2[1,1]
+  fullData$smallPctBelow3[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow3[1,1]
+  fullData$smallPctBelow4[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow4[1,1]
+  fullData$smallPctBelow5[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow5[1,1]
+  fullData$smallPctBelow7[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow7[1,1]
+  fullData$smallPctBelow10[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow10[1,1]
+  fullData$smallPctBelow12[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow12[1,1]
+  fullData$smallPctBelow14[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow14[1,1]
+  fullData$smallPctBelow16[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow16[1,1]
+  fullData$smallPctBelow18[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow18[1,1]
+  fullData$smallPctBelow20[i] <- imageStats$stats[,,1]$Small[,,1]$pctBelow20[1,1]
   fullData$smallGLCMContrast[i] <- imageStats$stats[,,1]$Small[,,1]$GLCMContrast[1,1]
   fullData$smallGLCMCorr[i] <- imageStats$stats[,,1]$Small[,,1]$GLCMCorr[1,1]
   fullData$smallGLCMEnergy[i] <- imageStats$stats[,,1]$Small[,,1]$GLCMEnergy[1,1]
@@ -85,6 +118,17 @@ for (i in 1:nRows){
   fullData$fullPctile25[i] <- imageStats$stats[,,1]$Full[,,1]$Pctile25[1,1]
   fullData$fullPctile75[i] <- imageStats$stats[,,1]$Full[,,1]$Pctile75[1,1]
   fullData$fullPctile90[i] <- imageStats$stats[,,1]$Full[,,1]$Pctile90[1,1]
+  fullData$fullPctBelow2[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow2[1,1]
+  fullData$fullPctBelow3[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow3[1,1]
+  fullData$fullPctBelow4[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow4[1,1]
+  fullData$fullPctBelow5[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow5[1,1]
+  fullData$fullPctBelow7[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow7[1,1]
+  fullData$fullPctBelow10[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow10[1,1]
+  fullData$fullPctBelow12[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow12[1,1]
+  fullData$fullPctBelow14[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow14[1,1]
+  fullData$fullPctBelow16[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow16[1,1]
+  fullData$fullPctBelow18[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow18[1,1]
+  fullData$fullPctBelow20[i] <- imageStats$stats[,,1]$Full[,,1]$pctBelow20[1,1]
   fullData$fullGLCMContrast[i] <- imageStats$stats[,,1]$Full[,,1]$GLCMContrast[1,1]
   fullData$fullGLCMCorr[i] <- imageStats$stats[,,1]$Full[,,1]$GLCMCorr[1,1]
   fullData$fullGLCMEnergy[i] <- imageStats$stats[,,1]$Full[,,1]$GLCMEnergy[1,1]
@@ -134,6 +178,17 @@ for (i in 1:nRows){
     fullData$largeGLCMCorr[i] <- NA
     fullData$largeGLCMEnergy[i] <-NA
     fullData$largeGLCMHomog[i] <- NA
+    fullData$largePctBelow2[i] <- NA
+    fullData$largePctBelow3[i] <- NA
+    fullData$largePctBelow4[i] <- NA
+    fullData$largePctBelow5[i] <- NA
+    fullData$largePctBelow7[i] <- NA
+    fullData$largePctBelow10[i] <- NA
+    fullData$largePctBelow12[i] <- NA
+    fullData$largePctBelow14[i] <- NA
+    fullData$largePctBelow16[i] <- NA
+    fullData$largePctBelow18[i] <- NA
+    fullData$largePctBelow20[i] <- NA 
     
     fullData$mediumMean[i] <- NA
     fullData$mediumMedian[i] <- NA
@@ -150,6 +205,17 @@ for (i in 1:nRows){
     fullData$mediumGLCMCorr[i] <- NA
     fullData$mediumGLCMEnergy[i] <- NA
     fullData$mediumGLCMHomog[i] <- NA
+    fullData$mediumPctBelow2[i] <- NA
+    fullData$mediumPctBelow3[i] <- NA
+    fullData$mediumPctBelow4[i] <- NA
+    fullData$mediumPctBelow5[i] <- NA
+    fullData$mediumPctBelow7[i] <- NA
+    fullData$mediumPctBelow10[i] <- NA
+    fullData$mediumPctBelow12[i] <- NA
+    fullData$mediumPctBelow14[i] <- NA
+    fullData$mediumPctBelow16[i] <- NA
+    fullData$mediumPctBelow18[i] <- NA
+    fullData$mediumPctBelow20[i] <- NA 
     # 
     fullData$smallMean[i] <- NA
     fullData$smallMedian[i] <- NA
@@ -166,6 +232,17 @@ for (i in 1:nRows){
     fullData$smallGLCMCorr[i] <- NA
     fullData$smallGLCMEnergy[i] <-NA
     fullData$smallGLCMHomog[i] <- NA
+    fullData$smallPctBelow2[i] <- NA
+    fullData$smallPctBelow3[i] <- NA
+    fullData$smallPctBelow4[i] <- NA
+    fullData$smallPctBelow5[i] <- NA
+    fullData$smallPctBelow7[i] <- NA
+    fullData$smallPctBelow10[i] <- NA
+    fullData$smallPctBelow12[i] <- NA
+    fullData$smallPctBelow14[i] <- NA
+    fullData$smallPctBelow16[i] <- NA
+    fullData$smallPctBelow18[i] <- NA
+    fullData$smallPctBelow20[i] <- NA 
     # 
     # 
     fullData$fullMean[i] <-NA
@@ -183,6 +260,17 @@ for (i in 1:nRows){
     fullData$fullGLCMCorr[i] <- NA
     fullData$fullGLCMEnergy[i] <- NA
     fullData$fullGLCMHomog[i] <- NA
+    fullData$fullPctBelow2[i] <- NA
+    fullData$fullPctBelow3[i] <- NA
+    fullData$fullPctBelow4[i] <- NA
+    fullData$fullPctBelow5[i] <- NA
+    fullData$fullPctBelow7[i] <- NA
+    fullData$fullPctBelow10[i] <- NA
+    fullData$fullPctBelow12[i] <- NA
+    fullData$fullPctBelow14[i] <- NA
+    fullData$fullPctBelow16[i] <- NA
+    fullData$fullPctBelow18[i] <- NA
+    fullData$fullPctBelow20[i] <- NA 
     # 
     # 
     # 
@@ -219,16 +307,23 @@ relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_
                                     "mediumKurtosis", "mediumSkewness", "mediumPctile10",
                                     "mediumPctile25", "mediumPctile75", "mediumPctile90",
                                     "mediumGLCMContrast", "mediumGLCMCorr", "mediumGLCMEnergy",
-                                    "mediumGLCMHomog")]
+                                    "mediumGLCMHomog",
+                                    "mediumPctBelow2","mediumPctBelow3","mediumPctBelow4"
+                                    ,"mediumPctBelow5","mediumPctBelow7","mediumPctBelow10"
+                                   ,"mediumPctBelow12","mediumPctBelow14","mediumPctBelow16"
+                                    ,"mediumPctBelow18","mediumPctBelow20")]
 medCorVals <- cor(relevantData, relevantData, use="complete")
-
 
 relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "fullMean",
                             "fullMedian", "fullSum", "fullEntropy",
                             "fullKurtosis", "fullSkewness", "fullPctile10",
                             "fullPctile25", "fullPctile75", "fullPctile90",
                             "fullGLCMContrast", "fullGLCMCorr", "fullGLCMEnergy",
-                            "fullGLCMHomog")]
+                            "fullGLCMHomog",
+                            "fullPctBelow2","fullPctBelow3","fullPctBelow4"
+                            ,"fullPctBelow5","fullPctBelow7","fullPctBelow10"
+                            ,"fullPctBelow12","fullPctBelow14","fullPctBelow16"
+                            ,"fullPctBelow18","fullPctBelow20")]
 fullCorVals <- cor(relevantData, relevantData, use="complete")
 
 relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "smallMean",
@@ -236,7 +331,11 @@ relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_
                             "smallKurtosis", "smallSkewness", "smallPctile10",
                             "smallPctile25", "smallPctile75", "smallPctile90",
                             "smallGLCMContrast", "smallGLCMCorr", "smallGLCMEnergy",
-                            "smallGLCMHomog")]
+                            "smallGLCMHomog",
+                            "smallPctBelow2","smallPctBelow3","smallPctBelow4"
+                            ,"smallPctBelow5","smallPctBelow7","smallPctBelow10"
+                            ,"smallPctBelow12","smallPctBelow14","smallPctBelow16"
+                            ,"smallPctBelow18","smallPctBelow20")]
 smallCorVals <- cor(relevantData, relevantData, use="complete")
 
 relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_V_L", "largeMean",
@@ -244,7 +343,11 @@ relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_
                             "largeKurtosis", "largeSkewness", "largePctile10",
                             "largePctile25", "largePctile75", "largePctile90",
                             "largeGLCMContrast", "largeGLCMCorr", "largeGLCMEnergy",
-                            "largeGLCMHomog")]
+                            "largeGLCMHomog",
+                            "largePctBelow2","largePctBelow3","largePctBelow4"
+                            ,"largePctBelow5","largePctBelow7","largePctBelow10"
+                            ,"largePctBelow12","largePctBelow14","largePctBelow16"
+                            ,"largePctBelow18","largePctBelow20")]
 LargeCorVals <- cor(relevantData, relevantData, use="complete")
 
 
@@ -262,19 +365,19 @@ relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_
 bMatrixCorVals <- cor(relevantData, relevantData, use="complete")
 
 setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
-write.table(medCorVals, file=sprintf("%s.CorrelationData.csv","medium"))
-write.table(fullCorVals, file=sprintf("%s.CorrelationData.csv","full"))
-write.table(smallCorVals, file=sprintf("%s.CorrelationData.csv","small"))
-write.table(LargeCorVals, file=sprintf("%s.CorrelationData.csv","Large"))
-write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData.csv","aMatrix"))
-write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData.csv","bMatrix"))
+write.table(medCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","medium"))
+write.table(fullCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","full"))
+write.table(smallCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","small"))
+write.table(LargeCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","Large"))
+write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","aMatrix"))
+write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","bMatrix"))
 
-write.table(medCorVals, file=sprintf("%s.CorrelationData.txt","medium"))
-write.table(fullCorVals, file=sprintf("%s.CorrelationData.txt","full"))
-write.table(smallCorVals, file=sprintf("%s.CorrelationData.txt","small"))
-write.table(LargeCorVals, file=sprintf("%s.CorrelationData.txt","Large"))
-write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData.txt","aMatrix"))
-write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData.txt","bMatrix"))
+write.table(medCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","medium"))
+write.table(fullCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","full"))
+write.table(smallCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","small"))
+write.table(LargeCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","Large"))
+write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","aMatrix"))
+write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","bMatrix"))
 
 
 #####
@@ -315,6 +418,28 @@ feature <-fullData$mediumPctile75
 plot(fullData$VPD_L, feature, main="VPD vs medium 75th Percentile IQF", xlab="Percent Density", ylab = "Medium 75th percentile IQF Value")
 feature <-fullData$mediumPctile90 
 plot(fullData$VPD_L, feature, main="VPD vs medium 90the Percentile IQF", xlab="Percent Density", ylab = "Medium 90th Percentile IQF Value")
+feature <-fullData$mediumPctBelow2 
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$mediumPctBelow3
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$mediumPctBelow4
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$mediumPctBelow5
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$mediumPctBelow7
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$mediumPctBelow10
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$mediumPctBelow12
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$mediumPctBelow14
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$mediumPctBelow16
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$mediumPctBelow18
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$mediumPctBelow20
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$mediumGLCMContrast 
 plot(fullData$VPD_L, feature, main="VPD vs medium GLCM Contrast IQF", xlab="Percent Density", ylab = "Medium GLCM Contrast IQF Value")
 feature <-fullData$mediumGLCMCorr
@@ -348,6 +473,28 @@ feature <-fullData$largePctile75
 plot(fullData$VPD_L, feature, main="VPD vs large 75th Percentile IQF", xlab="Percent Density", ylab = "Large 75th percentile IQF Value")
 feature <-fullData$largePctile90 
 plot(fullData$VPD_L, feature, main="VPD vs large 90th Percentile IQF", xlab="Percent Density", ylab = "Large 90th percentile IQF Value")
+feature <-fullData$largePctBelow2 
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$largePctBelow3
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$largePctBelow4
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$largePctBelow5
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$largePctBelow7
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$largePctBelow10
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$largePctBelow12
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$largePctBelow14
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$largePctBelow16
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$largePctBelow18
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$largePctBelow20
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$largeGLCMContrast 
 plot(fullData$VPD_L, feature, main="VPD vs large GLCM Contrast IQF", xlab="Percent Density", ylab = "Large GLCM Contrast IQF Value")
 feature <-fullData$largeGLCMCorr
@@ -381,6 +528,28 @@ feature <-fullData$smallPctile75
 plot(fullData$VPD_L, feature, main="VPD vs small median IQF", xlab="Percent Density", ylab = "Small 75th Percentile IQF Value")
 feature <-fullData$smallPctile90 
 plot(fullData$VPD_L, feature, main="VPD vs small median IQF", xlab="Percent Density", ylab = "Small 90th Percentile IQF Value")
+feature <-fullData$smallPctBelow2 
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$smallPctBelow3
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$smallPctBelow4
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$smallPctBelow5
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$smallPctBelow7
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$smallPctBelow10
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$smallPctBelow12
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$smallPctBelow14
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$smallPctBelow16
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$smallPctBelow18
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$smallPctBelow20
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$smallGLCMContrast 
 plot(fullData$VPD_L, feature, main="VPD vs small median IQF", xlab="Percent Density", ylab = "Small GLCM COntrast IQF Value")
 feature <-fullData$smallGLCMCorr
@@ -414,6 +583,28 @@ feature <-fullData$fullPctile75
 plot(fullData$VPD_L, feature, main="VPD vs full 75th Percentile IQF", xlab="Percent Density", ylab = "Full 75th percentile IQF Value")
 feature <-fullData$fullPctile90 
 plot(fullData$VPD_L, feature, main="VPD vs full 90th Percentile IQF", xlab="Percent Density", ylab = "Full 90th percentile IQF Value")
+feature <-fullData$fullPctBelow2 
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$fullPctBelow3
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$fullPctBelow4
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$fullPctBelow5
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$fullPctBelow7
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$fullPctBelow10
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$fullPctBelow12
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$fullPctBelow14
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$fullPctBelow16
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$fullPctBelow18
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$fullPctBelow20
+plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$fullGLCMContrast 
 plot(fullData$VPD_L, feature, main="VPD vs full GLCM Contrast IQF", xlab="Percent Density", ylab = "Full GLCM Contrast IQF Value")
 feature <-fullData$fullGLCMCorr
@@ -551,6 +742,28 @@ feature <-fullData$mediumPctile75
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Medium 75th Percentile IQF")
 feature <-fullData$mediumPctile90 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Medium 90th Percentile IQF")
+feature <-fullData$mediumPctBelow2 
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$mediumPctBelow3
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$mediumPctBelow4
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$mediumPctBelow5
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$mediumPctBelow7
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$mediumPctBelow10
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$mediumPctBelow12
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$mediumPctBelow14
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$mediumPctBelow16
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$mediumPctBelow18
+boxplot( feature~fullData$density, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$mediumPctBelow20
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$mediumGLCMContrast 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Medium GLCM Contrast IQF")
 feature <-fullData$mediumGLCMCorr
@@ -582,6 +795,28 @@ feature <-fullData$largePctile75
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large 75th Percentile IQF")
 feature <-fullData$largePctile90 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large 90th Percentile IQF")
+feature <-fullData$largePctBelow2 
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$largePctBelow3
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$largePctBelow4
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$largePctBelow5
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$largePctBelow7
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$largePctBelow10
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$largePctBelow12
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$largePctBelow14
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$largePctBelow16
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$largePctBelow18
+boxplot( feature~fullData$density, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$largePctBelow20
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$largeGLCMContrast 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large GLCM Contrast IQF")
 feature <-fullData$largeGLCMCorr
@@ -613,6 +848,28 @@ feature <-fullData$smallPctile75
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Small 75th Percentile IQF")
 feature <-fullData$smallPctile90 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Small 90th Percentile IQF")
+feature <-fullData$smallPctBelow2 
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$smallPctBelow3
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$smallPctBelow4
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$smallPctBelow5
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$smallPctBelow7
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$smallPctBelow10
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$smallPctBelow12
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$smallPctBelow14
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$smallPctBelow16
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$smallPctBelow18
+boxplot( feature~fullData$density, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$smallPctBelow20
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$smallGLCMContrast 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Small GLCM Contrast IQF")
 feature <-fullData$smallGLCMCorr
@@ -644,6 +901,28 @@ feature <-fullData$fullPctile75
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Full 75th Percentile IQF")
 feature <-fullData$fullPctile90 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Full 90th Percentile IQF")
+feature <-fullData$fullPctBelow2 
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$fullPctBelow3
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$fullPctBelow4
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$fullPctBelow5
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$fullPctBelow7
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$fullPctBelow10
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$fullPctBelow12
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$fullPctBelow14
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$fullPctBelow16
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$fullPctBelow18
+boxplot( feature~fullData$density, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$fullPctBelow20
+boxplot(feature~fullData$density, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
 feature <-fullData$fullGLCMContrast 
 boxplot(feature~fullData$density, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Full GLCM Contrast IQF")
 feature <-fullData$fullGLCMCorr
