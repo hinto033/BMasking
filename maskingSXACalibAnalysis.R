@@ -297,8 +297,8 @@ print("DONE")
 #####
 #Save FullData sometime soon!!!!!!!!
 setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
-write.table(fullData, file=sprintf("%s.CompiledData.txt","CaseControlAfter2009"))
-write.table(fullData, file=sprintf("%s.CompiledData.csv","CaseControlAfter2009"))
+write.table(fullData, file=sprintf("%s.CompiledData_8.12.16.txt","CaseControlAfter2009"))
+write.table(fullData, file=sprintf("%s.CompiledData_8.12.16.csv","CaseControlAfter2009"))
 
 
 #####
@@ -400,6 +400,13 @@ feature =fullData$mediumMean
 cor(comparison, feature, use="complete")
 feature <-fullData$mediumMedian 
 plot(fullData$VPD_L, feature, main="VPD vs medium median IQF", xlab="Percent Density", ylab = "MediumMedian IQF Value")
+
+feature <-log(fullData$mediumMedian)
+plot(fullData$VPD_L, feature, main="VPD vs medium median IQF", xlab="Percent Density", ylab = "MediumMedian IQF Value")
+
+fit <- lm(fullData$VPD_L ~ feature)
+summary(fit)
+
 feature <-fullData$mediumStDev
 plot(fullData$VPD_L, feature, main="VPD vs medium StDev IQF", xlab="Percent Density", ylab = "Medium StDev IQF Value")
 feature <-fullData$mediumSum
@@ -412,6 +419,12 @@ feature <-fullData$mediumSkewness
 plot(fullData$VPD_L, feature, main="VPD vs medium Skewness IQF", xlab="Percent Density", ylab = "MediumSkewness IQF Value")
 feature <-fullData$mediumPctile10 
 plot(fullData$VPD_L, feature, main="VPD vs medium 10th Percentile IQF", xlab="Percent Density", ylab = "Medium 10th Percentile IQF Value")
+
+feature<- log(fullData$mediumPctile10)
+plot(fullData$VPD_L, feature, main="VPD vs medium 10th Percentile IQF", xlab="Percent Density", ylab = "Medium 10th Percentile IQF Value")
+fit <- lm(fullData$VPD_L ~ feature)
+summary(fit)
+
 feature <-fullData$mediumPctile25 
 plot(fullData$VPD_L, feature, main="VPD vs medium 25th percentile IQF", xlab="Percent Density", ylab = "Medium 25th Percentile IQF Value")
 feature <-fullData$mediumPctile75 
@@ -426,6 +439,17 @@ feature <-fullData$mediumPctBelow4
 plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
 feature <-fullData$mediumPctBelow5
 plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+
+feature<- exp(fullData$mediumPctBelow4)
+plot(fullData$VPD_L, feature, main="VPD vs medium 10th Percentile IQF", xlab="Percent Density", ylab = "Medium 10th Percentile IQF Value")
+fit <- lm(fullData$VPD_L ~ feature)
+summary(fit)
+feature<- exp(fullData$mediumPctBelow5)
+plot(fullData$VPD_L, feature, main="VPD vs medium 10th Percentile IQF", xlab="Percent Density", ylab = "Medium 10th Percentile IQF Value")
+fit <- lm(fullData$VPD_L ~ feature)
+summary(fit)
+influence(fit)
+
 feature <-fullData$mediumPctBelow7
 plot(fullData$VPD_L, feature, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
 feature <-fullData$mediumPctBelow10
@@ -450,7 +474,8 @@ feature <-fullData$mediumGLCMHomog
 plot(fullData$VPD_L, feature, main="VPD vs medium GLCM Homogeneity IQF", xlab="Percent Density", ylab = "Medium GLCM Homogeneity IQF Value")
 
 
-#Vs Large IQF Feature
+#####
+Vs Large IQF Feature
 feature <-fullData$largeMean 
 plot(fullData$VPD_L, feature, main="VPD vs large mean IQF", xlab="Percent Density", ylab = "Large mean IQF Value")
 feature <-fullData$largeMedian 
