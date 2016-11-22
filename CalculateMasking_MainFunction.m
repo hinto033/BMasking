@@ -84,12 +84,13 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
 %%
-shape = 'Round'; %May need to change this!!!
+% shape = 'Round'; %May need to change this!!!
 %%
 thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
     .05, .04, .03]; %um
 diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
     .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
+nCorrectDiscTimes=0
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected    
 %% Import the image & DICOMData   
 timePerImage = 1.25; %Min
@@ -99,6 +100,7 @@ disp('Importing the image...'); tic
 [IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
     PathName_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 %% Pre-processing data
 disp('Calculating the MTF...'); tic
 [SigmaPixels, errFlags] = determineMTF(IDicomOrig);
@@ -106,17 +108,23 @@ t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating the disk attenuations based on KVP, mAs...'); tic
 [attenuation, errFlags] = getSpectraAttens(DICOMData, thickness, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 %% Calculate the disk attenuations
 disp('Calculating lesions of appropriate attenuations/shapes...'); tic
-pixelSpacing = DICOMData.PixelSpacing(1);
-radius = ((diameter.*0.5)./(pixelSpacing));
+pixelSpacing = DICOMData.PixelSpacing(1)
+radius = ((diameter.*0.5)./(pixelSpacing))
+if strcmp(shape, 'Gaussian') == 1
+    nCorrectDiscTimes = nCorrectDiscTimes+1
+end
 [attenDisk, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 %% Remove the phantom itself
 disp('Removing the phantom and unnecessary artifacts...'); tic
 [maskingMap1, IDicomOrig, maxArea] = removePhantom(IDicomOrig);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 binaryOutline = maskingMap1;
+
 %% Remove excess material
 disp('Removing the outer Breast edge and Muscle...'); tic
 [maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea);
@@ -125,20 +133,24 @@ IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
 IDicomAvg = mean(IDicomVectorNoZeros);
 IDicomStdev = std(IDicomVectorNoZeros);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 %% Calculate the beta value (Used for thresholding)
 disp('Calculating Beta Value...'); tic
 PatchSize = 256;
 [beta, errFlags] = deriveBeta(IDicomEroded, pixelSpacing, PatchSize, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 %% Doing Calculations
 disp('Calculating thresholds for each lesion diameter...');tic
 [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisk,...
     diameter, attenuation,beta);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+
 disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
     attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
     part1, part2, FileName_Naming, beta, j, errFlags);
@@ -242,13 +254,15 @@ guidata(hObject,handles);
 function Plot_IsoContour_Callback(hObject, eventdata, handles)
 global SelectedData multipleImagesYesNo IQFSizeType
 disp('Working on plotting the isocontour image(s)...')
+SelectedData
+IQFSizeType = 'IQFMedium'
 if multipleImagesYesNo == 0
     figure
     imageArray = SelectedData.(IQFSizeType);
     imageArray = flipud(imageArray);
-    contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
+    contourSizes = [0,.5, 1,1.5 , 2,3, 4,5, 6, 8, 10, 12, 14, 16];
     contourf(imageArray, contourSizes)
-    % colormap(gray)
+%     colormap(gray)
     colorbar
     title(IQFSizeType)
 else
@@ -256,9 +270,9 @@ else
     figure
     imageArray = SelectedData{j}.(IQFSizeType{j});
     imageArray = flipud(imageArray);
-    contourSizes = [0, 1 , 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
+    contourSizes = [0, .5,1,1.5 , 2,3, 4,5, 6, 8, 10, 12, 14, 16];
     contourf(imageArray, contourSizes)
-    % colormap(gray)
+%     colormap(gray)
     colorbar
     title(IQFSizeType{j})
     end

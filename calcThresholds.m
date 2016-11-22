@@ -30,7 +30,21 @@ for j = 1:nPatches
     %Adjust this noise to have same mean/stdev as mammogram
     imAdjusted = (imf3Noise-imAvg)*(IDicomStdev/imStDev);
     imNoiseFinal = real(imAdjusted + IDicomAvg);
-    noisePatches(j,:) = imNoiseFinal(:)';
+    
+%     figure
+%     imshow(imNoiseFinal,[])
+%     pause
+%     noisePatches(j,:) = imNoiseFinal(:)';
+%     figure
+%     imshow(imNoiseFinal,[350 1150])
+%     negDisk = binDisk(:,:,5);
+%     attenuation(1)
+%     attenDisk = negDisk*((IDicomAvg-50)*(attenuation(7) - 1));
+%     figure
+%     imshow(imNoiseFinal+attenDisk,[350 1150])
+%     if j>=2
+%         pause
+%     end
 end
 clear imFFTf3Noise imNoise imFFT imf3Noise im1Final im1StdevAdj
 %% Determine threshold at each Diameter

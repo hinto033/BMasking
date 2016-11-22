@@ -1,7 +1,10 @@
 function [binaryDiskBlurred, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags)
-diamVector = round(radius.*2) + 1;
-radiusVector = diamVector./2;
-diskRegionSize = ceil(max(diamVector.*sqrt(2)))+1;
+diamVector = round(radius.*2) + 1
+radiusVector = diamVector./2
+diskRegionSize = ceil(max(diamVector.*sqrt(2)))+1
+radius
+shape
+SigmaPixels
 if isequal(shape, 'Round')  %shape == 'Round'
     centerX = round(diskRegionSize+1)/2;
     centerY = round(diskRegionSize+1)/2;
@@ -18,7 +21,7 @@ if isequal(shape, 'Round')  %shape == 'Round'
 elseif isequal(shape, 'Gaussian')  %shape == 'Gaussian'
     %Creates Gaussian that is centered and 3*sigma = radius
     diskBinaryMask = zeros(diskRegionSize, diskRegionSize, length(radius));
-    size(diskBinaryMask(:,:,1))
+    size(diskBinaryMask(:,:,1));
     for j = 1:length(radius)
     radCurrent = radiusVector(j);
     gaussianMask = fspecial('gaussian',diskRegionSize, radCurrent/3);

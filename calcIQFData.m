@@ -1,15 +1,22 @@
 function [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
     radius, binDisk, thickness, diameter, cutoffs, spacing,binaryOutline,IDicomAvg,IDicomStdev, errFlags)
 %% Setting Parms
+
 pMax = length(radius); kMax = length(attenuation);
 [nRows,nCols] = size(IDicomOrig); [nRowPatch,nColPatch] = size(binDisk(:,:,1));
-padAmnt = ceil(nRowPatch/2); patchRadius = padAmnt-1;
+padAmnt = ceil((nRowPatch+1)/2); patchRadius = padAmnt-1;
 IDicomOrig = padarray(IDicomOrig, [padAmnt,padAmnt], 'symmetric');
 oneMmPixels = ceil(1/spacing); pixelRadInIQFImg = ceil(oneMmPixels*2.5);
 rowIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nCols;
 colIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nRows;
 nValidPatches = 0;
 disp('Determining Locations to calculate...');tic
+
+patchRadius
+padAmnt
+nRowPatch
+nColPatch
+
 for rowIdx = rowIndices
     for colIdx = colIndices
         if binaryOutline(colIdx,rowIdx) == 0
@@ -19,7 +26,12 @@ for rowIdx = rowIndices
     end
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-imgPatch = zeros((patchRadius*2+1)^2,nValidPatches); %VERY GREEDY RAM
+ %VERY GREEDY RAM
+if mod(nRowPatch,2) == 0
+    imgPatch = zeros((patchRadius*2)^2,nValidPatches);
+else
+    imgPatch = zeros((patchRadius*2+1)^2,nValidPatches);
+end
 imgInfo = zeros(nValidPatches,4);
 nValidPatches = 0;
 disp('Storing Image Patches...');tic
@@ -28,8 +40,14 @@ for rowIdx = rowIndices
         paddedColIdx = colIdx+padAmnt;
         paddedRowIdx = rowIdx+padAmnt;
         %Define Region
-        region = IDicomOrig(paddedColIdx-patchRadius:paddedColIdx+patchRadius, ...
+        if mod(nRowPatch,2) == 0
+            region = IDicomOrig(paddedColIdx-patchRadius:paddedColIdx+patchRadius-1, ...
+            paddedRowIdx-patchRadius:paddedRowIdx+patchRadius-1);
+        else
+            region = IDicomOrig(paddedColIdx-patchRadius:paddedColIdx+patchRadius, ...
             paddedRowIdx-patchRadius:paddedRowIdx+patchRadius);
+        end
+        
         if binaryOutline(colIdx,rowIdx) == 0 %Do not store the location
         else  %Do store the location
             nValidPatches = nValidPatches+1;
@@ -55,6 +73,8 @@ for colIdx = 1:pMax
         attenMatrix(:,k) = attenDisk(:);
     end
     attenMatrixFlipped = attenMatrix.';
+    size(attenMatrixFlipped)
+    size(imgPatch)
     lambdaAll(:,:,colIdx) = attenMatrixFlipped*imgPatch;
 end
 clear imgPatch attenMatrix binDisk
@@ -99,6 +119,15 @@ for m = 1:nValidPatches
     IQFSmall(m) = sum(diameter(17:24))./(x(17:24)*y(17:24)');
    
     A = ones(length(diameter),2); B = zeros(length(diameter),1);
+    
+%     figure
+%     scatter(diameter,y)
+%     set(gca,'xscale','log','yscale','log')
+%     title('Contrast Detail plot')
+%     xlabel('Diameter of Lesion (mm)')
+%     ylabel('Threshold Thickness for Detection (um Gold)')
+%     pause
+    
     B(:,1) = log(y)'; A(:,2) = log(diameter');
     test = A\B;
     alpha = exp(test(1)); beta = test(2);

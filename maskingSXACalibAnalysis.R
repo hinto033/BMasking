@@ -10,7 +10,7 @@ baseData1 <- na.omit(baseData) #Clears any rows that have NA entries (Small numb
 fullData <- baseData1
 r <- dim(baseData1)
 nRows <- r[1]
-setwd("W:\\Breast Studies\\Masking\\BJH_MaskingMaps")
+setwd("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\From9.13.16GaussianDisks")
 
 for (i in 1:nRows){
   k<-baseData1$acquisition_id_L[i]
@@ -297,8 +297,8 @@ print("DONE")
 #####
 #Save FullData sometime soon!!!!!!!!
 setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
-write.table(fullData, file=sprintf("%s.CompiledData_8.12.16.txt","CaseControlAfter2009"))
-write.table(fullData, file=sprintf("%s.CompiledData_8.12.16.csv","CaseControlAfter2009"))
+write.table(fullData, file=sprintf("%s.CompiledData_GaussianDisks_9.13.16.txt","CaseControlAfter2009"))
+write.table(fullData, file=sprintf("%s.CompiledData_GaussianDisks_9.13.16.csv","CaseControlAfter2009"))
 
 
 #####
@@ -365,31 +365,95 @@ relevantData <- fullData[,c("density","bc_case","VPD_L", "BrstVol_V_L", "DenVol_
 bMatrixCorVals <- cor(relevantData, relevantData, use="complete")
 
 setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
-write.table(medCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","medium"))
-write.table(fullCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","full"))
-write.table(smallCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","small"))
-write.table(LargeCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","Large"))
-write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","aMatrix"))
-write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.csv","bMatrix"))
+write.table(medCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.csv","medium"))
+write.table(fullCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.csv","full"))
+write.table(smallCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.csv","small"))
+write.table(LargeCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.csv","Large"))
+write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.csv","aMatrix"))
+write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.csv","bMatrix"))
 
-write.table(medCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","medium"))
-write.table(fullCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","full"))
-write.table(smallCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","small"))
-write.table(LargeCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","Large"))
-write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","aMatrix"))
-write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData8.10.16.txt","bMatrix"))
+write.table(medCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.txt","medium"))
+write.table(fullCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.txt","full"))
+write.table(smallCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.txt","small"))
+write.table(LargeCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.txt","Large"))
+write.table(aMatrixCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.txt","aMatrix"))
+write.table(bMatrixCorVals, file=sprintf("%s.CorrelationData_GaussianDisks_9.13.16.txt","bMatrix"))
 
 
 #####
 
-setwd("Z:\\Breast Studies\\CBCRP Masking")
-baseData <- read.csv("CaseControlAfter2009.CompiledData8.7.16.csv", header=TRUE, sep=" ")
+setwd("Z:\\Breast Studies\\CBCRP Masking\\Analyzed Data")
+baseData <- read.csv("CaseControlAfter2009.CompiledData_8.12.16.csv", header=TRUE, sep=" ")
 baseData1 <- na.omit(baseData) #Clears any rows that have NA entries (Small number)
 
 fullData <- baseData1
 
+fullData$DenseBin <- ifelse(fullData$density>=3, 1, ifelse(fullData$density<=2, 0, NA))
 
 
+#Need to see if -> Correlates with density
+# Large IQF Image Stats
+#####
+feature <-fullData$largeMean 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large Mean IQF")
+feature <-fullData$largeMedian 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large Median IQF")
+feature <-fullData$largeStDev
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large StDev IQF")
+feature <-fullData$largeSum
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large Sum IQF")
+feature <-fullData$largeEntropy
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large Entropy IQF")
+feature <-fullData$largeKurtosis
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large Kurtosis IQF")
+feature <-fullData$largeSkewness 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large Skewness IQF")
+feature <-fullData$largePctile10 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large 10th Percentile IQF")
+feature <-fullData$largePctile25 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large 25th percentile IQF")
+feature <-fullData$largePctile75 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large 75th Percentile IQF")
+feature <-fullData$largePctile90 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large 90th Percentile IQF")
+feature <-fullData$largePctBelow2 
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 2", xlab="Percent Density", ylab = "Percent below IQF 2")
+feature <-fullData$largePctBelow3
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 3", xlab="Percent Density", ylab = "Percent below IQF 3")
+feature <-fullData$largePctBelow4
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 4", xlab="Percent Density", ylab = "Percent below IQF 4")
+feature <-fullData$largePctBelow5
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 5", xlab="Percent Density", ylab = "Percent below IQF 5")
+feature <-fullData$largePctBelow7
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 7", xlab="Percent Density", ylab = "Percent below IQF 7")
+feature <-fullData$largePctBelow10
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 10", xlab="Percent Density", ylab = "Percent below IQF 10")
+feature <-fullData$largePctBelow12
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 12", xlab="Percent Density", ylab = "Percent below IQF 12")
+feature <-fullData$largePctBelow14
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 14", xlab="Percent Density", ylab = "Percent below IQF 14")
+feature <-fullData$largePctBelow16
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 16", xlab="Percent Density", ylab = "Percent below IQF 16")
+feature <-fullData$largePctBelow18
+boxplot( feature~fullData$DenseBin, main="VPD vs Percent below IQF 18", xlab="Percent Density", ylab = "Percent below IQF 18")
+feature <-fullData$largePctBelow20
+boxplot(feature~fullData$DenseBin, main="VPD vs Percent below IQF 20", xlab="Percent Density", ylab = "Percent below IQF 20")
+feature <-fullData$largeGLCMContrast 
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large GLCM Contrast IQF")
+feature <-fullData$largeGLCMCorr
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large GLCM Corr IQF")
+feature <-fullData$largeGLCMEnergy
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large GLCM Energy IQF")
+feature <-fullData$largeGLCMHomog
+boxplot(feature~fullData$DenseBin, main = "Feature vs. BI-RADS Category", xlab ="BIRADS Category", ylab="Large GLCM Homogeneity IQF")
+
+#####
+#If can predict density (Logistic)
+
+
+
+
+#####
 #Plot the VBD Versus different values
 #Vs Medium IQF Feature
 comparison <- fullData$VPD_L

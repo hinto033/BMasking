@@ -86,41 +86,43 @@ stats.Data.Attenuations = attenuation;
 stats.Data.Beta = beta;
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 savepath = 'W:\Breast Studies\Masking\BJH_MaskingMaps\';
+savepath = 'W:\Breast Studies\Masking\PrelimAnalysis\ScreenDetected\MaskingMaps\'
+% pause
 %% Export images/data as .mats
 disp('Saving all Data...'); tic
 A4 = 'GeneratedStatistics'; A5 = '.mat';
 formatSpec = '%s_%s_%s%s';
 fileForSaving = sprintf(formatSpec,A2,A3, A4, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'stats')
+save([savepath fileForSaving], 'stats')
 A4_2 = 'IQFFullDisks';
 IQFFull = IQF.Full;
 fileForSaving = sprintf(formatSpec,A2,A3,  A4_2,  A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'IQFFull') %IQF Image
+save([savepath fileForSaving], 'IQFFull') %IQF Image
 A4_3 = 'IQFSmallDisks';
 IQFSmall = IQF.Small;
 fileForSaving = sprintf(formatSpec,A2,A3,A4_3,  A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'IQFSmall') %IQF Image of small disks
+save([savepath fileForSaving], 'IQFSmall') %IQF Image of small disks
 A4_4 = 'IQFMediumDisks';
 IQFMedium = IQF.Medium;
 fileForSaving = sprintf(formatSpec,A2,A3, A4_4, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'IQFMedium') % IQF Image of medium disks
+save([savepath fileForSaving], 'IQFMedium') % IQF Image of medium disks
 A4_5 = 'IQFLargeDisks';
 IQFLarge = IQF.Large;
 fileForSaving = sprintf(formatSpec,A2,A3, A4_5, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'IQFLarge') % IQF Image of large disks
+save([savepath fileForSaving], 'IQFLarge') % IQF Image of large disks
 A4_6 = 'A_ValueOfFit';
 fileForSaving = sprintf(formatSpec,A2,A3, A4_6, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'aMat')% a value from exponential fit at each point
+save([savepath fileForSaving], 'aMat')% a value from exponential fit at each point
 A4_7 = 'B_ValueOfFit';
 fileForSaving = sprintf(formatSpec,A2,A3, A4_7, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'bMat')% b value from exponential fit at each point
+save([savepath fileForSaving], 'bMat')% b value from exponential fit at each point
 % A4_8 = 'RSquareOfFit';
 % fileForSaving = sprintf(formatSpec,A2,A3, A4_8, A5)
 % save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'RSquare')% r^2 value from exp fit at each point
 % t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 A4_8 = 'ErrorFlags';
 fileForSaving = sprintf(formatSpec,A2,A3, A4_8, A5)
-save(['W:\Breast Studies\Masking\BJH_MaskingMaps\' fileForSaving], 'errFlags')% r^2 value from exp fit at each point
+save([savepath fileForSaving], 'errFlags')% r^2 value from exp fit at each point
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 Done = 'Finished this image.';
 end
