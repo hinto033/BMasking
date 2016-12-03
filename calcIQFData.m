@@ -6,17 +6,13 @@ pMax = length(radius); kMax = length(attenuation);
 [nRows,nCols] = size(IDicomOrig); [nRowPatch,nColPatch] = size(binDisk(:,:,1));
 padAmnt = ceil((nRowPatch+1)/2); patchRadius = padAmnt-1;
 IDicomOrig = padarray(IDicomOrig, [padAmnt,padAmnt], 'symmetric');
+
+
 oneMmPixels = ceil(1/spacing); pixelRadInIQFImg = ceil(oneMmPixels*2.5);
 rowIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nCols;
 colIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nRows;
 nValidPatches = 0;
 disp('Determining Locations to calculate...');tic
-
-patchRadius
-padAmnt
-nRowPatch
-nColPatch
-
 for rowIdx = rowIndices
     for colIdx = colIndices
         if binaryOutline(colIdx,rowIdx) == 0
@@ -59,6 +55,7 @@ for rowIdx = rowIndices
         end
     end
 end
+
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 clear IDicomOrig binaryOutline
 %Calculate the lambda for every disk/diameter
@@ -73,8 +70,6 @@ for colIdx = 1:pMax
         attenMatrix(:,k) = attenDisk(:);
     end
     attenMatrixFlipped = attenMatrix.';
-    size(attenMatrixFlipped)
-    size(imgPatch)
     lambdaAll(:,:,colIdx) = attenMatrixFlipped*imgPatch;
 end
 clear imgPatch attenMatrix binDisk
@@ -101,6 +96,7 @@ for currentDiam = 1:pMax %For each diamter, find the cutoff thickness at each po
     end
 
 end
+
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating IQF Values...');tic
 %Now Calculate the IQF, EXP Fit, etc.
@@ -110,13 +106,17 @@ IQFSmall = zeros(1,nValidPatches);aVector = zeros(1,nValidPatches);bVector = zer
 %NEED TO INSERT AN ERROR FLAG HERE
 threshThickness(isnan(threshThickness)) = 0.03; %Replaces any nan values with 0.03
 threshThickness(isinf(threshThickness)) = 0.03; %Replaces any nan values with 0.03
+
+nDiam = length(diameter);
+split1 = round(nDiam/3);
+split2 = 2*split1;
 for m = 1:nValidPatches
     y = threshThickness(m,:);
     IQFdenom = x*y';
     IQFFull(m) = sum(diameter(:))./IQFdenom;
-    IQFLarge(m) = sum(diameter(1:8))./(x(1:8)*y(1:8)');
-    IQFMedium(m) = sum(diameter(9:16))./(x(9:16)*y(9:16)');
-    IQFSmall(m) = sum(diameter(17:24))./(x(17:24)*y(17:24)');
+    IQFLarge(m) = sum(diameter(1:split1))./(x(1:split1)*y(1:split1)');
+    IQFMedium(m) = sum(diameter(split1+1:split2))./(x(split1+1:split2)*y(split1+1:split2)');
+    IQFSmall(m) = sum(diameter(split2+1:end))./(x(split2+1:end)*y(split2+1:end)');
    
     A = ones(length(diameter),2); B = zeros(length(diameter),1);
     
@@ -150,4 +150,14 @@ for m = 1:nValidPatches
     bMat(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg) = bVector(m);
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
+figure
+imshow(IQF.Full,[])
+figure
+imshow(IQF.Medium,[])
+figure
+imshow(IQF.Small,[])
+
+str = 'pausing'
+pause
 end

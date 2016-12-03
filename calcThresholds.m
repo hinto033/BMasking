@@ -34,7 +34,7 @@ for j = 1:nPatches
 %     figure
 %     imshow(imNoiseFinal,[])
 %     pause
-%     noisePatches(j,:) = imNoiseFinal(:)';
+    noisePatches(j,:) = imNoiseFinal(:)';
 %     figure
 %     imshow(imNoiseFinal,[350 1150])
 %     negDisk = binDisk(:,:,5);
@@ -74,7 +74,7 @@ for p = 1:length(diameter) %For each Diam
                 thresholdDetection(nTimes,p) = threshAvg;
                 break
             end
-        elseif percentCorrect < .7 %If was too inaccurate -> Set threshold
+        elseif percentCorrect < .7 %If was too inaccurate -> Set threshold  
                 threshWDisk = mean(lambdasAtAttenWDisk);
                 threshNoDisk = mean(lambdasAtAttenNoDisk);
                 threshAvg = (threshWDisk+threshNoDisk) / 2;

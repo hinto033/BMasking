@@ -42,7 +42,10 @@ varargout{1} = handles.output;
 function ShapeSelect_Callback(hObject, eventdata, handles)
 %Allows you to select a type of shape for the inserted disk
 %Will be useful for making different lesion sizes
-global shape
+global shape thickness diameter
+thickness = [4, 3.5, 3, 2.5, 2, 1.5, 1, .75, .5, .36, .25, .2, .16, .13, .1, .08,...
+    .05, .03]; %um
+diameter = [30, 28, 25, 22, 20, 18, 15, 12, 10, 8, 5, 4]; %mm
 contents = cellstr(get(hObject,'String'));
 shape = contents{get(hObject,'Value')};
 guidata(hObject,handles);
@@ -83,13 +86,8 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
+global thickness diameter
 %%
-% shape = 'Round'; %May need to change this!!!
-%%
-thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
-    .05, .04, .03]; %um
-diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
-    .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
 nCorrectDiscTimes=0
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected    
 %% Import the image & DICOMData   
@@ -291,10 +289,7 @@ function MakeVideo_Callback(hObject, eventdata, handles)
 %Creates video of disks being inserted into the region that you select.
 global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming FilterIndex_Naming extension shape
-thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
-    .05, .04, .03]; %um
-diameter = [50, 40, 30, 20, 10, 8, 5, 3, 2, 1.6, 1.25, 1, .8, .63, .5,...
-    .4, .31, .25, .2, .16, .13, .1, .08, .06]; %mm
+global thickness diameter
 j = 1
 %% Import the image & DICOMData   
 timePerImage = 7; %Min
@@ -356,10 +351,124 @@ close(v)
 guidata(hObject,handles);
 
 % --- Executes on button press in pushbutton21.
-function pushbutton21_Callback(hObject, eventdata, handles)
+function RegionAnalysis_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton21 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+global FileName_Naming NumImageAnalyze part1 part2
+global PathName_Naming extension shape
+global thickness diameter
+%%
+for j = 1:NumImageAnalyze %Does calculation for each image that was selected    
+%% Import the image & DICOMData   
+timePerImage = 1.25; %Min
+TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
+str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
+disp('Importing the image...'); tic
+[IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
+    PathName_Naming, extension);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Pre-processing data
+disp('Calculating the MTF...'); tic
+[SigmaPixels, errFlags] = determineMTF(IDicomOrig);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+disp('Calculating the disk attenuations based on KVP, mAs...'); tic
+[attenuation, errFlags] = getSpectraAttens(DICOMData, thickness, errFlags);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Calculate the disk attenuations
+disp('Calculating lesions of appropriate attenuations/shapes...'); tic
+pixelSpacing = DICOMData.PixelSpacing(1);
+radius = ((diameter.*0.5)./(pixelSpacing));
+[attenDisk, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Remove the phantom itself
+disp('Removing the phantom and unnecessary artifacts...'); tic
+[maskingMap1, IDicomOrig, maxArea] = removePhantom(IDicomOrig);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+binaryOutline = maskingMap1;
+%% Remove excess material
+disp('Removing the outer Breast edge and Muscle...'); tic
+[maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea);
+IDicomEroded = IDicomOrig .* maskingMap1; IDicomVector = IDicomEroded(:);
+IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
+IDicomAvg = mean(IDicomVectorNoZeros);
+IDicomStdev = std(IDicomVectorNoZeros);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Calculate the beta value (Used for thresholding)
+disp('Calculating Beta Value...'); tic
+PatchSize = 256;
+[beta, errFlags] = deriveBeta(IDicomEroded, pixelSpacing, PatchSize, errFlags);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
+%% Separate out only the ROI
+disp('Separating the ROI...'); tic
+
+%Import the annotated points
+yxCoords = [300 300; 300 700; 600 200; 600 700] %y is col, x is row 
+[nPnts, ~] = size(yxCoords) ;
+[nRow,nCol] = size(IDicomOrig);
+%dot the points on a background and make convex hull
+ROIMask = zeros(nRow,nCol);
+for f = 1:nPnts
+ROIMask(yxCoords(f,1),yxCoords(f,2)) = 1;
+end
+ROIMask1 = bwconvhull(ROIMask);
+
+
+%Calculates dimensions and rectangularity of the region
+xmax = max(yxCoords(:,2));
+xmin = min(yxCoords(:,2));
+xrange = xmax-xmin;
+ymax = max(yxCoords(:,1));
+ymin = min(yxCoords(:,1));
+yrange = ymax-ymin;
+
+% Makes mask rectangular and annotation is inscribed within
+ROIMask(ymin:ymax, xmin:xmax) = 1;
+% Makes mask square and dilates by 0.5 cm
+aD = round(5/pixelSpacing);
+if xrange>yrange %Wider than tall-> adds difference to make square
+    diff = (xrange-yrange)/2;
+    ROIMask(ymin-diff-aD:ymax+diff +aD, xmin-aD:xmax+aD) = 1;
+elseif xrange<yrange %Taller than wide-> adds difference to make square
+    diff = (yrange-xrange)/2;
+    ROIMask(ymin-aD:ymax+aD, xmin-diff-aD:xmax+diff+aD) = 1;
+else %only add the dilation
+    ROIMask(ymin-aD:ymax+aD, xmin-aD:xmax+aD) = 1;
+end
+
+ROINotCropped = ROIMask.*IDicomOrig;
+    
+if xrange>yrange %Wider than tall
+    ROI = ROINotCropped(ymin-diff-aD:ymax+diff +aD, xmin-aD:xmax+aD);
+elseif xrange<yrange %Taller than wide
+    ROI = ROINotCropped(ymin-aD:ymax+aD, xmin-diff-aD:xmax+diff+aD);
+else
+    ROI = ROINotCropped(ymin-aD:ymax +aD, xmin-aD:xmax+aD);
+end
+
+    %Calculate statistics 
+ROINoZeros =ROI(ROI~=0);
+ROIAvg = mean(ROINoZeros);
+ROIStdev = std(ROINoZeros);
+t = toc; str=sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
+%% Doing Calculations
+disp('Calculating thresholds for each lesion diameter...');tic
+[cutoffs] = calcThresholds(ROIAvg,ROIStdev,attenDisk,...
+    diameter, attenuation, beta);
+t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+cutoffs
+disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
+[IQF, aMat, bMat, errFlags] = calcIQFData(ROI,attenuation, radius,...
+    attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
+t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+pause
+%% Calculate Statistics that are relevant to test
+saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
+    part1, part2, FileName_Naming, beta, j, errFlags);
+end %Going through set of images
+
 
 
 guidata(hObject,handles);
