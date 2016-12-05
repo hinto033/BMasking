@@ -30,7 +30,10 @@ end
 % --- Executes just before DICOMReplace is made visible.
 function DICOMReplace_OpeningFcn(hObject, eventdata, handles, varargin)
 %Sets Initial Variables.
-global shape
+global shape thickness diameter
+thickness = [4, 3.5, 3, 2.5, 2, 1.5, 1, .75, .5, .36, .25, .2, .16, .13, .1, .08,...
+    .05, .03]; %um
+diameter = [30, 28, 25, 22, 20, 18, 15, 12, 10, 8, 5, 4]; %mm
 handles.output = hObject;
 guidata(hObject, handles);
 
@@ -43,9 +46,6 @@ function ShapeSelect_Callback(hObject, eventdata, handles)
 %Allows you to select a type of shape for the inserted disk
 %Will be useful for making different lesion sizes
 global shape thickness diameter
-thickness = [4, 3.5, 3, 2.5, 2, 1.5, 1, .75, .5, .36, .25, .2, .16, .13, .1, .08,...
-    .05, .03]; %um
-diameter = [30, 28, 25, 22, 20, 18, 15, 12, 10, 8, 5, 4]; %mm
 contents = cellstr(get(hObject,'String'));
 shape = contents{get(hObject,'Value')};
 guidata(hObject,handles);
@@ -402,60 +402,16 @@ t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 
 %% Separate out only the ROI
 disp('Separating the ROI...'); tic
-
 %Import the annotated points
-yxCoords = [300 300; 300 700; 600 200; 600 700] %y is col, x is row 
-[nPnts, ~] = size(yxCoords) ;
-[nRow,nCol] = size(IDicomOrig);
-%dot the points on a background and make convex hull
-ROIMask = zeros(nRow,nCol);
-for f = 1:nPnts
-ROIMask(yxCoords(f,1),yxCoords(f,2)) = 1;
-end
-ROIMask1 = bwconvhull(ROIMask);
-
-
-%Calculates dimensions and rectangularity of the region
-xmax = max(yxCoords(:,2));
-xmin = min(yxCoords(:,2));
-xrange = xmax-xmin;
-ymax = max(yxCoords(:,1));
-ymin = min(yxCoords(:,1));
-yrange = ymax-ymin;
-
-% Makes mask rectangular and annotation is inscribed within
-ROIMask(ymin:ymax, xmin:xmax) = 1;
-% Makes mask square and dilates by 0.5 cm
-aD = round(5/pixelSpacing);
-if xrange>yrange %Wider than tall-> adds difference to make square
-    diff = (xrange-yrange)/2;
-    ROIMask(ymin-diff-aD:ymax+diff +aD, xmin-aD:xmax+aD) = 1;
-elseif xrange<yrange %Taller than wide-> adds difference to make square
-    diff = (yrange-xrange)/2;
-    ROIMask(ymin-aD:ymax+aD, xmin-diff-aD:xmax+diff+aD) = 1;
-else %only add the dilation
-    ROIMask(ymin-aD:ymax+aD, xmin-aD:xmax+aD) = 1;
-end
-
-ROINotCropped = ROIMask.*IDicomOrig;
-    
-if xrange>yrange %Wider than tall
-    ROI = ROINotCropped(ymin-diff-aD:ymax+diff +aD, xmin-aD:xmax+aD);
-elseif xrange<yrange %Taller than wide
-    ROI = ROINotCropped(ymin-aD:ymax+aD, xmin-diff-aD:xmax+diff+aD);
-else
-    ROI = ROINotCropped(ymin-aD:ymax +aD, xmin-aD:xmax+aD);
-end
-
-    %Calculate statistics 
-ROINoZeros =ROI(ROI~=0);
-ROIAvg = mean(ROINoZeros);
-ROIStdev = std(ROINoZeros);
+%**********************Need to do this as input once I have annotations
+yxCoords = [300 300; 300 700; 600 200; 600 700]; %y is col, x is row 
+%THIS PART RIGHT ABOVE
+[ROI, ROIAvg, ROIStDev] = separateROI(IDicomOrig, yxCoords, pixelSpacing);
 t = toc; str=sprintf('time elapsed: %0.2f seconds', t); disp(str)
 
 %% Doing Calculations
 disp('Calculating thresholds for each lesion diameter...');tic
-[cutoffs] = calcThresholds(ROIAvg,ROIStdev,attenDisk,...
+[cutoffs] = calcThresholds(ROIAvg,ROIStDev,attenDisk,...
     diameter, attenuation, beta);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 cutoffs
