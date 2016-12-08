@@ -151,13 +151,4 @@ for m = 1:nValidPatches
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 
-figure
-imshow(IQF.Full,[])
-figure
-imshow(IQF.Medium,[])
-figure
-imshow(IQF.Small,[])
-
-str = 'pausing'
-pause
 end

@@ -1,5 +1,5 @@
 function [Done] = saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,...
-    SigmaPixels,attenuation,part1, part2, FileName_Naming, beta, j, errFlags)
+    SigmaPixels,attenuation,part1, part2, FileName_Naming, beta, j, errFlags, savedir)
 % mean, stdev, sum, entropy, kurtosis, skewness, 5th percentile, 25th
 % percentile, 75th percentile, 95th percentile, GLCM Contrast, GLCM
 % correlation, GLCM Energy, (All for full, small, med, large)
@@ -86,7 +86,9 @@ stats.Data.Attenuations = attenuation;
 stats.Data.Beta = beta;
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 savepath = 'W:\Breast Studies\Masking\BJH_MaskingMaps\';
-savepath = 'W:\Breast Studies\Masking\PrelimAnalysis\ScreenDetected\MaskingMaps\'
+savepath = 'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval\MaskingMaps\'
+savepath = [savedir,'\']
+    pause
 % pause
 %% Export images/data as .mats
 disp('Saving all Data...'); tic

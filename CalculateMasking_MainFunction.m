@@ -6,7 +6,7 @@ function varargout = DICOMReplace(varargin)
 %      instance to run (singleton)".
 % See also: GUIDE, GUIDATA, GUIHANDLES
 % Edit the above text to modify the response to help DICOMReplace
-% Last Modified by GUIDE v2.5 08-Jul-2016 11:17:05
+% Last Modified by GUIDE v2.5 08-Dec-2016 13:58:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -86,10 +86,10 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
-global thickness diameter
+global thickness diameter savedir
 %%
 nCorrectDiscTimes=0
-for j = 1:NumImageAnalyze %Does calculation for each image that was selected    
+for j = 1:NumImageAnalyze %Does calculation for each image that was selected     
 %% Import the image & DICOMData   
 timePerImage = 1.25; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
@@ -98,6 +98,31 @@ disp('Importing the image...'); tic
 [IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
     PathName_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+%% Check if I can't analyze (Because Spot Magnification or Breast Implant)
+%Check if implant exists
+bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
+bb2 =  strcmp(DICOMData.ImplantPresent, 'No');
+bb3 = strcmp(DICOMData.ImplantPresent, 'no');
+bb4 = strcmp(DICOMData.ImplantPresent, '');
+
+if bb1+bb2+bb3+bb4 == 0
+%     DICOMData.ImplantPresent
+%     pause
+    continue
+end
+
+%Check if it is a non-standard mammogram (I skip these for now)
+%Could do image processing to remove metal portions if I want later.
+% ww = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence
+% numel((DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence))
+tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
+if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
+%     DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence
+%     pause
+    continue
+end
+g1 = strcmp(DICOMData.ImplantPresent, 'NO');
+g2 = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence;
 
 %% Pre-processing data
 disp('Calculating the MTF...'); tic
@@ -109,8 +134,8 @@ t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 
 %% Calculate the disk attenuations
 disp('Calculating lesions of appropriate attenuations/shapes...'); tic
-pixelSpacing = DICOMData.PixelSpacing(1)
-radius = ((diameter.*0.5)./(pixelSpacing))
+pixelSpacing = DICOMData.PixelSpacing(1);
+radius = ((diameter.*0.5)./(pixelSpacing));
 if strcmp(shape, 'Gaussian') == 1
     nCorrectDiscTimes = nCorrectDiscTimes+1
 end
@@ -138,6 +163,10 @@ PatchSize = 256;
 [beta, errFlags] = deriveBeta(IDicomEroded, pixelSpacing, PatchSize, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 
+%% Remove the Muscle Before Calculating (ONLY IF MLO)
+disp('Removing the Muscle before Calculating IQF'); tic
+[IDicomOrig, binaryOutline] = removeMuscle(IDicomOrig, DICOMData);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 %% Doing Calculations
 disp('Calculating thresholds for each lesion diameter...');tic
 [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisk,...
@@ -148,10 +177,9 @@ disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
     attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
-    part1, part2, FileName_Naming, beta, j, errFlags);
+    part1, part2, FileName_Naming, beta, j, errFlags, savedir);
 end %Going through set of images
 guidata(hObject,handles);
 
@@ -289,7 +317,7 @@ function MakeVideo_Callback(hObject, eventdata, handles)
 %Creates video of disks being inserted into the region that you select.
 global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming FilterIndex_Naming extension shape
-global thickness diameter
+global thickness diameter savedir
 j = 1
 %% Import the image & DICOMData   
 timePerImage = 7; %Min
@@ -422,9 +450,17 @@ t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 pause
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
-    part1, part2, FileName_Naming, beta, j, errFlags);
+    part1, part2, FileName_Naming, beta, j, errFlags, savedir);
 end %Going through set of images
 
 
+
+guidata(hObject,handles);
+
+
+% --- Executes on button press in saveDirectory.
+function saveDirectory_Callback(hObject, eventdata, handles)
+global savedir
+savedir = uigetdir
 
 guidata(hObject,handles);
