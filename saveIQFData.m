@@ -40,6 +40,10 @@ for y = 1:4
     imgVectorNoZeros = imgVector(imgVector~=0);
     IQFvals = imgVectorNoZeros;
     totPx = length(IQFvals);
+    pctPxBelow05 = length(IQFvals(IQFvals<.5))/totPx;stats.(names{y}).pctBelowPnt5 = pctPxBelow05;
+    pctPxBelow1 = length(IQFvals(IQFvals<1))/totPx;stats.(names{y}).pctBelow1 = pctPxBelow1;
+    pctPxBelow125 = length(IQFvals(IQFvals<1.25))/totPx;stats.(names{y}).pctBelow1Pnt25 = pctPxBelow125;
+    pctPxBelow15 = length(IQFvals(IQFvals<1.5))/totPx;stats.(names{y}).pctBelow1Pnt5 = pctPxBelow15;
     pctPxBelow2 = length(IQFvals(IQFvals<2))/totPx;stats.(names{y}).pctBelow2 = pctPxBelow2;
     pctPxBelow3 = length(IQFvals(IQFvals<3))/totPx;stats.(names{y}).pctBelow3 = pctPxBelow3;
     pctPxBelow4 = length(IQFvals(IQFvals<4))/totPx;stats.(names{y}).pctBelow4 = pctPxBelow4;
@@ -88,7 +92,6 @@ t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 savepath = 'W:\Breast Studies\Masking\BJH_MaskingMaps\';
 savepath = 'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval\MaskingMaps\'
 savepath = [savedir,'\']
-    pause
 % pause
 %% Export images/data as .mats
 disp('Saving all Data...'); tic

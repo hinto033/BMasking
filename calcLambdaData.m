@@ -1,5 +1,5 @@
-function [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
-    radius, binDisk, thickness, diameter, cutoffs, spacing,binaryOutline,IDicomAvg,IDicomStdev, errFlags)
+function [IQF, aMat, bMat, errFlags] = calcLambdaData(IDicomOrig,attenuation, ...
+    radius, binDisk, thickness, diameter, spacing,binaryOutline,IDicomAvg,IDicomStdev, errFlags)
 %% Setting Parms
 
 pMax = length(radius); kMax = length(attenuation);
@@ -21,7 +21,6 @@ for rowIdx = rowIndices
         end
     end
 end
-nValidPatches
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
  %VERY GREEDY RAM
 if mod(nRowPatch,2) == 0
@@ -29,10 +28,9 @@ if mod(nRowPatch,2) == 0
 else
     imgPatch = zeros((patchRadius*2+1)^2,nValidPatches);
 end
-imgInfo = zeros(nValidPatches,5);
+imgInfo = zeros(nValidPatches,4);
 nValidPatches = 0;
 disp('Storing Image Patches...');tic
-testcount=1
 for rowIdx = rowIndices
     for colIdx = colIndices
         paddedColIdx = colIdx+padAmnt;
@@ -45,125 +43,18 @@ for rowIdx = rowIndices
             region = IDicomOrig(paddedColIdx-patchRadius:paddedColIdx+patchRadius, ...
             paddedRowIdx-patchRadius:paddedRowIdx+patchRadius);
         end
-        [regionnRow,regionNCol] = size(region);
+        
         if binaryOutline(colIdx,rowIdx) == 0 %Do not store the location
-        else  %Do store the location\
-%             testcount = testcount+1;
-%             if testcount==10
-%                 testcount=testcount+1;
-%                 figure
-%                 imshow(region,[400 1000])
-%                 negDisk = binDisk(:,:,1);
-%                 k = 8;
-%                 attenDisk = negDisk.*((IDicomAvg-50)*(attenuation(k) - 1));
-%                 figure
-%                 imshow(attenDisk,[])
-%                 figure
-%                 imshow(region+attenDisk,[400 1000])
-%                 pause
-%             end
+        else  %Do store the location
             nValidPatches = nValidPatches+1;
             imgInfo(nValidPatches,1) = paddedColIdx;
             imgInfo(nValidPatches,2) = paddedRowIdx;
             imgInfo(nValidPatches,3) = colIdx;
             imgInfo(nValidPatches,4) = rowIdx;
             imgPatch(:,nValidPatches) = region(:);
-            
         end
     end
 end
-% imgInfo
-% nValidPatches
-% size(imgInfo)
-% pause
-
-%% Calculate the thresholds by using nearby patches
-%Find nearby patches
-%find intermediate patches
-%Store them in same way I stores threshold thing
-% tic
-paddedLocations = imgInfo(:,1:2);
-thresholdFinal = zeros(nValidPatches,length(diameter));
-nPatches = 5;
-
-
-for kk = 1:nValidPatches
- 
-    patchLocation = imgInfo(kk,1:2);
-    patchOffset = repmat(patchLocation, nValidPatches,1);
-    patchOffset = paddedLocations-patchOffset;
-    distToPatch = patchOffset(:,1).^2 + patchOffset(:,2).^2;
-    [n,idx] = sort(distToPatch);
-    noisePatches(1,:) = imgPatch(:,idx(1))';
-    noisePatches(2,:) = imgPatch(:,idx(2))';
-    noisePatches(3,:) = imgPatch(:,idx(3))';
-    noisePatches(4,:) = imgPatch(:,idx(4))';
-    noisePatches(5,:) = imgPatch(:,idx(5))';
-    
-    filterNPW = zeros(regionnRow*regionNCol,length(attenuation));
-   
-    for p = 1:length(diameter) %For each Diam
-        negDisk = binDisk(:,:,p);
-        for k = 1:length(attenuation)
-            attenDisk = negDisk*((IDicomAvg-50)*(attenuation(k) - 1));
-            filterNPW(:,k) = attenDisk(:);
-        end
-        %Computes lambdas without disk for all attenuations and all patches
-        
-        lambdasNoDisk = noisePatches*filterNPW; %Costly TimeWise
-        offsetWDisk = diag(filterNPW'*filterNPW)'; %Costly timewise
-        offsetMatrix = repmat(offsetWDisk,nPatches,1); %Fine
-        %Computes lambdas with disk for all attenuations and all patches
-        lambdasWDisk = lambdasNoDisk + offsetMatrix; 
-        for k = 1:length(attenuation)
-            lambdasAtAttenNoDisk = lambdasNoDisk(:,k); %Separates lambdas of single attenuation
-            lambdasAtAttenWDisk = lambdasWDisk(:,k); %Separates lambdas of single attenuation
-            numCorrect = 0;
-            for numTries = 1:sum(linspace(1,(nPatches-1),(nPatches-1)))% Number of times to do
-                patchSelection = randperm(nPatches, 2);
-                p1 = patchSelection(1);
-                p2 = patchSelection(2);
-                if lambdasAtAttenNoDisk(p1)<lambdasAtAttenWDisk(p2)
-                    numCorrect = numCorrect + 1;
-                    percentCorrect = numCorrect/numTries;
-                elseif lambdasAtAttenNoDisk(p1)>lambdasAtAttenWDisk(p2)
-                end
-            end
-            percentCorrect = numCorrect/numTries;
-
-            if percentCorrect >= .7 %If guessed correctly enough ->don't set threshold
-                %************USE THIS SECTION TO SET THRESHOLD DIAMETERS AT
-                %ALL PATCHES
-                if k == length(attenuation); %Set threshold if at last atten
-                    threshWDisk = mean(lambdasAtAttenWDisk);
-                    threshNoDisk = mean(lambdasAtAttenNoDisk);
-                    threshAvg = (threshWDisk+threshNoDisk) / 2;
-                    thresholdDetection(1,p) = threshAvg;
-                    break
-                end
-            elseif percentCorrect < .7 %If was too inaccurate -> Set threshold  
-                %************USE THIS SECTION TO SET THRESHOLD DIAMETERS AT
-                %ALL PATCHES
-                    threshWDisk = mean(lambdasAtAttenWDisk);
-                    threshNoDisk = mean(lambdasAtAttenNoDisk);
-                    threshAvg = (threshWDisk+threshNoDisk) / 2;
-                    thresholdDetection(1,p) = threshAvg;
-                    break
-            end
-        end
-    end
-    thresholdFinal(kk,:) = (thresholdDetection);
-%     toc
-end
-   cutoffs = thresholdFinal
-   toc
-
-    %********************THE REST BELOW THIS MAY NOT BE NECESSARY
-    
-    pause
-%Do the thresholding (Only 1 time) and store the values 
-%%
-
 
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 clear IDicomOrig 
@@ -181,6 +72,11 @@ for colIdx = 1:pMax
     attenMatrixFlipped = attenMatrix.';
     lambdaAll(:,:,colIdx) = attenMatrixFlipped*imgPatch;
 end
+
+size(lambdaAll)
+pause
+
+
 clear imgPatch attenMatrix binDisk
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 threshThickness = zeros(nValidPatches, pMax);
@@ -220,14 +116,13 @@ nDiam = length(diameter);
 split1 = round(nDiam/3);
 split2 = 2*split1;
 for m = 1:nValidPatches
-    y = threshThickness(m,:)
-    
+    y = threshThickness(m,:);
     IQFdenom = x*y';
-    IQFFull(m) = sum(diameter(:))./IQFdenom
+    IQFFull(m) = sum(diameter(:))./IQFdenom;
     IQFLarge(m) = sum(diameter(1:split1))./(x(1:split1)*y(1:split1)');
     IQFMedium(m) = sum(diameter(split1+1:split2))./(x(split1+1:split2)*y(split1+1:split2)');
     IQFSmall(m) = sum(diameter(split2+1:end))./(x(split2+1:end)*y(split2+1:end)');
-    pause
+   
     A = ones(length(diameter),2); B = zeros(length(diameter),1);
     
 %     figure
@@ -266,9 +161,5 @@ IQF.Full = IQF.Full(1:nRows,1:nCols) .* binaryOutline;
 IQF.Large = IQF.Large(1:nRows,1:nCols) .* binaryOutline;
 IQF.Medium = IQF.Medium(1:nRows,1:nCols) .* binaryOutline;
 IQF.Small = IQF.Small(1:nRows,1:nCols) .* binaryOutline;
-
-figure
-imshow(IQF.Full,[0 3])
-pause
 
 end

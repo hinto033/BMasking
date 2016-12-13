@@ -105,6 +105,43 @@ end
 spectre1=spectre0.*exp(-Filtration);
 %Plot filtered Spectrum
 % hold on; plot(energies0,spectre1);
+%% Plot Spectrum after going through breast tissue
+%***********ADJUST THIS TO WORK WITH SXA***********
+breastThickness = DICOMData.BodyPartThickness;
+fattyThickness = breastThickness/2;
+glandularThickness = breastThickness/2;
+filtrationID = 'BREAST';
+for index=1:length(thickness)
+    Filtration=0*energies0;
+    filtrationID='GOLD';   %Change this to include diff material types.
+    thicknessCurrent=thickness(index)/1e4; %Converts from um to cm
+    if strcmp(filtrationID,'ADIPOSE')==1
+        Filtration=Filtration+interp1(attenuationData.Adipous(:,1),attenuationData.Adipous(:,2),energies0,'pchip')*thicknessCurrent*0.95;
+    elseif strcmp(filtrationID,'BREAST')==1
+        Filtration=Filtration+interp1(attenuationData.Breast(:,1),attenuationData.Breast(:,2),energies0,'pchip')*thicknessCurrent*1.02;
+    elseif strcmp(filtrationID,'WATER')==1
+        Filtration=Filtration+interp1(attenuationData.Water(:,1),attenuationData.Water(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Fat;
+    elseif strcmp(filtrationID,'CorticalBone')==1
+        Filtration=Filtration+interp1(attenuationData.CorticalBone(:,1),attenuationData.CorticalBone(:,2),energies0,'pchip')*thicknessCurrent*1.92;
+    elseif strcmp(filtrationID,'PE')==1
+        Filtration=Filtration+interp1(attenuationData.PE(:,1),attenuationData.PE(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.PE;
+    elseif strcmp(filtrationID,'MUSCLE')==1
+        Filtration=Filtration+interp1(attenuationData.Muscle(:,1),attenuationData.Muscle(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Muscle;
+    elseif strcmp(filtrationID,'PROTEIN')==1
+        Filtration=Filtration+interp1(attenuationData.Protein(:,1),attenuationData.Protein(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Protein;
+    elseif strcmp(filtrationID,'FAT')==1
+        Filtration=Filtration+interp1(attenuationData.Fat(:,1),attenuationData.Fat(:,2),energies0,'pchip')*thicknessCurrent*SimulationX.rho.Fat;
+    end
+    %Calculate post-gold spectrum and plot
+    spectre15=spectre1.*exp(-Filtration);
+%     hold on; plot(energies0,spectre2);
+end
+
+
+
+%Currently use HalfValueLayer or %BodyPartThickness (in mm)
+
+
 %% Plot spectrum after going thru gold disks
 % thickness = [2, 1.42, 1, .71, .5, .36, .25, .2, .16, .13, .1, .08, .06,...
 %     .05, .04, .03]; %This is in um
@@ -160,8 +197,8 @@ for index=1:length(thickness)
     %Calculate post-gold spectrum and plot
     spectre2=spectre1.*exp(-Filtration);
 %     hold on; plot(energies0,spectre2);
-    attenuationMeasure(index)=-log(sum(energies0.*spectre2)./sum(energies0.*spectre1));
-    attenuationMeasurev2(index)=(sum(energies0.*spectre2)./sum(energies0.*spectre1));
+    attenuationMeasure(index)=-log(sum(energies0.*spectre2)./sum(energies0.*spectre15));
+    attenuationMeasurev2(index)=(sum(energies0.*spectre2)./sum(energies0.*spectre15));
 end
 %Set Attenuation
 attenuation = attenuationMeasurev2;

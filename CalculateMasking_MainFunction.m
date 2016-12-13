@@ -126,7 +126,7 @@ g2 = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence;
 
 %% Pre-processing data
 disp('Calculating the MTF...'); tic
-[SigmaPixels, errFlags] = determineMTF(IDicomOrig);
+[SigmaPixels, errFlags] = determineMTF(IDicomOrig, DICOMData);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating the disk attenuations based on KVP, mAs...'); tic
 [attenuation, errFlags] = getSpectraAttens(DICOMData, thickness, errFlags);
@@ -147,10 +147,10 @@ disp('Removing the phantom and unnecessary artifacts...'); tic
 [maskingMap1, IDicomOrig, maxArea] = removePhantom(IDicomOrig);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 binaryOutline = maskingMap1;
-
 %% Remove excess material
 disp('Removing the outer Breast edge and Muscle...'); tic
 [maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea);
+size(maskingMap1)
 IDicomEroded = IDicomOrig .* maskingMap1; IDicomVector = IDicomEroded(:);
 IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
 IDicomAvg = mean(IDicomVectorNoZeros);
@@ -162,11 +162,19 @@ disp('Calculating Beta Value...'); tic
 PatchSize = 256;
 [beta, errFlags] = deriveBeta(IDicomEroded, pixelSpacing, PatchSize, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-
 %% Remove the Muscle Before Calculating (ONLY IF MLO)
 disp('Removing the Muscle before Calculating IQF'); tic
-[IDicomOrig, binaryOutline] = removeMuscle(IDicomOrig, DICOMData);
+[~, muscleMask] = removeMuscle(IDicomOrig, DICOMData);
+binaryOutline = binaryOutline.*muscleMask;
+% figure
+% imshow(binaryOutline)
+% pause
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+% %% Doing Calculations (Only Lambda Values)
+% [IQF, aMat, bMat, errFlags] = calcLambdaData(IDicomOrig,attenuation, radius,...
+%     attenDisk, thickness, diameter, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
+% t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+
 %% Doing Calculations
 disp('Calculating thresholds for each lesion diameter...');tic
 [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisk,...
@@ -177,6 +185,7 @@ disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
     attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
     part1, part2, FileName_Naming, beta, j, errFlags, savedir);
