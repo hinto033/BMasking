@@ -86,9 +86,9 @@ paddedLocations = imgInfo(:,1:2);
 thresholdFinal = zeros(nValidPatches,length(diameter));
 nPatches = 5;
 
-
+threshThickness = zeros(nValidPatches, pMax);
 for kk = 1:nValidPatches
- 
+    kk
     patchLocation = imgInfo(kk,1:2);
     patchOffset = repmat(patchLocation, nValidPatches,1);
     patchOffset = paddedLocations-patchOffset;
@@ -119,10 +119,12 @@ for kk = 1:nValidPatches
             lambdasAtAttenNoDisk = lambdasNoDisk(:,k); %Separates lambdas of single attenuation
             lambdasAtAttenWDisk = lambdasWDisk(:,k); %Separates lambdas of single attenuation
             numCorrect = 0;
-            for numTries = 1:sum(linspace(1,(nPatches-1),(nPatches-1)))% Number of times to do
-                patchSelection = randperm(nPatches, 2);
-                p1 = patchSelection(1);
-                p2 = patchSelection(2);
+            for numTries = 1:((nPatches-1)*2)% Number of times to do
+                patchSelection = [ones(1,nPatches-1), 2:nPatches; 2:nPatches,ones(1,nPatches-1)];
+                
+                p1 = patchSelection(1,numTries);
+                p2 = patchSelection(2,numTries);
+%                 pause
                 if lambdasAtAttenNoDisk(p1)<lambdasAtAttenWDisk(p2)
                     numCorrect = numCorrect + 1;
                     percentCorrect = numCorrect/numTries;
@@ -135,78 +137,86 @@ for kk = 1:nValidPatches
                 %************USE THIS SECTION TO SET THRESHOLD DIAMETERS AT
                 %ALL PATCHES
                 if k == length(attenuation); %Set threshold if at last atten
-                    threshWDisk = mean(lambdasAtAttenWDisk);
-                    threshNoDisk = mean(lambdasAtAttenNoDisk);
-                    threshAvg = (threshWDisk+threshNoDisk) / 2;
-                    thresholdDetection(1,p) = threshAvg;
+                    threshThickness(kk,p) = thickness(k);
+%                     pause
+%                     threshWDisk = mean(lambdasAtAttenWDisk);
+%                     threshNoDisk = mean(lambdasAtAttenNoDisk);
+%                     threshAvg = (threshWDisk+threshNoDisk) / 2;
+%                     thresholdDetection(1,p) = threshAvg;
                     break
                 end
             elseif percentCorrect < .7 %If was too inaccurate -> Set threshold  
                 %************USE THIS SECTION TO SET THRESHOLD DIAMETERS AT
                 %ALL PATCHES
-                    threshWDisk = mean(lambdasAtAttenWDisk);
-                    threshNoDisk = mean(lambdasAtAttenNoDisk);
-                    threshAvg = (threshWDisk+threshNoDisk) / 2;
-                    thresholdDetection(1,p) = threshAvg;
+                threshThickness(kk,p) = thickness(k);
+%                 pause
+                
+%                     threshWDisk = mean(lambdasAtAttenWDisk);
+%                     threshNoDisk = mean(lambdasAtAttenNoDisk);
+%                     threshAvg = (threshWDisk+threshNoDisk) / 2;
+%                     thresholdDetection(1,p) = threshAvg;
                     break
             end
         end
     end
-    thresholdFinal(kk,:) = (thresholdDetection);
+%     thresholdFinal(kk,:) = (thresholdDetection);
 %     toc
 end
-   cutoffs = thresholdFinal
+%    cutoffs = thresholdFinal
+
+threshThickness
+% pause
    toc
 
     %********************THE REST BELOW THIS MAY NOT BE NECESSARY
     
-    pause
+%     pause
 %Do the thresholding (Only 1 time) and store the values 
 %%
 
-
-t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-clear IDicomOrig 
-%Calculate the lambda for every disk/diameter
-disp('Calculating Lambda Values...');tic
-lambdaAll= zeros(kMax,nValidPatches,pMax);
-% attenMatrix = zeros(kMax,r*c);
-attenMatrix = zeros(nRowPatch*nColPatch,kMax);
-for colIdx = 1:pMax
-    negDisk = binDisk(:,:,colIdx);
-    for k = 1:kMax
-        attenDisk = negDisk.*((IDicomAvg-50)*(attenuation(k) - 1));
-        attenMatrix(:,k) = attenDisk(:);
-    end
-    attenMatrixFlipped = attenMatrix.';
-    lambdaAll(:,:,colIdx) = attenMatrixFlipped*imgPatch;
-end
-clear imgPatch attenMatrix binDisk
-t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-threshThickness = zeros(nValidPatches, pMax);
-disp('Calculating threshold Thicknesses...');tic %CAN IMPROVE ON THIS IF CAN GET ALL INDICES IN ONE SWOOP
-for currentDiam = 1:pMax %For each diamter, find the cutoff thickness at each point
-    lambdaDiam = lambdaAll(:,:,currentDiam);
-    cutoffDiam = cutoffs(currentDiam);
-    for m = 1:nValidPatches
-        lambdaPatch = lambdaDiam(:,m);
-        idx = find(lambdaPatch>cutoffDiam, 1);
-        if idx == 1 %Not detectable at thickest attenuation level
-            threshThickness(m,currentDiam) = 2;
-        elseif isempty(idx)
-            threshThickness(m,currentDiam) = thickness(kMax);
-        else
-            distLambdas = lambdaPatch(idx-1) - lambdaPatch(idx);
-            distCutoffLambda = cutoffs(currentDiam) - lambdaPatch(idx);
-            fractionAbove = distCutoffLambda/distLambdas;
-            distThickness = thickness(idx-1) - thickness(idx);
-            threshThickness(m, currentDiam) = thickness(idx)+(fractionAbove*distThickness);
-        end
-    end
-
-end
-
-t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+% 
+% t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+% clear IDicomOrig 
+% %Calculate the lambda for every disk/diameter
+% disp('Calculating Lambda Values...');tic
+% lambdaAll= zeros(kMax,nValidPatches,pMax);
+% % attenMatrix = zeros(kMax,r*c);
+% attenMatrix = zeros(nRowPatch*nColPatch,kMax);
+% for colIdx = 1:pMax
+%     negDisk = binDisk(:,:,colIdx);
+%     for k = 1:kMax
+%         attenDisk = negDisk.*((IDicomAvg-50)*(attenuation(k) - 1));
+%         attenMatrix(:,k) = attenDisk(:);
+%     end
+%     attenMatrixFlipped = attenMatrix.';
+%     lambdaAll(:,:,colIdx) = attenMatrixFlipped*imgPatch;
+% end
+% clear imgPatch attenMatrix binDisk
+% t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+% threshThickness = zeros(nValidPatches, pMax);
+% disp('Calculating threshold Thicknesses...');tic %CAN IMPROVE ON THIS IF CAN GET ALL INDICES IN ONE SWOOP
+% for currentDiam = 1:pMax %For each diamter, find the cutoff thickness at each point
+%     lambdaDiam = lambdaAll(:,:,currentDiam);
+%     cutoffDiam = cutoffs(currentDiam);
+%     for m = 1:nValidPatches
+%         lambdaPatch = lambdaDiam(:,m);
+%         idx = find(lambdaPatch>cutoffDiam, 1);
+%         if idx == 1 %Not detectable at thickest attenuation level
+%             threshThickness(m,currentDiam) = 2;
+%         elseif isempty(idx)
+%             threshThickness(m,currentDiam) = thickness(kMax);
+%         else
+%             distLambdas = lambdaPatch(idx-1) - lambdaPatch(idx);
+%             distCutoffLambda = cutoffs(currentDiam) - lambdaPatch(idx);
+%             fractionAbove = distCutoffLambda/distLambdas;
+%             distThickness = thickness(idx-1) - thickness(idx);
+%             threshThickness(m, currentDiam) = thickness(idx)+(fractionAbove*distThickness);
+%         end
+%     end
+% 
+% end
+% 
+% t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Calculating IQF Values...');tic
 %Now Calculate the IQF, EXP Fit, etc.
 x = diameter;
@@ -220,14 +230,14 @@ nDiam = length(diameter);
 split1 = round(nDiam/3);
 split2 = 2*split1;
 for m = 1:nValidPatches
-    y = threshThickness(m,:)
+    y = threshThickness(m,:);
     
     IQFdenom = x*y';
-    IQFFull(m) = sum(diameter(:))./IQFdenom
+    IQFFull(m) = sum(diameter(:))./IQFdenom;
     IQFLarge(m) = sum(diameter(1:split1))./(x(1:split1)*y(1:split1)');
     IQFMedium(m) = sum(diameter(split1+1:split2))./(x(split1+1:split2)*y(split1+1:split2)');
     IQFSmall(m) = sum(diameter(split2+1:end))./(x(split2+1:end)*y(split2+1:end)');
-    pause
+%     pause
     A = ones(length(diameter),2); B = zeros(length(diameter),1);
     
 %     figure
@@ -266,9 +276,9 @@ IQF.Full = IQF.Full(1:nRows,1:nCols) .* binaryOutline;
 IQF.Large = IQF.Large(1:nRows,1:nCols) .* binaryOutline;
 IQF.Medium = IQF.Medium(1:nRows,1:nCols) .* binaryOutline;
 IQF.Small = IQF.Small(1:nRows,1:nCols) .* binaryOutline;
-
-figure
-imshow(IQF.Full,[0 3])
-pause
+% 
+% figure
+% imshow(IQF.Full,[])
+% pause
 
 end
