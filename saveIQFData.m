@@ -1,4 +1,4 @@
-function [Done] = saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,...
+function [Done] = saveIQFData(aMat, bMat, IQF,DICOMData,...
     SigmaPixels,attenuation,part1, part2, FileName_Naming, beta, j, errFlags, savedir)
 % mean, stdev, sum, entropy, kurtosis, skewness, 5th percentile, 25th
 % percentile, 75th percentile, 95th percentile, GLCM Contrast, GLCM
@@ -84,7 +84,7 @@ stats.DICOMData.XRayCurrent = DICOMData.XrayTubeCurrent;
 stats.DICOMData.ImageOrientation = DICOMData.SeriesDescription;
 stats.DICOMData.FilterMaterial = DICOMData.FilterMaterial;
 stats.DICOMData.FilterThickness = (DICOMData.FilterThicknessMinimum + DICOMData.FilterThicknessMaximum) / 2; 
-stats.Data.Thresholds = cutoffs;
+% stats.Data.Thresholds = cutoffs;
 stats.Data.MTFSigmaPixels = SigmaPixels;
 stats.Data.Attenuations = attenuation;
 stats.Data.Beta = beta;

@@ -6,7 +6,7 @@ function varargout = DICOMReplace(varargin)
 %      instance to run (singleton)".
 % See also: GUIDE, GUIDATA, GUIHANDLES
 % Edit the above text to modify the response to help DICOMReplace
-% Last Modified by GUIDE v2.5 08-Dec-2016 13:58:49
+% Last Modified by GUIDE v2.5 20-Dec-2016 09:50:58
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -56,6 +56,7 @@ function SelectFile_Callback(hObject, eventdata, handles)
 %This will allow you to analyze these files later
 global NumImageAnalyze FileName PathName FilterIndex ext
 global FileName_Naming parts part1 part2 PathName_Naming FilterIndex_Naming extension
+
 %%Opens up dialogue box to import a DICOM file of your choosing
 [FileName,PathName,FilterIndex] = uigetfile('*.*', 'Select Multiple Files', 'MultiSelect', 'on');
 %Stores filepath
@@ -86,7 +87,7 @@ function InsertDisks_Callback(hObject, eventdata, handles)
 %Parameter Setting
 global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
-global thickness diameter savedir
+global thickness diameter savedir analysisChoice
 %%
 nCorrectDiscTimes=0
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected     
@@ -104,17 +105,12 @@ bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
 bb2 =  strcmp(DICOMData.ImplantPresent, 'No');
 bb3 = strcmp(DICOMData.ImplantPresent, 'no');
 bb4 = strcmp(DICOMData.ImplantPresent, '');
-
 if bb1+bb2+bb3+bb4 == 0
-%     DICOMData.ImplantPresent
-%     pause
     continue
 end
 
 %Check if it is a non-standard mammogram (I skip these for now)
 %Could do image processing to remove metal portions if I want later.
-% ww = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence
-% numel((DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence))
 tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
 if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
 %     DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence
@@ -156,7 +152,6 @@ IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
 IDicomAvg = mean(IDicomVectorNoZeros);
 IDicomStdev = std(IDicomVectorNoZeros);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-
 %% Calculate the beta value (Used for thresholding)
 disp('Calculating Beta Value...'); tic
 PatchSize = 256;
@@ -166,28 +161,25 @@ t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 disp('Removing the Muscle before Calculating IQF'); tic
 [~, muscleMask] = removeMuscle(IDicomOrig, DICOMData);
 binaryOutline = binaryOutline.*muscleMask;
-% figure
-% imshow(binaryOutline)
-% pause
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-% %% Doing Calculations (Only Lambda Values)
-% [IQF, aMat, bMat, errFlags] = calcLambdaData(IDicomOrig,attenuation, radius,...
-%     attenDisk, thickness, diameter, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
-% t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-
-%% Doing Calculations
-disp('Calculating thresholds for each lesion diameter...');tic
-[cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,attenDisk,...
-    diameter, attenuation,beta);
+%% Identify (and store) relevant image patches and related data
+disp('Determining relevant image patches to analyze...');tic
+[imgInfo, imgPatch,regionnRow,regionNCol, errFlags] = findImagePatches(IDicomOrig,attenuation,...
+    radius, attenDisk, pixelSpacing, binaryOutline, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-
+%% Perform 2-AFC test for detectability of those regions
+disp('Determining relevant image patches to analyze...');tic
+[threshThickness, errFlags] = determineDetectability(imgInfo,imgPatch, ...
+    attenDisk, thickness, diameter, IDicomAvg,IDicomStdev, analysisChoice, errFlags, radius, attenuation,regionnRow,regionNCol, beta);
+t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+%% Calculate the IQF Values and maps
 disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
-    attenDisk, thickness, diameter, cutoffs, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev,errFlags);
+    attenDisk, thickness, diameter, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev, threshThickness, errFlags, imgInfo);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-
+pause
 %% Calculate Statistics that are relevant to test
-saveIQFData(aMat, bMat, IQF,DICOMData,cutoffs,SigmaPixels,attenuation,...
+saveIQFData(aMat, bMat, IQF,DICOMData,SigmaPixels,attenuation,...
     part1, part2, FileName_Naming, beta, j, errFlags, savedir);
 end %Going through set of images
 guidata(hObject,handles);
@@ -473,3 +465,34 @@ global savedir
 savedir = uigetdir
 
 guidata(hObject,handles);
+
+
+% --- Executes on selection change in listbox2.
+function listbox2_Callback(hObject, eventdata, handles)
+% hObject    handle to listbox2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global shape thickness diameter analysisChoice
+contents = cellstr(get(hObject,'String'));
+choice = contents{get(hObject,'Value')};
+if strcmp(choice,'Simulated Patches')==1
+    analysisChoice = 'Simulate'
+elseif strcmp(choice, 'Similar Patches')==1
+    analysisChoice = 'Similar'
+end
+guidata(hObject,handles);
+% Hints: contents = cellstr(get(hObject,'String')) returns listbox2 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from listbox2
+
+
+% --- Executes during object creation, after setting all properties.
+function listbox2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to listbox2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
