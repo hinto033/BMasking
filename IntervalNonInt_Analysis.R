@@ -375,6 +375,73 @@ screenDataCC <- subset(allDataCC, Interval==0)
 intDataCC <- subset(allDataCC, Interval==1)
 
 
+##### Do Correlations
+
+
+
+
+#MLO
+
+#CC
+
+keep = c('Interval', 'largeMean', 'largeMedian', 'largeStDev', 'largeSum','largeEntropy','largeKurtosis', 'largeSkewness',
+         'largePctile10','largePctile25', 'largePctile75', 'largePctile90',
+         'largePctBelowPnt5', 'largePctBelow1', 'largePctBelow1Pnt25', 'largePctBelow1Pnt5',  'largePctBelow2', 'largePctBelow3',
+         'largePctBelow4', 'largePctBelow5', 'largePctBelow7', 'largePctBelow10',  'largePctBelow12', 'largePctBelow14',
+         'largePctBelow16', 'largePctBelow18', 'largePctBelow20',
+         'largeGLCMContrast', 'largeGLCMEnergy', 'largeGLCMCorr',  'largeGLCMHomog')
+
+corLargeDataCC <- data.frame(cor(allDataCC[keep]))
+corLargeDataMLO <- data.frame(cor(allDataMLO[keep]))
+corLargeDataAll <- data.frame(cor(allData[keep]))
+
+
+keep = c('Interval', 'mediumMean', 'mediumMedian', 'mediumStDev', 'mediumSum','mediumEntropy','mediumKurtosis', 'mediumSkewness',
+         'mediumPctile10','mediumPctile25', 'mediumPctile75', 'mediumPctile90',
+         'mediumPctBelowPnt5', 'mediumPctBelow1', 'mediumPctBelow1Pnt25', 'mediumPctBelow1Pnt5',  'mediumPctBelow2', 'mediumPctBelow3',
+         'mediumPctBelow4', 'mediumPctBelow5', 'mediumPctBelow7', 'mediumPctBelow10',  'mediumPctBelow12', 'mediumPctBelow14',
+         'mediumPctBelow16', 'mediumPctBelow18', 'mediumPctBelow20',
+         'mediumGLCMContrast', 'mediumGLCMEnergy', 'mediumGLCMCorr',  'mediumGLCMHomog')
+
+corMediumDataCC <- data.frame(cor(allDataCC[keep]))
+corMediumDataMLO <- data.frame(cor(allDataMLO[keep]))
+corMediumDataAll <- data.frame(cor(allData[keep]))
+
+keep = c('Interval', 'smallMean', 'smallMedian', 'smallStDev', 'smallSum','smallEntropy','smallKurtosis', 'smallSkewness',
+         'smallPctile10','smallPctile25', 'smallPctile75', 'smallPctile90',
+         'smallPctBelowPnt5', 'smallPctBelow1', 'smallPctBelow1Pnt25', 'smallPctBelow1Pnt5',  'smallPctBelow2', 'smallPctBelow3',
+         'smallPctBelow4', 'smallPctBelow5', 'smallPctBelow7', 'smallPctBelow10',  'smallPctBelow12', 'smallPctBelow14',
+         'smallPctBelow16', 'smallPctBelow18', 'smallPctBelow20',
+         'smallGLCMContrast', 'smallGLCMEnergy', 'smallGLCMCorr',  'smallGLCMHomog')
+
+corSmallDataCC <- data.frame(cor(allDataCC[keep]))
+corSmallDataMLO <- data.frame(cor(allDataMLO[keep]))
+corSmallDataAll <- data.frame(cor(allData[keep]))
+
+keep = c('Interval', 'fullMean', 'fullMedian', 'fullStDev', 'fullSum','fullEntropy','fullKurtosis', 'fullSkewness',
+         'fullPctile10','fullPctile25', 'fullPctile75', 'fullPctile90',
+         'fullPctBelowPnt5', 'fullPctBelow1', 'fullPctBelow1Pnt25', 'fullPctBelow1Pnt5',  'fullPctBelow2', 'fullPctBelow3',
+         'fullPctBelow4', 'fullPctBelow5', 'fullPctBelow7', 'fullPctBelow10',  'fullPctBelow12', 'fullPctBelow14',
+         'fullPctBelow16', 'fullPctBelow18', 'fullPctBelow20',
+         'fullGLCMContrast', 'fullGLCMEnergy', 'fullGLCMCorr',  'fullGLCMHomog')
+
+corFullDataCC <- data.frame(cor(allDataCC[keep]))
+corFullDataMLO <- data.frame(cor(allDataMLO[keep]))
+corFullDataAll <- data.frame(cor(allData[keep]))
+
+keep = c('Interval', 'imgBMean', 'imgAMean', 'imgBMedian', 'imgAMedian','imgBSum','imgASum', 
+         'imgBPctile10', 'imgBPctile25','imgBPctile75', 'imgBPctile90',
+         'imgAPctile10', 'imgAPctile25','imgAPctile75', 'imgAPctile90')
+
+corABMatDataCC <- data.frame(cor(combinedDataCC[keep]))
+corABMatDataMLO <- data.frame(cor(combinedDataMLO[keep]))
+corABMatDataAll <- data.frame(cor(combinedData[keep]))
+
+
+#####
+
+
+
 
 #Choose test/train set by going random set 1-682 or whatever.
 nTrainBreasts <- round(0.8* nBreasts)

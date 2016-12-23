@@ -60,5 +60,4 @@ for rowIdx = rowIndices
         end
     end
 end
-pause
 errFlags=errFlags

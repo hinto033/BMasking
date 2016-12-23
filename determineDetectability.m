@@ -2,11 +2,15 @@ function [threshThickness, errFlags] = determineDetectability(imgInfo,imgPatch, 
     binDisk, thickness, diameter, IDicomAvg,IDicomStdev, analysisChoice,...
     errFlags, radius, attenuation,regionnRow,regionNCol, beta)
 
+imgInfo(:,5) = imgInfo(:,5) / max(imgInfo(:,5));
+imgInfo(:,6) = imgInfo(:,6) / max(imgInfo(:,6));
+imgInfo;
 pMax = length(radius); kMax = length(attenuation);
 [nRowPatch,nColPatch] = size(binDisk(:,:,1));
 if strcmp(analysisChoice, 'Similar') ==1
     %% Calculate the thresholds by using nearby patches
     paddedLocations = imgInfo(:,1:2);
+    paddedStats = imgInfo(:,5:6);
     [nValidPatches,~] = size(paddedLocations);
     thresholdFinal = zeros(nValidPatches,length(diameter));
     nPatches = 5;
@@ -16,11 +20,17 @@ if strcmp(analysisChoice, 'Similar') ==1
         %**** NEED to adjust to choose image patches that are of similar mean,
         %stdev, NPS, etc.
         %**** That will involve altering findImagePatches as well.
-        patchLocation = imgInfo(kk,1:2);
-        patchOffset = repmat(patchLocation, nValidPatches,1);
-        patchOffset = paddedLocations-patchOffset;
-        distToPatch = patchOffset(:,1).^2 + patchOffset(:,2).^2; %This is what will chagne.
-        [n,idx] = sort(distToPatch);
+%         patchLocation = imgInfo(kk,1:2);
+%         patchOffset = repmat(patchLocation, nValidPatches,1);
+%         patchOffset = paddedLocations-patchOffset;
+%         distToPatch = patchOffset(:,1).^2 + patchOffset(:,2).^2; %This is what will chagne.
+%         [n,idx] = sort(distToPatch)
+        patchStat = imgInfo(kk,5:6);
+        statOffset = repmat(patchStat, nValidPatches, 1);
+        statOffset = paddedStats - statOffset;
+        diffInStats = statOffset(:,1).^2 + statOffset(:,2).^2;
+        [n,idx] = sort(diffInStats);
+        
         noisePatches(1,:) = imgPatch(:,idx(1))';
         noisePatches(2,:) = imgPatch(:,idx(2))';
         noisePatches(3,:) = imgPatch(:,idx(3))';
