@@ -10,8 +10,8 @@ install.packages("ROCR")
 # Importing the data
 #####
 
-setwd("W:\\Breast Studies\\Masking\\PrelimAnalysis\\12.14.16_CompiledData\\Interval")
-fileNames <- list.files("W:\\Breast Studies\\Masking\\PrelimAnalysis\\12.14.16_CompiledData\\Interval")
+setwd("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\Interval")
+fileNames <- list.files("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\Interval")
 nRows <- length(fileNames)
 intData <- data.frame(num=1:nRows)
 for (i in 1:nRows){
@@ -167,9 +167,10 @@ for (i in 1:nRows){
 print("DONE")
 
 
-setwd("W:\\Breast Studies\\Masking\\PrelimAnalysis\\12.14.16_CompiledData\\ScreenDetected")
+setwd("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\ScreenDetected")
+fileNames <- list.files("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\ScreenDetected")
 
-fileNames <- list.files("W:\\Breast Studies\\Masking\\PrelimAnalysis\\12.14.16_CompiledData\\ScreenDetected")
+
 nRows <- length(fileNames)
 screenData <- data.frame(num=1:nRows)
 for (i in 1:nRows){
