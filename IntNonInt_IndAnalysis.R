@@ -1,51 +1,23 @@
 
-#####
-# Installs necessary packages to do the analysis
+
+#Inputs:
 install.packages("R.matlab")
 install.packages("ROCR")
-install.packages("dplyr")
-install.packages("e1071")
-install.packages("ICC")
-install.packages("lattice")
-install.packages("psych")
-require("R.matlab")
-require("ROCR")
-require("dplyr")
-require("e1071")
-require("ICC")
-require("lattice")
-require("psych")
+# file:///W:/Breast Studies/Masking/txt_excels/cpmc_masking.txt
+# file:///W:/Breast Studies/Masking/txt_excels/cpmc_masking_rest.txt
+# file:///W:/Breast Studies/Masking/txt_excels/masking_diag_last_cpmc.txt
+
+# Importing the data
 #####
-#Defines the dataset that I'll analyze
-#Similar patches by mean/stdev
 
-dateOfAnalysis = "12.21.16"
-savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\"
-
-
-wdInt <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\Interval"
-wdScreen <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\ScreenDetected"
-
-#Similar Patches by location
-# wdInt <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.14.16_CompiledData\\Interval"
-# wdScreen <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.14.16_CompiledData\\ScreenDetected"
-
-# #Simulated Patches
-# wdInt <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.13.16_CompiledData\\Interval"
-# wdScreen <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.13.16_CompiledData\\ScreenDetected"
-
-##### 
-# Imports the dataset of the interval and screen detected cancers and places them in two tables
-setwd(wdInt)
-fileNames <- list.files(wdInt)
+setwd("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\Interval")
+fileNames <- list.files("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\Interval")
 nRows <- length(fileNames)
 intData <- data.frame(num=1:nRows)
 for (i in 1:nRows){
   imageStats <- readMat(fileNames[i])
   
   intData$fileName[i] <- fileNames[i]
-  intData$tmp[i] <- strsplit(fileNames[i], '_')[[1]][2]
-  intData$acquisition_id[i] <- strsplit(intData$tmp[i], '[.]')[[1]][1]
   intData$view[i] <- imageStats$stats[,,1]$DICOMData[,,1]$Position[1,1]
   intData$Interval <- 1
   intData$ScreenDetected <- 0
@@ -193,18 +165,18 @@ for (i in 1:nRows){
 
 
 print("DONE")
-#####
-# Screen Detected Data
-setwd(wdScreen)
-fileNames <- list.files(wdScreen)
+
+
+setwd("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\ScreenDetected")
+fileNames <- list.files("W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\12.21.16_CompiledData2\\ScreenDetected")
+
+
 nRows <- length(fileNames)
 screenData <- data.frame(num=1:nRows)
 for (i in 1:nRows){
   imageStats <- readMat(fileNames[i])
   
   screenData$fileName[i] <- fileNames[i]
-  screenData$tmp[i] <- strsplit(fileNames[i], '_')[[1]][2]
-  screenData$acquisition_id[i] <- strsplit(screenData$tmp[i], '[.]')[[1]][1]
   screenData$view[i] <- imageStats$stats[,,1]$DICOMData[,,1]$Position[1,1]
   screenData$Interval <- 0
   screenData$ScreenDetected <- 1
@@ -349,36 +321,22 @@ for (i in 1:nRows){
   screenData$imgAPctile75[i] <- imageStats$stats[,,1]$imgA[,,1]$Pctile75[1,1]
   screenData$imgAPctile90[i] <- imageStats$stats[,,1]$imgA[,,1]$Pctile90[1,1]
 }
+
+
 print("DONE")
 
+
+#Splits up data by CC and MLO
+
+#Arranging the data (MLO and CC Separately)
 #####
-# Combines data
-allData <- rbind(intData, screenData)
 
-
-#Adds the data from the SXA Analysis
-wdSXA <- "W:\\Breast Studies\\Masking\\SXAAnalysisData\\"
-fileName<-'SXA_Masking_01102017_APM.csv'
-SXAData <- read.csv(file=paste(wdSXA,fileName, sep=''),header=TRUE, sep=',')
-
-
-#merge the SXA and the Masking Datasets
-mergedData <- merge(allData, SXAData, by='acquisition_id')
-
-
-#Split by int/nonInt
-splitMerged <- split(mergedData, mergedData$Interval)
-dataInt <- splitMerged$`1`
-dataScreen <- splitMerged$`0`
-
-#Splits up data by CC andMLO
-splitInt<-split(dataInt, dataInt$view)
-splitScreen<-split(dataScreen, dataScreen$view)
-intDataMLO <- splitInt$MLO
-intDataCC <- splitInt$CC
+splitScreen <- split(screenData, screenData$view)
 screenDataMLO <- splitScreen$MLO
 screenDataCC <- splitScreen$CC
-
+splitInt <- split(intData, intData$view)
+intDataMLO <- splitInt$MLO
+intDataCC <- splitInt$CC
 
 
 # ### This section forces MLO data to have same number of INT as Screen Detected
@@ -437,544 +395,511 @@ trainSetCC <- rbind(trainSetIntCC,trainSetScreenCC)
 testSetCC <- rbind(testSetIntCC,testSetScreenCC)
 
 
+
+
+
+
+#Checking correlations
 #####
-#Testing correlation of the SXA Density Variable with the IQF Variables.
 
-# SXA..Breast.Density. vs all variabels from 8-147 in mergedData
+keep = c('Interval', 'largeMean', 'largeMedian', 'largeStDev', 'largeSum','largeEntropy','largeKurtosis', 'largeSkewness',
+         'largePctile10','largePctile25', 'largePctile75', 'largePctile90',
+         'largePctBelowPnt5', 'largePctBelow1', 'largePctBelow1Pnt25', 'largePctBelow1Pnt5',  'largePctBelow2', 'largePctBelow3',
+         'largePctBelow4', 'largePctBelow5', 'largePctBelow7', 'largePctBelow10',  'largePctBelow12', 'largePctBelow14',
+         'largePctBelow16', 'largePctBelow18', 'largePctBelow20',
+         'largeGLCMContrast', 'largeGLCMEnergy', 'largeGLCMCorr',  'largeGLCMHomog')
 
-SXACorVals <- cor(mergedData$SXA..Breast.Density., mergedData[,c(8:141)], use="pairwise.complete.obs")
-SXACorVals <- t(SXACorVals)
-write.csv(SXACorVals, file = paste(savePath,dateOfAnalysis,"CorWithSXA.csv", sep=""),row.names=TRUE)
+corLargeDataCC <- data.frame(cor(combinedDataCC[keep]))
+corLargeDataMLO <- data.frame(cor(combinedDataMLO[keep]))
 
 
-######
-#Logistic Regression of each individual variable (Not controlled for BIRADS)
-#For Both CC and MLO
+keep = c('Interval', 'mediumMean', 'mediumMedian', 'mediumStDev', 'mediumSum','mediumEntropy','mediumKurtosis', 'mediumSkewness',
+         'mediumPctile10','mediumPctile25', 'mediumPctile75', 'mediumPctile90',
+         'mediumPctBelowPnt5', 'mediumPctBelow1', 'mediumPctBelow1Pnt25', 'mediumPctBelow1Pnt5',  'mediumPctBelow2', 'mediumPctBelow3',
+         'mediumPctBelow4', 'mediumPctBelow5', 'mediumPctBelow7', 'mediumPctBelow10',  'mediumPctBelow12', 'mediumPctBelow14',
+         'mediumPctBelow16', 'mediumPctBelow18', 'mediumPctBelow20',
+         'mediumGLCMContrast', 'mediumGLCMEnergy', 'mediumGLCMCorr',  'mediumGLCMHomog')
 
-nCols <- ncol(allData)
-regResults <- data.frame(matrix(ncol = 7, nrow = (nCols-5)))
-colnames(regResults) <- c('Variable','pValCCTrain', 'pValMLOTrain', 'pctCorrTestCC', 'pctCorrTestMLO', 'AUCCC', 'AUCMLO')
-for (i in 8:nCols){
-  # i<-7
-  varT <- i
-  modelDataCC <- trainSetCC[,c(6,varT)]
-  model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
-  summary(model)
-  if (nrow(coef(summary(model)))==2) {
-  pValCC <- (coef(summary(model))[2,4])
-  }
-  else if (nrow(coef(summary(model)))==1) {pValCC <- 1}
+corMediumDataCC <- data.frame(cor(combinedDataCC[keep]))
+corMediumDataMLO <- data.frame(cor(combinedDataMLO[keep]))
+
+keep = c('Interval', 'smallMean', 'smallMedian', 'smallStDev', 'smallSum','smallEntropy','smallKurtosis', 'smallSkewness',
+         'smallPctile10','smallPctile25', 'smallPctile75', 'smallPctile90',
+         'smallPctBelowPnt5', 'smallPctBelow1', 'smallPctBelow1Pnt25', 'smallPctBelow1Pnt5',  'smallPctBelow2', 'smallPctBelow3',
+         'smallPctBelow4', 'smallPctBelow5', 'smallPctBelow7', 'smallPctBelow10',  'smallPctBelow12', 'smallPctBelow14',
+         'smallPctBelow16', 'smallPctBelow18', 'smallPctBelow20',
+         'smallGLCMContrast', 'smallGLCMEnergy', 'smallGLCMCorr',  'smallGLCMHomog')
+
+corSmallDataCC <- data.frame(cor(combinedDataCC[keep]))
+corSmallDataMLO <- data.frame(cor(combinedDataMLO[keep]))
+
+keep = c('Interval', 'fullMean', 'fullMedian', 'fullStDev', 'fullSum','fullEntropy','fullKurtosis', 'fullSkewness',
+         'fullPctile10','fullPctile25', 'fullPctile75', 'fullPctile90',
+         'fullPctBelowPnt5', 'fullPctBelow1', 'fullPctBelow1Pnt25', 'fullPctBelow1Pnt5',  'fullPctBelow2', 'fullPctBelow3',
+         'fullPctBelow4', 'fullPctBelow5', 'fullPctBelow7', 'fullPctBelow10',  'fullPctBelow12', 'fullPctBelow14',
+         'fullPctBelow16', 'fullPctBelow18', 'fullPctBelow20',
+         'fullGLCMContrast', 'fullGLCMEnergy', 'fullGLCMCorr',  'fullGLCMHomog')
+
+corFullDataCC <- data.frame(cor(combinedDataCC[keep]))
+corFullDataMLO <- data.frame(cor(combinedDataMLO[keep]))
+
+keep = c('Interval', 'imgBMean', 'imgAMean', 'imgBMedian', 'imgAMedian','imgBSum','imgASum', 
+         'imgBPctile10', 'imgBPctile25','imgBPctile75', 'imgBPctile90',
+         'imgAPctile10', 'imgAPctile25','imgAPctile75', 'imgAPctile90')
+
+corABMatDataCC <- data.frame(cor(combinedDataCC[keep]))
+corABMatDataMLO <- data.frame(cor(combinedDataMLO[keep]))
+
+
+#Checking various features via boxplots
+#Not Done
+#####
+
+
+#Checking for best individual identifiers in CC and MLO
+#####
+#MLO
+
+nCols <- ncol(intData)
+mloIndRegResult <- data.frame(matrix(ncol = 2, nrow = (nCols-5)))
+colnames(mloIndRegResult) <- c('Variable','AUC')
+for (i in 6:nCols){
   
-  testPredictionsData <- testSetCC[,c(6,varT)]
+  varT <- i
+  modelData <- trainSetMLO[,c(4,varT)]
+  model <- glm(modelData$Interval~., family=binomial(logit), data=modelData)
+  # summary(model)
+  # confint(model)
+  # anova(model, test="Chisq")
+  
+  testPredictionsData <- testSetMLO[,c(4,varT)]
   fitted.results <- predict(model,newdata=testPredictionsData,type='response')
   fitted.results <- ifelse(fitted.results > 0.5,1,0)
   misClasificError <- mean(fitted.results != testPredictionsData$Interval)
   print(paste('Accuracy',1-misClasificError))
-  AccuracyCC<- 1-misClasificError
+  
+  
   p <- predict(model, newdata=testPredictionsData, type="response")
   pr <- prediction(p, testPredictionsData$Interval)
   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
   # plot(prf)
+  
   auc <- performance(pr, measure = "auc")
-  aucCC <- auc@y.values[1]
-  print(colnames(allData[i]))
+  auc <- auc@y.values[1]
+  print(colnames(testSetMLO[i]))
   auc
   
-  
-  modelDataMLO <- trainSetMLO[,c(6,varT)]
-  model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
-  summary(model)
-  if (nrow(coef(summary(model)))==2) {
-    pValMLO <- (coef(summary(model))[2,4])
-  }
-  else if (nrow(coef(summary(model)))==1) {pValMLO <- 1}
-  # pValMLO <- (coef(summary(model))[2,4])
-  
-  testPredictionsData <- testSetMLO[,c(6,varT)]
-  fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-  fitted.results <- ifelse(fitted.results > 0.5,1,0)
-  misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-  print(paste('Accuracy',1-misClasificError))
-  AccuracyMLO<- 1-misClasificError
-  p <- predict(model, newdata=testPredictionsData, type="response")
-  pr <- prediction(p, testPredictionsData$Interval)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  # plot(prf)
-  auc <- performance(pr, measure = "auc")
-  aucMLO <- auc@y.values[1]
-  print(colnames(allData[i]))
-  auc
-  
-  
-  regResults[(i-5),1] <- colnames(allData[i])
-  regResults[(i-5),2] <- pValCC
-  regResults[(i-5),3] <- pValMLO
-  regResults[(i-5),4] <- AccuracyCC
-  regResults[(i-5),5] <- AccuracyMLO
-  regResults[(i-5),6] <- aucCC
-  regResults[(i-5),7] <- aucMLO
+  mloIndRegResult[(i-5),2] <- auc
+  mloIndRegResult[(i-5),1] <- colnames(testSetMLO[i])
+  # with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
 }
 
+mloIndRegResult <- data.frame(mloIndRegResult)
+sortedMLORegResult <- mloIndRegResult[order(mloIndRegResult$AUC, mloIndRegResult$Variable) , ] 
 
-#identifies the top performers of CC and MLO and shows some results and details of those items
+bestEntriesMLO<-sortedMLORegResult[(nCols-7):(nCols-5),]
 
-
-write.csv(regResults, file = paste(savePath,dateOfAnalysis,"regResults.csv", sep=""),row.names=TRUE)
-
-regResultsBest <- subset(regResults, pValCCTrain<0.2)
-sortedAUCCC <- regResultsBest[order(regResultsBest$AUCCC, regResultsBest$Variable, decreasing = TRUE) , ] 
-bestEntriesAUCCC<-sortedAUCCC[(1):(10),]
-keep <- bestEntriesAUCCC[,1]
-nEnt <- length(keep)
-keep[nEnt+1] <- 'Interval'
-bestData <- allData[keep]
-
-write.csv(regResultsBest, file = paste(savePath,dateOfAnalysis,"regResultsAUCCC.csv", sep=""),row.names=TRUE)
-write.csv(bestEntriesAUCCC, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCCC.csv", sep=""),row.names=TRUE)
-
-for (i in 1:10){
-  # i<-1
-  png(filename=paste("W:\\Breast Studies\\Masking\\AnalysisImages\\",dateOfAnalysis,"BoxPlotCC",i,".png", sep=""))
-  boxplot(bestData[,i]~bestData$Interval, main = paste(colnames(bestData[i]), "vs. Interval", sep=" "), xlab ="Interval (Yes=1)", ylab=colnames(bestData[i]))
-  dev.off()
-  # dotplot(bestData$Interval~bestData[,i], data=bestData)
-  png(filename=paste(savePath,dateOfAnalysis,"MeanPlotCC",i,".png", sep=""))
-  plotmeans(bestData[,i]~Interval, data = bestData,xlab="Intcancer Y/N",
-            ylab=colnames(bestData[i]), main="Mean Plot\nwith 95% CI")
-  dev.off()
-  # Do the test regression and plot how it works/looks
+nCols <- ncol(intData)
+ccIndRegResult <- data.frame(matrix(ncol = 2, nrow = (nCols-5)))
+colnames(ccIndRegResult) <- c('Variable','AUC')
+for (i in 6:nCols){
+  
   varT <- i
-  modelDataCC <- trainSetCC[,c(colnames(bestData[i]),"Interval")]
-  model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
-  summary(model)
+  modelData <- trainSetCC[,c(4,varT)]
+  model <- glm(modelData$Interval~., family=binomial(logit), data=modelData)
+  # summary(model)
+  # confint(model)
+  # anova(model, test="Chisq")
   
-  
-  testPredictionsData <- testSetCC[,c(colnames(bestData[i]),"Interval")]
-  fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedFullRangeCC",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  
-  fitted.results <- ifelse(fitted.results > 0.5,1,0)
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-  # plot(testPredictionsData$Interval, main=colnames(bestData[i]))
-  # plot(fitted.results, main=colnames(bestData[i]))
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedBinaryCC",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]),pch=16, col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  print(paste('Accuracy',1-misClasificError))
-  AccuracyCC<- 1-misClasificError
-  p <- predict(model, newdata=testPredictionsData, type="response")
-  pr <- prediction(p, testPredictionsData$Interval)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  png(filename=paste(savePath,dateOfAnalysis,"AUCPlotCC",i,".png", sep=""))
-  plot(prf, main=colnames(bestData[i]))
-  dev.off()
-  auc <- performance(pr, measure = "auc")
-  aucCC <- auc@y.values[1]
-  print(colnames(allData[i]))
-  aucCC
-  
-}
-
-
-regResultsBest <- subset(regResults, pValMLOTrain<.2)
-sortedAUCMLO <- regResultsBest[order(regResultsBest$AUCMLO, regResultsBest$Variable, decreasing = TRUE) , ] 
-bestEntriesAUCMLO<-sortedAUCMLO[(1):(10),]
-keep <- bestEntriesAUCMLO[,1]
-nEnt <- length(keep)
-keep[nEnt+1] <- 'Interval'
-bestData <- allData[keep]
-
-write.csv(regResultsBest, file = paste(savePath,dateOfAnalysis,"regResultsAUCMLO.csv", sep=""),row.names=TRUE)
-write.csv(bestEntriesAUCMLO, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCMLO.csv", sep=""),row.names=TRUE)
-
-for (i in 1:10){
-  # i<-1
-  png(filename=paste(savePath,dateOfAnalysis,"BoxPlotMLO",i,".png", sep=""))
-  boxplot(bestData[,i]~bestData$Interval, main = paste(colnames(bestData[i]), "vs. Interval", sep=" "), xlab ="Interval (Yes=1)", ylab=colnames(bestData[i]))
-  dev.off()
-  # dotplot(bestData$Interval~bestData[,i], data=bestData)
-  png(filename=paste(savePath,dateOfAnalysis,"MeanPlotMLO",i,".png", sep=""))
-  plotmeans(bestData[,i]~Interval, data = bestData,xlab="Intcancer Y/N",
-            ylab=colnames(bestData[i]), main="Mean Plot\nwith 95% CI")
-  dev.off()
-  # Do the test regression and plot how it works/looks
-  varT <- i
-  modelDataMLO <- trainSetMLO[,c(colnames(bestData[i]),"Interval")]
-  model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
-  summary(model)
-  
-  
-  testPredictionsData <- testSetMLO[,c(colnames(bestData[i]),"Interval")]
-  fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedFullRangeMLO",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  
-  fitted.results <- ifelse(fitted.results > 0.5,1,0)
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-  # plot(testPredictionsData$Interval, main=colnames(bestData[i]))
-  # plot(fitted.results, main=colnames(bestData[i]))
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedBinaryMLO",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]),pch=16, col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  print(paste('Accuracy',1-misClasificError))
-  AccuracyCC<- 1-misClasificError
-  p <- predict(model, newdata=testPredictionsData, type="response")
-  pr <- prediction(p, testPredictionsData$Interval)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  png(filename=paste(savePath,dateOfAnalysis,"AUCPlotMLO",i,".png", sep=""))
-  plot(prf, main=colnames(bestData[i]))
-  dev.off()
-  auc <- performance(pr, measure = "auc")
-  aucMLO <- auc@y.values[1]
-  print(colnames(allData[i]))
-  aucMLO
-  
-}
-
-
-######
-#Logistic Regression of each individual variable (controlled for BIRADS)
-#For Both CC and MLO
-
-nCols <- ncol(allData)
-regResultsCtrl <- data.frame(matrix(ncol = 13, nrow = (nCols-5)))
-colnames(regResultsCtrl) <- c('Variable','pValCCTrainSXA','pValCCTrainVar', 'pValMLOTrainSXA', 
-                              'pValMLOTrainVar','pctCorrTestCC', 'pctCorrTestMLO', 'AUCCC', 'AUCMLO',
-                              'estimateSXACC','estimateVarCC','estimateSXAMLO','estimateVarMLO')
-for (i in 8:nCols){
-  # i<-9
-  varT <- i
-  modelDataCC <- trainSetCC[,c(6,147,varT)]
-  model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
-  print(summary(model))
-  if (nrow(coef(summary(model)))==3) {
-    pValCCSXA <- (coef(summary(model))[2,4])
-    pValCCVar <- (coef(summary(model))[3,4])
-    estimateSXACC <- (coef(summary(model))[2,1])
-    estimateVarCC <- (coef(summary(model))[3,1])
-  }
-  # else if (nrow(coef(summary(model)))==1) {pValCC <- 1}
-  
-  testPredictionsData <- testSetCC[,c(6,147,varT)]
+  testPredictionsData <- testSetCC[,c(4,varT)]
   fitted.results <- predict(model,newdata=testPredictionsData,type='response')
   fitted.results <- ifelse(fitted.results > 0.5,1,0)
   misClasificError <- mean(fitted.results != testPredictionsData$Interval)
   print(paste('Accuracy',1-misClasificError))
-  AccuracyCC<- 1-misClasificError
+  
+  library(ROCR)
   p <- predict(model, newdata=testPredictionsData, type="response")
   pr <- prediction(p, testPredictionsData$Interval)
   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  # plot(prf)
+  #plot(prf)
+  
   auc <- performance(pr, measure = "auc")
-  aucCC <- auc@y.values[1]
-  print(colnames(allData[i]))
+  auc <- auc@y.values[1]
+  print(colnames(testSetMLO[i]))
   auc
   
+  ccIndRegResult[(i-5),2] <- auc
+  ccIndRegResult[(i-5),1] <- colnames(testSetMLO[i])
   
-  modelDataMLO <- trainSetMLO[,c(6,147,varT)]
-  model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
-  summary(model)
-  if (nrow(coef(summary(model)))==3) {
-    pValMLOSXA <- (coef(summary(model))[2,4])
-    pValMLOVar <- (coef(summary(model))[3,4])
-    estimateVarMLO <- (coef(summary(model))[3,1])
-    estimateSXAMLO <- (coef(summary(model))[2,1])
-  }
-  
-  testPredictionsData <- testSetMLO[,c(6,147,varT)]
-  fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-  fitted.results <- ifelse(fitted.results > 0.5,1,0)
-  misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-  print(paste('Accuracy',1-misClasificError))
-  AccuracyMLO<- 1-misClasificError
-  p <- predict(model, newdata=testPredictionsData, type="response")
-  pr <- prediction(p, testPredictionsData$Interval)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  # plot(prf)
-  auc <- performance(pr, measure = "auc")
-  aucMLO <- auc@y.values[1]
-  print(colnames(allData[i]))
-  auc
-  
-  regResultsCtrl[(i-5),1] <- colnames(allData[i])
-  regResultsCtrl[(i-5),2] <- pValCCSXA
-  regResultsCtrl[(i-5),3] <- pValCCVar
-  regResultsCtrl[(i-5),4] <- pValMLOSXA
-  regResultsCtrl[(i-5),5] <- pValMLOVar
-  regResultsCtrl[(i-5),6] <- AccuracyCC
-  regResultsCtrl[(i-5),7] <- AccuracyMLO
-  regResultsCtrl[(i-5),8] <- aucCC
-  regResultsCtrl[(i-5),9] <- aucMLO
-  regResultsCtrl[(i-5),10] <- estimateSXACC
-  regResultsCtrl[(i-5),11] <- estimateVarCC
-  regResultsCtrl[(i-5),12] <- estimateSXAMLO
-  regResultsCtrl[(i-5),13] <- estimateVarMLO
+  # with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
 }
 
+
+ccIndRegResult <- data.frame(ccIndRegResult)
+sortedCCRegResult <- ccIndRegResult[order(ccIndRegResult$AUC, ccIndRegResult$Variable) , ] 
+
+bestEntriesCC<-sortedCCRegResult[(nCols-7):(nCols-5),]
 
 #####
-#AUC of things I choose on same plot as BIRADS
+#Testing the MLO/CC Set separately
+#Using Logistic Regression
+#Without Controlling for BIRADS Density
+#Doing regressions based on those best individual Identifiers
+#####
 
 
-modelDataCC <- trainSetCC[,c(6,147)]
-model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
-# print(summary(model))
+#MLO
 
-testPredictionsData <- testSetCC[,c(6,147)]
+#Based on good individual performers
+keep = c('Interval', 'smallMean', 'smallMedian', 'smallStDev', 'smallSum','smallEntropy',
+         'smallPctile10','smallPctile25', 'smallPctile75', 'smallPctile90',
+         'smallPctBelowPnt5', 'smallPctBelow1', 'smallPctBelow1Pnt25', 'smallPctBelow1Pnt5',  'smallPctBelow2', 'smallPctBelow3',
+         'smallPctBelow4', 'smallPctBelow5', 'smallPctBelow7', 'smallPctBelow10',  'smallPctBelow12', 'smallPctBelow14',
+         'smallPctBelow16', 'smallPctBelow18', 'smallPctBelow20',
+         'smallGLCMContrast', 'smallGLCMEnergy', 'smallGLCMCorr',  'smallGLCMHomog')
+
+keep = c('Interval', 
+         'smallPctile10', 'smallPctBelow2', 'smallPctBelow3',
+         'smallPctBelow4',  'smallPctBelow14')
+
+modelData<-trainSetMLO[keep]
+model <- glm(modelData$Interval~., family=binomial(logit), data=modelData)
+summary(model)
+# confint(model)
+# anova(model, test="Chisq")
+
+
+testPredictionsData <- testSetMLO[keep]
 fitted.results <- predict(model,newdata=testPredictionsData,type='response')
+plot(fitted.results)
 fitted.results <- ifelse(fitted.results > 0.5,1,0)
+plot(fitted.results)
 misClasificError <- mean(fitted.results != testPredictionsData$Interval)
+plot(testPredictionsData$Interval)
 print(paste('Accuracy',1-misClasificError))
-AccuracyCC<- 1-misClasificError
+
+library(ROCR)
 p <- predict(model, newdata=testPredictionsData, type="response")
 pr <- prediction(p, testPredictionsData$Interval)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf, col='blue', lwd=2)
+plot(prf)
+
 auc <- performance(pr, measure = "auc")
-aucCC <- auc@y.values[1]
-aucCC
-pValCCSXA <- (coef(summary(model))[2,4])
-print(pValCCSXA)
-print(AccuracyCC)
+auc <- auc@y.values[1]
+auc
 
 
-keep <- c('Interval', 'SXA..Breast.Density.', 'fullMedian')
-modelDataCC <- trainSetCC[keep]
-model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
-# print(summary(model))
+with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
 
+
+
+#Testing the CC Set
+#Without Controlling for BIRADS Density
+#####
+#Based on individual performers in regression
+keep = c('Interval', 'smallMean', 'smallMedian', 'smallStDev', 'smallSum','smallEntropy',#'smallKurtosis', 'smallSkewness',
+         'smallPctile10','smallPctile25', 'smallPctile75', 'smallPctile90',
+         'smallPctBelowPnt5', 'smallPctBelow1', 'smallPctBelow1Pnt25', 'smallPctBelow1Pnt5',  'smallPctBelow2', 'smallPctBelow3',
+         'smallPctBelow4', 'smallPctBelow5', 'smallPctBelow7', 'smallPctBelow10',  'smallPctBelow12', 'smallPctBelow14',
+         'smallPctBelow16', 'smallPctBelow18', 'smallPctBelow20',
+         'smallGLCMContrast', 'smallGLCMEnergy', 'smallGLCMCorr',  'smallGLCMHomog')
+
+
+keep = c('Interval', 'smallMean', 'smallEntropy',
+         'smallPctile10','smallPctile25',
+         'smallPctBelow4')
+
+
+modelData<-trainSetCC[keep]
+model <- glm(modelData$Interval~., family=binomial(logit), data=modelData)
+summary(model)
+confint(model)
+
+anova(model, test="Chisq")
+
+# testSet$Interval <- factor(testSet$Interval)
 testPredictionsData <- testSetCC[keep]
+# testPredictionsData <- testSet[,c(3,varT)]
+fitted.results <- predict(model,newdata=testPredictionsData,type='response')
+plot(fitted.results)
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
+plot(fitted.results)
+plot(testPredictionsData$Interval)
+misClasificError <- mean(fitted.results != testPredictionsData$Interval)
+print(paste('Accuracy',1-misClasificError))
+
+
+p <- predict(model, newdata=testPredictionsData, type="response")
+pr <- prediction(p, testPredictionsData$Interval)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[1]
+auc
+
+
+with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
+
+
+
+#Testing the overall method to see if it works.
+#It does. which means the problem is my data.
+
+#Testing by combining info from MLO/CC into one
+
+#####
+
+
+#Controlling for BIRADS Density
+#####
+
+#With Controling for BIRADS Density (DON"T HAVE IT ON THIS DATASET.)
+trainSet$rank <- factor(trainSet$rank)
+
+keep = c('Interval', 'mediumMedian', 'mediumSum', 'mediumPctile25', 'mediumPctile90', 'mediumPctBelow5', 
+         'mediumGLCMEnergy', 'mediumGLCMCorr', 'mediumGLCMContrast', 'mediumGLCMHomog')
+modelData <- trainSet[keep]
+model <- glm(modelData$Interval~., family=binomial(logit), data=modelData)
+summary(model)
+anova(model, test="Chisq")
+
+testPredictionsData <- testSet[keep]
 fitted.results <- predict(model,newdata=testPredictionsData,type='response')
 fitted.results <- ifelse(fitted.results > 0.5,1,0)
 misClasificError <- mean(fitted.results != testPredictionsData$Interval)
 print(paste('Accuracy',1-misClasificError))
-AccuracyCC<- 1-misClasificError
+
+library(ROCR)
 p <- predict(model, newdata=testPredictionsData, type="response")
 pr <- prediction(p, testPredictionsData$Interval)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-lines(prf@x.values[[1]], prf@y.values[[1]], col='firebrick3', lwd=2)
+plot(prf)
+
 auc <- performance(pr, measure = "auc")
-aucCC <- auc@y.values[1]
-aucCC
-pValCCSXA <- (coef(summary(model))[2,4])
-pValCCVar <- (coef(summary(model))[3,4])
-print(pValCCSXA)
-print(pValCCVar)
-print(AccuracyCC)
+auc <- auc@y.values[[1]]
+auc
 
 
+
+
+
+
+#BoxPlots for MLO Dataset
 #####
-#identifies the top performers of CC and MLO and shows some results and details of those items
-# sortedPVal <- regResults[order(regResults$pVal, regResults$Variable) , ] 
-# bestEntriesPVal<-sortedPVal[(1):(10),]
-# 
-# keep <- bestEntriesPVal[,1]
-# nEnt <- length(keep)
-# keep[nEnt+1] <- 'Interval'
-# bestData <- allData[keep]
 
-
-
-write.csv(regResultsCtrl, file = paste(savePath,dateOfAnalysis,"regResultsCtrl.csv", sep=""),row.names=TRUE)
-
-regResultsBest <- subset(regResultsCtrl, pValCCTrain<0.1)
-sortedAUCCC <- regResultsBest[order(regResultsBest$AUCCC, regResultsBest$Variable, decreasing = TRUE) , ] 
-bestEntriesAUCCC<-sortedAUCCC[(1):(10),]
-keep <- bestEntriesAUCCC[,1]
-nEnt <- length(keep)
-keep[nEnt+1] <- 'Interval'
-bestData <- allData[keep]
-
-write.csv(regResultsBest, file = paste(savePath,dateOfAnalysis,"regResultsAUCCCControl.csv", sep=""),row.names=TRUE)
-write.csv(bestEntriesAUCCC, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCCCControl.csv", sep=""),row.names=TRUE)
-
-for (i in 1:10){
-  # i <- 1
-  png(filename=paste("W:\\Breast Studies\\Masking\\AnalysisImages\\",dateOfAnalysis,"BoxPlotCCControl",i,".png", sep=""))
-  boxplot(bestData[,i]~bestData$Interval, main = paste(colnames(bestData[i]), "vs. Interval", sep=" "), xlab ="Interval (Yes=1)", ylab=colnames(bestData[i]))
-  dev.off()
-  # dotplot(bestData$Interval~bestData[,i], data=bestData)
-  png(filename=paste(savePath,dateOfAnalysis,"MeanPlotCCControl",i,".png", sep=""))
-  plotmeans(bestData[,i]~Interval, data = bestData,xlab="Intcancer Y/N",
-            ylab=colnames(bestData[i]), main="Mean Plot\nwith 95% CI")
-  dev.off()
-  # Do the test regression and plot how it works/looks
-  varT <- i
-  modelDataCC <- trainSetCC[,c(colnames(bestData[i]),"Interval")]
-  model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
-  summary(model)
-  
-  
-  testPredictionsData <- testSetCC[,c(colnames(bestData[i]),"Interval")]
-  fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  
-  
-  
-  
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedFullRangeCCControl",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  
-  fitted.results <- ifelse(fitted.results > 0.5,1,0)
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-  # plot(testPredictionsData$Interval, main=colnames(bestData[i]))
-  # plot(fitted.results, main=colnames(bestData[i]))
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedBinaryCCControl",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]),pch=16, col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  print(paste('Accuracy',1-misClasificError))
-  AccuracyCC<- 1-misClasificError
-  p <- predict(model, newdata=testPredictionsData, type="response")
-  pr <- prediction(p, testPredictionsData$Interval)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  png(filename=paste(savePath,dateOfAnalysis,"AUCPlotCCControl",i,".png", sep=""))
-  plot(prf, main=colnames(bestData[i]))
-  dev.off()
-  auc <- performance(pr, measure = "auc")
-  aucCC <- auc@y.values[1]
-  print(colnames(allData[i]))
-  aucCC
-  
-}
-
-
-regResultsBest <- subset(regResults, pValMLOTrain<.2)
-sortedAUCMLO <- regResultsBest[order(regResultsBest$AUCMLO, regResultsBest$Variable, decreasing = TRUE) , ] 
-bestEntriesAUCMLO<-sortedAUCMLO[(1):(10),]
-keep <- bestEntriesAUCMLO[,1]
-nEnt <- length(keep)
-keep[nEnt+1] <- 'Interval'
-bestData <- allData[keep]
-
-write.csv(regResultsBest, file = paste(savePath,dateOfAnalysis,"regResultsAUCMLOControl.csv", sep=""),row.names=TRUE)
-write.csv(bestEntriesAUCMLO, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCMLOControl.csv", sep=""),row.names=TRUE)
-
-for (i in 1:10){
-  # i<-1
-  png(filename=paste(savePath,dateOfAnalysis,"BoxPlotMLO",i,".png", sep=""))
-  boxplot(bestData[,i]~bestData$Interval, main = paste(colnames(bestData[i]), "vs. Interval", sep=" "), xlab ="Interval (Yes=1)", ylab=colnames(bestData[i]))
-  dev.off()
-  # dotplot(bestData$Interval~bestData[,i], data=bestData)
-  png(filename=paste(savePath,dateOfAnalysis,"MeanPlotMLOControl",i,".png", sep=""))
-  plotmeans(bestData[,i]~Interval, data = bestData,xlab="Intcancer Y/N",
-            ylab=colnames(bestData[i]), main="Mean Plot\nwith 95% CI")
-  dev.off()
-  # Do the test regression and plot how it works/looks
-  varT <- i
-  modelDataMLO <- trainSetMLO[,c(colnames(bestData[i]),"Interval")]
-  model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
-  summary(model)
-  
-  
-  testPredictionsData <- testSetMLO[,c(colnames(bestData[i]),"Interval")]
-  fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedFullRangeMLOControl",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  
-  fitted.results <- ifelse(fitted.results > 0.5,1,0)
-  nEntries <- length(fitted.results)
-  nIntTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==1))
-  nScDTest <- nrow(subset(testPredictionsData, testPredictionsData$Interval==0))
-  fittedInt <- fitted.results
-  fittedInt[(nIntTest+1):nEntries] <- NA
-  fittedScD <- fitted.results
-  fittedScD[1:nIntTest] <- NA
-  misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-  # plot(testPredictionsData$Interval, main=colnames(bestData[i]))
-  # plot(fitted.results, main=colnames(bestData[i]))
-  png(filename=paste(savePath,dateOfAnalysis,"ClassifiedBinaryMLOControl",i,".png", sep=""))
-  plot(1:nEntries, fittedInt, main=colnames(bestData[i]),pch=16, col=ifelse(fitted.results>0.5, "darkgreen", "red"))
-  points( fittedScD, main=colnames(bestData[i]), pch=16,col=ifelse(fitted.results>0.5, "red", "darkgreen"))
-  dev.off()
-  print(paste('Accuracy',1-misClasificError))
-  AccuracyCC<- 1-misClasificError
-  p <- predict(model, newdata=testPredictionsData, type="response")
-  pr <- prediction(p, testPredictionsData$Interval)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  png(filename=paste(savePath,dateOfAnalysis,"AUCPlotMLOControl",i,".png", sep=""))
-  plot(prf, main=colnames(bestData[i]))
-  dev.off()
-  auc <- performance(pr, measure = "auc")
-  aucMLO <- auc@y.values[1]
-  print(colnames(allData[i]))
-  aucMLO
-  
-}
+# Full IQF Image Stats
+feature <-combinedDataMLO$fullMean 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Mean IQF")
+feature <-combinedDataMLO$fullMedian 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Median IQF")
+feature <-combinedDataMLO$fullStDev
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full StDev IQF")
+feature <-combinedDataMLO$fullSum
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Sum IQF")
+feature <-combinedDataMLO$fullEntropy
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Entropy IQF")
+feature <-combinedDataMLO$fullKurtosis
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Kurtosis IQF")
+feature <-combinedDataMLO$fullSkewness 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Skewness IQF")
+feature <-combinedDataMLO$fullPctile10 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 10th Percentile IQF")
+feature <-combinedDataMLO$fullPctile25 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 25th percentile IQF")
+feature <-combinedDataMLO$fullPctile75 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 75th Percentile IQF")
+feature <-combinedDataMLO$fullPctile90 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 90th Percentile IQF")
+feature <-combinedDataMLO$fullPctBelow2 
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 2", xlab="Percent Interval", ylab = "Percent below IQF 2")
+feature <-combinedDataMLO$fullPctBelow3
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 3", xlab="Percent Interval", ylab = "Percent below IQF 3")
+feature <-combinedDataMLO$fullPctBelow4
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 4", xlab="Percent Interval", ylab = "Percent below IQF 4")
+feature <-combinedDataMLO$fullPctBelow5
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 5", xlab="Percent Interval", ylab = "Percent below IQF 5")
+feature <-combinedDataMLO$fullPctBelow7
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 7", xlab="Percent Interval", ylab = "Percent below IQF 7")
+feature <-combinedDataMLO$fullPctBelow10
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 10", xlab="Percent Interval", ylab = "Percent below IQF 10")
+feature <-combinedDataMLO$fullPctBelow12
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 12", xlab="Percent Interval", ylab = "Percent below IQF 12")
+feature <-combinedDataMLO$fullPctBelow14
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 14", xlab="Percent Interval", ylab = "Percent below IQF 14")
+feature <-combinedDataMLO$fullPctBelow16
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 16", xlab="Percent Interval", ylab = "Percent below IQF 16")
+feature <-combinedDataMLO$fullPctBelow18
+boxplot( feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 18", xlab="Percent Interval", ylab = "Percent below IQF 18")
+feature <-combinedDataMLO$fullPctBelow20
+boxplot(feature~combinedDataMLO$Interval, main="VPD vs Percent below IQF 20", xlab="Percent Interval", ylab = "Percent below IQF 20")
+feature <-combinedDataMLO$fullGLCMContrast 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Contrast IQF")
+feature <-combinedDataMLO$fullGLCMCorr
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Corr IQF")
+feature <-combinedDataMLO$fullGLCMEnergy
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Energy IQF")
+feature <-combinedDataMLO$fullGLCMHomog
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Homogeneity IQF")
+# A Value of Exp Fit of Image Stats
+feature <-combinedDataMLO$imgAMean
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value Mean IQF")
+feature <-combinedDataMLO$imgAMedian 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value Median IQF")
+feature <-combinedDataMLO$imgASum
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value Sum IQF")
+feature <-combinedDataMLO$imgAPctile10
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 10th percentile IQF")
+feature <-combinedDataMLO$imgAPctile25
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 25th percentile IQF")
+feature <-combinedDataMLO$imgAPctile75
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 75th percentile IQF")
+feature <-combinedDataMLO$imgAPctile90
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 90th percentile IQF")
+# B Value of Exp Fit of Image Stats
+feature <-combinedDataMLO$imgBMean
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value Mean IQF")
+feature <-combinedDataMLO$imgBMedian 
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value Median IQF")
+feature <-combinedDataMLO$imgBSum
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value Sum IQF")
+feature <-combinedDataMLO$imgBPctile10
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 10th percentile IQF")
+feature <-combinedDataMLO$imgBPctile25
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 25th percentile IQF")
+feature <-combinedDataMLO$imgBPctile75
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 75th percentile IQF")
+feature <-combinedDataMLO$imgBPctile90
+boxplot(feature~combinedDataMLO$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 90th percentile IQF")
 
 
 
 
+#Boxplots for CC Dataset
+#Boxplots fo CC Dataset
+##### 
+# BoxPLots
 
 
 
+# Full IQF Image Stats
+feature <-combinedDataCC$fullMean 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Mean IQF")
+feature <-combinedDataCC$fullMedian 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Median IQF")
+feature <-combinedDataCC$fullStDev
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full StDev IQF")
+feature <-combinedDataCC$fullSum
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Sum IQF")
+feature <-combinedDataCC$fullEntropy
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Entropy IQF")
+feature <-combinedDataCC$fullKurtosis
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Kurtosis IQF")
+feature <-combinedDataCC$fullSkewness 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full Skewness IQF")
+feature <-combinedDataCC$fullPctile10 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 10th Percentile IQF")
+feature <-combinedDataCC$fullPctile25 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 25th percentile IQF")
+feature <-combinedDataCC$fullPctile75 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 75th Percentile IQF")
+feature <-combinedDataCC$fullPctile90 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full 90th Percentile IQF")
+feature <-combinedDataCC$fullPctBelow2 
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 2", xlab="Percent Interval", ylab = "Percent below IQF 2")
+feature <-combinedDataCC$fullPctBelow3
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 3", xlab="Percent Interval", ylab = "Percent below IQF 3")
+feature <-combinedDataCC$fullPctBelow4
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 4", xlab="Percent Interval", ylab = "Percent below IQF 4")
+feature <-combinedDataCC$fullPctBelow5
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 5", xlab="Percent Interval", ylab = "Percent below IQF 5")
+feature <-combinedDataCC$fullPctBelow7
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 7", xlab="Percent Interval", ylab = "Percent below IQF 7")
+feature <-combinedDataCC$fullPctBelow10
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 10", xlab="Percent Interval", ylab = "Percent below IQF 10")
+feature <-combinedDataCC$fullPctBelow12
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 12", xlab="Percent Interval", ylab = "Percent below IQF 12")
+feature <-combinedDataCC$fullPctBelow14
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 14", xlab="Percent Interval", ylab = "Percent below IQF 14")
+feature <-combinedDataCC$fullPctBelow16
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 16", xlab="Percent Interval", ylab = "Percent below IQF 16")
+feature <-combinedDataCC$fullPctBelow18
+boxplot( feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 18", xlab="Percent Interval", ylab = "Percent below IQF 18")
+feature <-combinedDataCC$fullPctBelow20
+boxplot(feature~combinedDataCC$Interval, main="VPD vs Percent below IQF 20", xlab="Percent Interval", ylab = "Percent below IQF 20")
+feature <-combinedDataCC$fullGLCMContrast 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Contrast IQF")
+feature <-combinedDataCC$fullGLCMCorr
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Corr IQF")
+feature <-combinedDataCC$fullGLCMEnergy
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Energy IQF")
+feature <-combinedDataCC$fullGLCMHomog
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Full GLCM Homogeneity IQF")
+# A Value of Exp Fit of Image Stats
+feature <-combinedDataCC$imgAMean
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value Mean IQF")
+feature <-combinedDataCC$imgAMedian 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value Median IQF")
+feature <-combinedDataCC$imgASum
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value Sum IQF")
+feature <-combinedDataCC$imgAPctile10
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 10th percentile IQF")
+feature <-combinedDataCC$imgAPctile25
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 25th percentile IQF")
+feature <-combinedDataCC$imgAPctile75
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 75th percentile IQF")
+feature <-combinedDataCC$imgAPctile90
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit A Value 90th percentile IQF")
+# B Value of Exp Fit of Image Stats
+feature <-combinedDataCC$imgBMean
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value Mean IQF")
+feature <-combinedDataCC$imgBMedian 
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value Median IQF")
+feature <-combinedDataCC$imgBSum
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value Sum IQF")
+feature <-combinedDataCC$imgBPctile10
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 10th percentile IQF")
+feature <-combinedDataCC$imgBPctile25
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 25th percentile IQF")
+feature <-combinedDataCC$imgBPctile75
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 75th percentile IQF")
+feature <-combinedDataCC$imgBPctile90
+boxplot(feature~combinedDataCC$Interval, main = "Feature vs. Interval", xlab ="Interval (Yes=1)", ylab="Exp Fit B Value 90th percentile IQF")
+#Sample of doing Logistic Regression
+#####
+
+mydata <- read.csv("http://www.ats.ucla.edu/stat/data/binary.csv")
+
+sampleSet <- mydata[sample(1:nrow(mydata)),]
+
+trainSet <- sampleSet[1:300,]
+testSet <- sampleSet[301:400,]
 
 
 
+modelData<-trainSet
+model <- glm(admit~., family=binomial(logit), data=modelData)
+summary(model)
 
 
 
+# testSet$Interval <- factor(testSet$Interval)
+testPredictionsData <- testSet
+fitted.results <- predict(model,newdata=testPredictionsData,type='response')
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
+misClasificError <- mean(fitted.results != testPredictionsData$admit)
+print(paste('Accuracy',1-misClasificError))
 
+library(ROCR)
+p <- predict(model, newdata=testPredictionsData, type="response")
+pr <- prediction(p, testPredictionsData$admit)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[1]
+auc
+
+
+with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
 
