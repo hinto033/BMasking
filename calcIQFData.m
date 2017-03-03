@@ -68,4 +68,8 @@ IQF.Medium = IQF.Medium(1:nRows,1:nCols) .* binaryOutline;
 IQF.Small = IQF.Small(1:nRows,1:nCols) .* binaryOutline;
 
 errFlags=errFlags;
+
+figure
+imshow(IQF.Full,[])
+pause
 end

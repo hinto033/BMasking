@@ -7,7 +7,7 @@ imgInfo(:,6) = imgInfo(:,6) / max(imgInfo(:,6));
 imgInfo;
 pMax = length(radius); kMax = length(attenuation);
 [nRowPatch,nColPatch] = size(binDisk(:,:,1));
-if strcmp(analysisChoice, 'Similar') ==1
+if strcmp(analysisChoice, 'Similar by Statistics') ==1
     %% Calculate the thresholds by using nearby patches
     paddedLocations = imgInfo(:,1:2);
     paddedStats = imgInfo(:,5:6);
@@ -15,21 +15,96 @@ if strcmp(analysisChoice, 'Similar') ==1
     thresholdFinal = zeros(nValidPatches,length(diameter));
     nPatches = 5;
     threshThickness = zeros(nValidPatches, pMax);
+    
     for kk = 1:nValidPatches
+        tic
         kk
-        %**** NEED to adjust to choose image patches that are of similar mean,
-        %stdev, NPS, etc.
-        %**** That will involve altering findImagePatches as well.
-%         patchLocation = imgInfo(kk,1:2);
-%         patchOffset = repmat(patchLocation, nValidPatches,1);
-%         patchOffset = paddedLocations-patchOffset;
-%         distToPatch = patchOffset(:,1).^2 + patchOffset(:,2).^2; %This is what will chagne.
-%         [n,idx] = sort(distToPatch)
         patchStat = imgInfo(kk,5:6);
         statOffset = repmat(patchStat, nValidPatches, 1);
         statOffset = paddedStats - statOffset;
         diffInStats = statOffset(:,1).^2 + statOffset(:,2).^2;
         [n,idx] = sort(diffInStats);
+        
+        noisePatches(1,:) = imgPatch(:,idx(1))';
+        noisePatches(2,:) = imgPatch(:,idx(2))';
+        noisePatches(3,:) = imgPatch(:,idx(3))';
+        noisePatches(4,:) = imgPatch(:,idx(4))';
+        noisePatches(5,:) = imgPatch(:,idx(5))';
+
+        filterNPW = zeros(regionnRow*regionNCol,length(attenuation));
+        toc  %.05 sec
+        
+        for p = 1:length(diameter) %For each Diam
+            tic
+            negDisk = binDisk(:,:,p);
+            for k = 1:length(attenuation) 
+                %***********REPLACE IDicomAvg with PatchStat informatoin
+                %(mean)
+                attenDisk = negDisk*((IDicomAvg-50)*(attenuation(k) - 1));
+                figure
+                imshow(negDisk(:,:,1),[])
+                pause
+                filterNPW(:,k) = attenDisk(:);
+            end
+            toc %.015 Sec * nDiam
+            tic
+            %Computes lambdas without disk for all attenuations and all patches
+            lambdasNoDisk = noisePatches*filterNPW; %Costly TimeWise
+            offsetWDisk = diag(filterNPW'*filterNPW)'; %Costly timewise
+            offsetMatrix = repmat(offsetWDisk,nPatches,1); %Fine
+            %Computes lambdas with disk for all attenuations and all patches
+            lambdasWDisk = lambdasNoDisk + offsetMatrix; 
+            toc %.015 sec * nDiam
+            tic
+            for k = 1:length(attenuation)
+                lambdasAtAttenNoDisk = lambdasNoDisk(:,k); %Separates lambdas of single attenuation
+                lambdasAtAttenWDisk = lambdasWDisk(:,k); %Separates lambdas of single attenuation
+                numCorrect = 0;
+                for numTries = 1:((nPatches-1)*2)% Number of times to do
+                    patchSelection = [ones(1,nPatches-1), 2:nPatches; 2:nPatches,ones(1,nPatches-1)];
+                    p1 = patchSelection(1,numTries);
+                    p2 = patchSelection(2,numTries);
+                    if lambdasAtAttenNoDisk(p1)<lambdasAtAttenWDisk(p2)
+                        numCorrect = numCorrect + 1;
+                        percentCorrect = numCorrect/numTries;
+                    elseif lambdasAtAttenNoDisk(p1)>lambdasAtAttenWDisk(p2)
+                    end
+                end
+                percentCorrect = numCorrect/numTries;
+                if percentCorrect >= .7 %If guessed correctly enough ->don't set threshold
+                    if k == length(attenuation); %Set threshold if at last atten
+                        threshThickness(kk,p) = thickness(k);
+                        break
+                    end
+                elseif percentCorrect < .7 %If was too inaccurate -> Set threshold 
+                    threshThickness(kk,p) = thickness(k);
+                        break
+                end
+            toc %.002 sec * n diam
+            pause
+            end
+        end
+%     toc
+    end
+    
+elseif strcmp(analysisChoice, 'Similar by Location') ==1
+    paddedLocations = imgInfo(:,1:2);
+    paddedStats = imgInfo(:,5:6);
+    [nValidPatches,~] = size(paddedLocations);
+    thresholdFinal = zeros(nValidPatches,length(diameter));
+    nPatches = 5;
+    threshThickness = zeros(nValidPatches, pMax);
+    for kk = 1:nValidPatches
+        tic
+        kk
+        %**** NEED to adjust to choose image patches that are of similar mean,
+        %stdev, NPS, etc.
+        %**** That will involve altering findImagePatches as well.
+        patchLocation = imgInfo(kk,1:2);
+        patchOffset = repmat(patchLocation, nValidPatches,1);
+        patchOffset = paddedLocations-patchOffset;
+        distToPatch = patchOffset(:,1).^2 + patchOffset(:,2).^2; %This is what will chagne.
+        [n,idx] = sort(distToPatch);
         
         noisePatches(1,:) = imgPatch(:,idx(1))';
         noisePatches(2,:) = imgPatch(:,idx(2))';
@@ -76,6 +151,7 @@ if strcmp(analysisChoice, 'Similar') ==1
                 end
             end
         end
+    toc
     end
 elseif strcmp(analysisChoice, 'Simulate') ==1
     [nValidPatches,~] = size(imgInfo);

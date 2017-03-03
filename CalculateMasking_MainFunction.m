@@ -113,8 +113,6 @@ end
 %Could do image processing to remove metal portions if I want later.
 tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
 if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
-%     DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence
-%     pause
     continue
 end
 g1 = strcmp(DICOMData.ImplantPresent, 'NO');
@@ -177,6 +175,7 @@ disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
     attenDisk, thickness, diameter, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev, threshThickness, errFlags, imgInfo);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+pause
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,SigmaPixels,attenuation,...
     part1, part2, FileName_Naming, beta, j, errFlags, savedir);
@@ -472,12 +471,14 @@ function listbox2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global shape thickness diameter analysisChoice
-contents = cellstr(get(hObject,'String'));
-choice = contents{get(hObject,'Value')};
+contents = cellstr(get(hObject,'String'))
+choice = contents{get(hObject,'Value')}
 if strcmp(choice,'Simulated Patches')==1
     analysisChoice = 'Simulate'
-elseif strcmp(choice, 'Similar Patches')==1
-    analysisChoice = 'Similar'
+elseif strcmp(choice, 'Similar by Statistics')==1
+    analysisChoice = 'Similar by Statistics'
+elseif strcmp(choice, 'Similar by Location')==1
+    analysisChoice = 'Similar by Location'
 end
 guidata(hObject,handles);
 % Hints: contents = cellstr(get(hObject,'String')) returns listbox2 contents as cell array
