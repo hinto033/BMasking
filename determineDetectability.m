@@ -1,13 +1,16 @@
 function [threshThickness, errFlags] = determineDetectability(imgInfo,imgPatch, ...
     binDisk, thickness, diameter, IDicomAvg,IDicomStdev, analysisChoice,...
     errFlags, radius, attenuation,regionnRow,regionNCol, beta)
-
+threshThickness = 0;
+errFlags = errFlags;
 imgInfo(:,5) = imgInfo(:,5) / max(imgInfo(:,5));
 imgInfo(:,6) = imgInfo(:,6) / max(imgInfo(:,6));
 imgInfo;
 pMax = length(radius); kMax = length(attenuation);
 [nRowPatch,nColPatch] = size(binDisk(:,:,1));
 if strcmp(analysisChoice, 'Similar by Statistics') ==1
+%     oil = 7
+%     pause
     %% Calculate the thresholds by using nearby patches
     paddedLocations = imgInfo(:,1:2);
     paddedStats = imgInfo(:,5:6);
@@ -17,7 +20,7 @@ if strcmp(analysisChoice, 'Similar by Statistics') ==1
     threshThickness = zeros(nValidPatches, pMax);
     
     for kk = 1:nValidPatches
-        tic
+%         tic
         kk
         patchStat = imgInfo(kk,5:6);
         statOffset = repmat(patchStat, nValidPatches, 1);
@@ -32,30 +35,36 @@ if strcmp(analysisChoice, 'Similar by Statistics') ==1
         noisePatches(5,:) = imgPatch(:,idx(5))';
 
         filterNPW = zeros(regionnRow*regionNCol,length(attenuation));
-        toc  %.05 sec
+%         toc  %.05 sec
         
         for p = 1:length(diameter) %For each Diam
-            tic
+%             tic
             negDisk = binDisk(:,:,p);
             for k = 1:length(attenuation) 
                 %***********REPLACE IDicomAvg with PatchStat informatoin
                 %(mean)
                 attenDisk = negDisk*((IDicomAvg-50)*(attenuation(k) - 1));
-                figure
-                imshow(negDisk(:,:,1),[])
-                pause
+%                 figure
+%                 imshow(attenDisk(:,:,1),[])
+%                 pause
                 filterNPW(:,k) = attenDisk(:);
             end
-            toc %.015 Sec * nDiam
-            tic
+%             toc %.015 Sec * nDiam
+%             tic
             %Computes lambdas without disk for all attenuations and all patches
             lambdasNoDisk = noisePatches*filterNPW; %Costly TimeWise
             offsetWDisk = diag(filterNPW'*filterNPW)'; %Costly timewise
             offsetMatrix = repmat(offsetWDisk,nPatches,1); %Fine
             %Computes lambdas with disk for all attenuations and all patches
             lambdasWDisk = lambdasNoDisk + offsetMatrix; 
-            toc %.015 sec * nDiam
-            tic
+            
+%             lambdasNoDisk(1,1)
+%             offsetWDisk(1,1)
+%             lambdasWDisk(1,1)
+%             pause
+            
+%             toc %.015 sec * nDiam
+%             tic
             for k = 1:length(attenuation)
                 lambdasAtAttenNoDisk = lambdasNoDisk(:,k); %Separates lambdas of single attenuation
                 lambdasAtAttenWDisk = lambdasWDisk(:,k); %Separates lambdas of single attenuation
@@ -80,8 +89,8 @@ if strcmp(analysisChoice, 'Similar by Statistics') ==1
                     threshThickness(kk,p) = thickness(k);
                         break
                 end
-            toc %.002 sec * n diam
-            pause
+%             toc %.002 sec * n diam
+%             pause
             end
         end
 %     toc
@@ -95,7 +104,7 @@ elseif strcmp(analysisChoice, 'Similar by Location') ==1
     nPatches = 5;
     threshThickness = zeros(nValidPatches, pMax);
     for kk = 1:nValidPatches
-        tic
+%         tic
         kk
         %**** NEED to adjust to choose image patches that are of similar mean,
         %stdev, NPS, etc.
@@ -117,6 +126,9 @@ elseif strcmp(analysisChoice, 'Similar by Location') ==1
             negDisk = binDisk(:,:,p);
             for k = 1:length(attenuation)
                 attenDisk = negDisk*((IDicomAvg-50)*(attenuation(k) - 1));
+                figure
+                imshow(negDisk(:,:,1),[])
+                pause
                 filterNPW(:,k) = attenDisk(:);
             end
             %Computes lambdas without disk for all attenuations and all patches
@@ -153,6 +165,7 @@ elseif strcmp(analysisChoice, 'Similar by Location') ==1
         end
     toc
     end
+    
 elseif strcmp(analysisChoice, 'Simulate') ==1
     [nValidPatches,~] = size(imgInfo);
     [cutoffs] = calcThresholds(IDicomAvg,IDicomStdev,binDisk,...

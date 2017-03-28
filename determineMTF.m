@@ -1,7 +1,7 @@
 function [sigmaPixels, errFlags] = determineMTF(IDicomOrig,DICOMData)
 
 sigmaPixels = 0.13/DICOMData.PixelSpacing(1);
-errFlags.MTF = 'no Error'
+errFlags.MTF = 'no Error';
 % 
 % [nRow,nCol] = size(IDicomOrig); 
 % deriv = zeros(1,nCol);

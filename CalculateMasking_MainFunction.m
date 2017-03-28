@@ -89,16 +89,18 @@ global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
 global thickness diameter savedir analysisChoice
 %%
-nCorrectDiscTimes=0
+nCorrectDiscTimes=0;
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected     
 %% Import the image & DICOMData   
-timePerImage = 1.25; %Min
+timePerImage = .41666; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
 str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
+pause(0.3)
 disp('Importing the image...'); tic
 [IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
     PathName_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 %% Check if I can't analyze (Because Spot Magnification or Breast Implant)
 %Check if implant exists
 bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
@@ -131,7 +133,7 @@ disp('Calculating lesions of appropriate attenuations/shapes...'); tic
 pixelSpacing = DICOMData.PixelSpacing(1);
 radius = ((diameter.*0.5)./(pixelSpacing));
 if strcmp(shape, 'Gaussian') == 1
-    nCorrectDiscTimes = nCorrectDiscTimes+1
+    nCorrectDiscTimes = nCorrectDiscTimes+1;
 end
 [attenDisk, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
@@ -144,7 +146,7 @@ binaryOutline = maskingMap1;
 %% Remove excess material
 disp('Removing the outer Breast edge and Muscle...'); tic
 [maskingMap1] = erodeUnecessaryEdges(maskingMap1, maxArea);
-size(maskingMap1)
+size(maskingMap1);
 IDicomEroded = IDicomOrig .* maskingMap1; IDicomVector = IDicomEroded(:);
 IDicomVectorNoZeros =IDicomVector(IDicomVector~=0);
 IDicomAvg = mean(IDicomVectorNoZeros);
@@ -167,15 +169,18 @@ disp('Determining relevant image patches to analyze...');tic
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 %% Perform 2-AFC test for detectability of those regions
 disp('Determining relevant image patches to analyze...');tic
-[threshThickness, errFlags] = determineDetectability(imgInfo,imgPatch, ...
+% [threshThickness, errFlags] = determineDetectability(imgInfo,imgPatch, ...
+%     attenDisk, thickness, diameter, IDicomAvg,IDicomStdev, analysisChoice, errFlags, radius, attenuation,regionnRow,regionNCol, beta);
+[threshThickness, errFlags] = determineDetectabilityFast(imgInfo,imgPatch, ...
     attenDisk, thickness, diameter, IDicomAvg,IDicomStdev, analysisChoice, errFlags, radius, attenuation,regionnRow,regionNCol, beta);
+
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 %% Calculate the IQF Values and maps
 disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
 [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
     attenDisk, thickness, diameter, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev, threshThickness, errFlags, imgInfo);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
-pause
+% pause
 %% Calculate Statistics that are relevant to test
 saveIQFData(aMat, bMat, IQF,DICOMData,SigmaPixels,attenuation,...
     part1, part2, FileName_Naming, beta, j, errFlags, savedir);

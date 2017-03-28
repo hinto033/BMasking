@@ -6,7 +6,7 @@ function [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
 oneMmPixels = ceil(1/spacing); pixelRadInIQFImg = ceil(oneMmPixels*2.5);
 rowIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nCols;
 colIndices = pixelRadInIQFImg+1:2*pixelRadInIQFImg:nRows;
-[nValidPatches,~] = size(threshThickness)
+[nValidPatches,~] = size(threshThickness);
 
 disp('Calculating IQF Values...');tic
 %Now Calculate the IQF, EXP Fit, etc.
@@ -68,8 +68,8 @@ IQF.Medium = IQF.Medium(1:nRows,1:nCols) .* binaryOutline;
 IQF.Small = IQF.Small(1:nRows,1:nCols) .* binaryOutline;
 
 errFlags=errFlags;
-
-figure
-imshow(IQF.Full,[])
-pause
+% 
+% figure
+% imshow(IQF.Full,[])
+% pause
 end

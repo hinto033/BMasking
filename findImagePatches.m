@@ -60,4 +60,4 @@ for rowIdx = rowIndices
         end
     end
 end
-errFlags=errFlags
+errFlags=errFlags;
