@@ -42,6 +42,7 @@ for rowIdx = rowIndices
         end
         [regionnRow,regionNCol] = size(region);
         regionMedian = median(region(:));
+%         regionMean = mean(region(:));
         regionStDev = std(region(:));
         %Calculate NPS HERE AS WELL***********************? Is there fast
         %way to do this.....?

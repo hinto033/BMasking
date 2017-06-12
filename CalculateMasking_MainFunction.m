@@ -6,7 +6,7 @@ function varargout = DICOMReplace(varargin)
 %      instance to run (singleton)".
 % See also: GUIDE, GUIDATA, GUIHANDLES
 % Edit the above text to modify the response to help DICOMReplace
-% Last Modified by GUIDE v2.5 20-Dec-2016 09:50:58
+% Last Modified by GUIDE v2.5 12-Jun-2017 12:24:23
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -89,6 +89,71 @@ global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
 global thickness diameter savedir analysisChoice
 %%
+imgPaths = {'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\Interval',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\ScreenDetected',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\MGH\Interval',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\MGH\ScreenDetected',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\ScreenDetected'};
+savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\CPMCInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\CPMCScreen\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\MGHInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\MGHScreen\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\UCSFInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\UCSFScreen\'};
+for instances = 5:6
+
+clear test1 preLim NumImageAnalyze FileName_Naming parts part1 part2 extension
+clear PathName_Naming savedir
+    
+    
+    
+clear test1
+preLim = imgPaths{instances};
+[preLim,'\*.png'];
+test1 = dir([imgPaths{instances},'\*.png'])
+[NumImageAnalyze, ~] = size(test1);
+test1(2).name;
+test1(3).name;
+test1.name;
+clear FileName_Naming
+
+
+parts=regexp(imgPaths(instances),'\','split');
+parts = fliplr(parts);
+parts{1}(4);
+parts{1}(5);
+parts{1}(6);
+for mm = 1:NumImageAnalyze
+    FileName_Naming{mm} = test1(mm).name;
+    part1{mm} = parts{1}(6); part2{mm} = parts{1}(6);
+end
+clear extension
+extension{1} = '.png';
+extension = repmat(extension, NumImageAnalyze, 1);
+
+
+PathName_Naming = imgPaths(instances);
+% test1 = dir(*imgPaths(instances)*.png)
+% test2 = dir(imgPaths(instances),'.png')
+savedir = savePaths(instances);
+
+
+
+% 
+% size(FileName_Naming)
+% size(PathName_Naming)
+% size(extension)
+
+% FileName_Naming{2}
+% PathName_Naming
+% extension{2}
+
+
+%Extension is good.
+%Pathname
+
+
 nCorrectDiscTimes=0;
 for j = 1:NumImageAnalyze %Does calculation for each image that was selected     
 %% Import the image & DICOMData   
@@ -110,7 +175,12 @@ bb4 = strcmp(DICOMData.ImplantPresent, '');
 if bb1+bb2+bb3+bb4 == 0
     continue
 end
-
+if strcmp(DICOMData.PixelIntensityRelationship, 'LOG')==1 %NOT LIN
+    break
+end
+if DICOMData.PixelIntensityRelationshipSign == -1
+    break
+end
 %Check if it is a non-standard mammogram (I skip these for now)
 %Could do image processing to remove metal portions if I want later.
 tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
@@ -137,7 +207,6 @@ if strcmp(shape, 'Gaussian') == 1
 end
 [attenDisk, errFlags] = createLesionShape(radius, shape, SigmaPixels, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-
 %% Remove the phantom itself
 disp('Removing the phantom and unnecessary artifacts...'); tic
 [maskingMap1, IDicomOrig, maxArea] = removePhantom(IDicomOrig);
@@ -169,6 +238,12 @@ disp('Determining relevant image patches to analyze...');tic
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 %% Perform 2-AFC test for detectability of those regions
 disp('Determining relevant image patches to analyze...');tic
+nPatches = 11
+[~, nValidPatches] = size(imgPatch)
+if nValidPatches <nPatches
+    continue
+end
+
 % [threshThickness, errFlags] = determineDetectability(imgInfo,imgPatch, ...
 %     attenDisk, thickness, diameter, IDicomAvg,IDicomStdev, analysisChoice, errFlags, radius, attenuation,regionnRow,regionNCol, beta);
 [threshThickness, errFlags] = determineDetectabilityFast(imgInfo,imgPatch, ...
@@ -177,14 +252,16 @@ disp('Determining relevant image patches to analyze...');tic
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 %% Calculate the IQF Values and maps
 disp('Calculating all IQF values and IQF Maps (~5 mins)...'); tic
-[IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
+[IQF, IQFc, aMat, bMat,  aMatc,  bMatc, errFlags] = calcIQFData(IDicomOrig,attenuation, radius,...
     attenDisk, thickness, diameter, pixelSpacing,binaryOutline ,IDicomAvg,IDicomStdev, threshThickness, errFlags, imgInfo);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
 % pause
 %% Calculate Statistics that are relevant to test
-saveIQFData(aMat, bMat, IQF,DICOMData,SigmaPixels,attenuation,...
+saveIQFData(aMat, bMat, aMatc, bMatc, IQF, IQFc,DICOMData,SigmaPixels,attenuation,...
     part1, part2, FileName_Naming, beta, j, errFlags, savedir);
 end %Going through set of images
+
+end%Going through each folder
 guidata(hObject,handles);
 
 % --- Executes on button press in CreateCDIQF.
@@ -501,3 +578,116 @@ function listbox2_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in ExclusionTree.
+function ExclusionTree_Callback(hObject, eventdata, handles)
+% hObject    handle to ExclusionTree (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global FileName_Naming NumImageAnalyze part1 part2
+global PathName_Naming extension shape
+global thickness diameter savedir analysisChoice
+%%
+imgPaths = {'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\Interval',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\ScreenDetected',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\MGH\Interval',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\MGH\ScreenDetected',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval',...
+            'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\ScreenDetected'};
+savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\CPMCInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\CPMCScreen\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\MGHInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\MGHScreen\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\UCSFInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\UCSFScreen\'};
+for instances = 1:6
+
+clear test1 preLim NumImageAnalyze FileName_Naming parts part1 part2 extension
+clear PathName_Naming savedir
+    
+
+
+nImages.MGH.Interval.Tot
+nImages.UCSF.Interval.Tot
+nImages.CPMC.Interval.Tot
+nImages.MGH.ScreenDetected.Tot
+nImages.UCSF.ScreenDetected.Tot
+nImages.CPMC.ScreenDetected.Tot
+
+
+nScreenDetected
+n
+
+    
+clear test1
+preLim = imgPaths{instances};
+[preLim,'\*.png'];
+test1 = dir([imgPaths{instances},'\*.png'])
+[NumImageAnalyze, ~] = size(test1);
+test1(2).name;
+test1(3).name;
+test1.name;
+clear FileName_Naming
+
+
+parts=regexp(imgPaths(instances),'\','split');
+parts = fliplr(parts);
+parts{1}(4);
+parts{1}(5);
+parts{1}(6);
+for mm = 1:NumImageAnalyze
+    FileName_Naming{mm} = test1(mm).name;
+    part1{mm} = parts{1}(6); part2{mm} = parts{1}(6);
+end
+clear extension
+extension{1} = '.png';
+extension = repmat(extension, NumImageAnalyze, 1);
+
+
+PathName_Naming = imgPaths(instances);
+savedir = savePaths(instances);
+
+
+nCorrectDiscTimes=0;
+for j = 1:NumImageAnalyze %Does calculation for each image that was selected     
+%% Import the image & DICOMData   
+timePerImage = .41666; %Min
+TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
+str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
+pause(0.3)
+disp('Importing the image...'); tic
+[IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
+    PathName_Naming, extension);
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
+%% Check if I can't analyze (Because Spot Magnification or Breast Implant)
+%Check if implant exists
+bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
+bb2 =  strcmp(DICOMData.ImplantPresent, 'No');
+bb3 = strcmp(DICOMData.ImplantPresent, 'no');
+bb4 = strcmp(DICOMData.ImplantPresent, '');
+if bb1+bb2+bb3+bb4 == 0
+    continue
+end
+if strcmp(DICOMData.PixelIntensityRelationship, 'LOG')==1 %NOT LIN
+    break
+end
+if DICOMData.PixelIntensityRelationshipSign == -1
+    break
+end
+%Check if it is a non-standard mammogram (I skip these for now)
+%Could do image processing to remove metal portions if I want later.
+tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
+if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
+    continue
+end
+g1 = strcmp(DICOMData.ImplantPresent, 'NO');
+g2 = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence;
+end
+
+
+
+end
+
+

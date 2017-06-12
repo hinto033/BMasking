@@ -2,6 +2,8 @@ function [IDicomOrig, DICOMData] = importImage(j, FileNameNaming, PathNameNaming
     pathname = PathNameNaming;
     ext = extension{j};
     FileName = FileNameNaming{j};
+    
+    
 if (strcmp(ext, '') || strcmp(ext, '.dcm') || strcmp(ext, '.DCM') )
     full_file_dicomread = [pathname,'\',FileName];
     info_dicom = dicominfo(full_file_dicomread);
@@ -9,16 +11,22 @@ if (strcmp(ext, '') || strcmp(ext, '.dcm') || strcmp(ext, '.DCM') )
     DICOMData = info_dicom;
 elseif (strcmp(ext, '.png'))
     % Importing Breast Images if .png
-
-    full_file_png = [pathname,'\',FileName];
+%****
+%     full_file_png = [pathname,'\',FileName]
+    full_file_png = strcat(pathname,'\',FileName)
+    full_file_png = full_file_png{1}
+%****
     IDicomOrig = imread(full_file_png); 
     IDicomOrig = im2double(IDicomOrig);
     pathname;
     [base,rem]=strtok(FileName,'.');
     DICOMInfoName = strcat(base, '.mat');
-    full_file_DICOMInfo = char(strcat(pathname,DICOMInfoName));
+    full_file_DICOMInfo = char(strcat(pathname,'\',DICOMInfoName));
     class(full_file_DICOMInfo);
-    DICOMDataFull = load(full_file_DICOMInfo, '-mat');
+    %****
+%     DICOMDataFull = load(full_file_DICOMInfo, '-mat');
+    DICOMDataFull = load(full_file_DICOMInfo ,'-mat');
+    %****
     DICOMData = DICOMDataFull.info_dicom_blinded;
     [nRows, nCols] = size(IDicomOrig);
     

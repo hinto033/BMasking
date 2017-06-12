@@ -1,4 +1,4 @@
-function [IQF, aMat, bMat, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
+function [IQF, IQFc, aMat, bMat,  aMatc,  bMatc, errFlags] = calcIQFData(IDicomOrig,attenuation, ...
     radius, binDisk, thickness, diameter,  spacing,binaryOutline,IDicomAvg,IDicomStdev, threshThickness,errFlags, imgInfo)
 %% Setting Parms
 
@@ -61,14 +61,41 @@ for m = 1:nValidPatches
     bMat(colIdx-pixelRadInIQFImg:colIdx+pixelRadInIQFImg,rowIdx-pixelRadInIQFImg:rowIdx+pixelRadInIQFImg) = bVector(m);
 end
 t=toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-
 IQF.Full = IQF.Full(1:nRows,1:nCols) .* binaryOutline;
 IQF.Large = IQF.Large(1:nRows,1:nCols) .* binaryOutline;
 IQF.Medium = IQF.Medium(1:nRows,1:nCols) .* binaryOutline;
 IQF.Small = IQF.Small(1:nRows,1:nCols) .* binaryOutline;
 
+% nRows
+% nCols
+% pixelRadInIQFImg
+maxRow = ceil(nRows/(pixelRadInIQFImg*2));
+maxCol = ceil(nCols/(pixelRadInIQFImg*2));
+% pause
+IQFc.Full = zeros(maxRow,maxCol); IQFc.Large= zeros(maxRow,maxCol);
+IQFc.Medium= zeros(maxRow,maxCol); IQFc.Small= zeros(maxRow,maxCol);
+for m = 1:nValidPatches
+    colIdx = imgInfo(m,3);
+    rowIdx = imgInfo(m,4);
+    
+%     pixelRadInIQFImg
+    colNum = ceil((colIdx-1)/(pixelRadInIQFImg*2));
+    rowNum = ceil((rowIdx-1)/(pixelRadInIQFImg*2));
+%     pause
+    IQFc.Full(colNum,rowNum) = IQFFull(m);
+    IQFc.Large(colNum,rowNum)= IQFLarge(m);
+    IQFc.Medium(colNum,rowNum)= IQFMedium(m);
+    IQFc.Small(colNum,rowNum)= IQFSmall(m);
+
+    aMatc(colNum,rowNum) = aVector(m);
+    bMatc(colNum,rowNum) = bVector(m);
+end
+
+
 errFlags=errFlags;
-% 
+
+% figure
+% imshow(IQFc.Full,[])
 % figure
 % imshow(IQF.Full,[])
 % pause
