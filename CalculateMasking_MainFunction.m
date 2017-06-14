@@ -95,18 +95,21 @@ imgPaths = {'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\Interval',...
             'W:\Breast Studies\Masking\PrelimAnalysis\MGH\ScreenDetected',...
             'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval',...
             'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\ScreenDetected'};
-savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\CPMCInterval\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\CPMCScreen\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\MGHInterval\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\MGHScreen\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\UCSFInterval\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\4.21.17_CompiledMaps_SimilarStatWeighted\UCSFScreen\'};
-for instances = 5:6
+savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\CPMCInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\CPMCScreen\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHScreen\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFInterval\', ...
+            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFScreen\'};
+
+
+demogData = xlsread('W:\Breast Studies\Masking\masking_output.csv'); 
+template = demogData(:,4);
+
+for instances = 1:6
 
 clear test1 preLim NumImageAnalyze FileName_Naming parts part1 part2 extension
 clear PathName_Naming savedir
-    
-    
     
 clear test1
 preLim = imgPaths{instances};
@@ -117,7 +120,6 @@ test1(2).name;
 test1(3).name;
 test1.name;
 clear FileName_Naming
-
 
 parts=regexp(imgPaths(instances),'\','split');
 parts = fliplr(parts);
@@ -134,24 +136,7 @@ extension = repmat(extension, NumImageAnalyze, 1);
 
 
 PathName_Naming = imgPaths(instances);
-% test1 = dir(*imgPaths(instances)*.png)
-% test2 = dir(imgPaths(instances),'.png')
 savedir = savePaths(instances);
-
-
-
-% 
-% size(FileName_Naming)
-% size(PathName_Naming)
-% size(extension)
-
-% FileName_Naming{2}
-% PathName_Naming
-% extension{2}
-
-
-%Extension is good.
-%Pathname
 
 
 nCorrectDiscTimes=0;
@@ -165,30 +150,42 @@ disp('Importing the image...'); tic
 [IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
     PathName_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-
+AccNum = DICOMData.AccessionNumber
 %% Check if I can't analyze (Because Spot Magnification or Breast Implant)
-%Check if implant exists
-bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
-bb2 =  strcmp(DICOMData.ImplantPresent, 'No');
-bb3 = strcmp(DICOMData.ImplantPresent, 'no');
-bb4 = strcmp(DICOMData.ImplantPresent, '');
-if bb1+bb2+bb3+bb4 == 0
+
+%Check if it is in the database.
+
+doesExist = any(AccNum==template)
+foundIt = ~isempty(doesExist)
+if foundIt ==0
     continue
 end
-if strcmp(DICOMData.PixelIntensityRelationship, 'LOG')==1 %NOT LIN
-    break
-end
-if DICOMData.PixelIntensityRelationshipSign == -1
-    break
-end
-%Check if it is a non-standard mammogram (I skip these for now)
-%Could do image processing to remove metal portions if I want later.
-tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
-if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
-    continue
-end
-g1 = strcmp(DICOMData.ImplantPresent, 'NO');
-g2 = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence;
+% pause
+% pause
+
+
+% %Check if implant exists
+% bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
+% bb2 =  strcmp(DICOMData.ImplantPresent, 'No');
+% bb3 = strcmp(DICOMData.ImplantPresent, 'no');
+% bb4 = strcmp(DICOMData.ImplantPresent, '');
+% if bb1+bb2+bb3+bb4 == 0
+%     continue
+% end
+% if strcmp(DICOMData.PixelIntensityRelationship, 'LOG')==1 %NOT LIN
+%     break
+% end
+% if DICOMData.PixelIntensityRelationshipSign == -1
+%     break
+% end
+% %Check if it is a non-standard mammogram (I skip these for now)
+% %Could do image processing to remove metal portions if I want later.
+% tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
+% if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
+%     continue
+% end
+% g1 = strcmp(DICOMData.ImplantPresent, 'NO');
+% g2 = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence;
 
 %% Pre-processing data
 disp('Calculating the MTF...'); tic

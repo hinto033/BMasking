@@ -376,6 +376,7 @@ splitMerged <- split(mergedData, mergedData$Interval)
 dataInt <- splitMerged$`1`
 dataScreen <- splitMerged$`0`
 
+
 #Splits up data by CC andMLO
 splitInt<-split(dataInt, dataInt$view)
 splitScreen<-split(dataScreen, dataScreen$view)
@@ -566,7 +567,18 @@ estimateVarMLO = NULL
 
 
 # modelDataCC <- trainSetCC[,c(6,141,  146,  149, 150, 151, 152, 153, 154, varT)]
-# = SXA..Breast.Density, density, age, bmi, race2, _menopause, _firstdeg_, biop_hist
+# = Interval,  density, age, bmi, race2, _menopause, _firstdeg_, biop_hist
+#Prep for K-Folds
+# rbind(intDataCC,screenDataCC)
+#Randomly shuffle the data (CC)
+DataCC <-combinedDataCC[sample(nrow(combinedDataCC)),]
+#Create 10 equally size folds (CC)
+CCfolds <- cut(seq(1,nrow(DataCC)),breaks=10,labels=FALSE)
+
+#Randomly shuffle the data (MLO)
+DataMLO <-combinedDataMLO[sample(nrow(combinedDataMLO)),]
+#Create 10 equally size folds (MLO)
+MLOfolds <- cut(seq(1,nrow(DataMLO)),breaks=10,labels=FALSE)
 
 
 for (i in 8:nCols){
@@ -577,22 +589,22 @@ for (i in 8:nCols){
     trainSetCC <- DataCC[-CCtestIndexes, ]
     
     MLOtestIndexes <- which(MLOfolds==j,arr.ind=TRUE)
-    testSetMLO <- screenDataMLO[MLOtestIndexes, ]
-    trainSetMLO <- screenDataMLO[-MLOtestIndexes, ]
+    testSetMLO <- DataMLO[MLOtestIndexes, ]
+    trainSetMLO <- DataMLO[-MLOtestIndexes, ]
     # i<-9
     varT <- i
-    modelDataCC <- trainSetCC[,c(6,141,  146,  149, 150, 151, 152, 153, 154, varT)]
+    modelDataCC <- trainSetCC[,c(6,  146,  149, 150,  varT)]
     model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
     # print(summary(model))
-    if (nrow(coef(summary(model)))==8) {
+    if (nrow(coef(summary(model)))==5) {
       pValCCSXA[j] <- (coef(summary(model))[2,4])
-      pValCCVar[j] <- (coef(summary(model))[8,4])
+      pValCCVar[j] <- (coef(summary(model))[5,4])
       estimateSXACC[j] <- (coef(summary(model))[2,1])
-      estimateVarCC[j] <- (coef(summary(model))[8,1])
+      estimateVarCC[j] <- (coef(summary(model))[5,1])
     }
     # else if (nrow(coef(summary(model)))==1) {pValCC <- 1}
     
-    testPredictionsData <- testSetCC[,c(6,141,  146,  149, 150, 151, 152, 153, 154, varT)]
+    testPredictionsData <- testSetCC[,c(6, 146,  149, 150,  varT)]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -608,17 +620,17 @@ for (i in 8:nCols){
     auc
     
     
-    modelDataMLO <- trainSetMLO[,c(6,141,  146,  149, 150, 151, 152, 153, 154, varT)]
+    modelDataMLO <- trainSetMLO[,c(6,  146,  149, 150, varT)]
     model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
     # summary(model)
-    if (nrow(coef(summary(model)))==8) {
+    if (nrow(coef(summary(model)))==5) {
       pValMLOSXA[j] <- (coef(summary(model))[2,4])
-      pValMLOVar[j] <- (coef(summary(model))[8,4])
+      pValMLOVar[j] <- (coef(summary(model))[5,4])
       estimateVarMLO[j] <- (coef(summary(model))[3,1])
-      estimateSXAMLO[j] <- (coef(summary(model))[8,1])
+      estimateSXAMLO[j] <- (coef(summary(model))[5,1])
     }
     
-    testPredictionsData <- testSetMLO[,c(6,141,  146,  149, 150, 151, 152, 153, 154, varT)]
+    testPredictionsData <- testSetMLO[,c(6, 146,  149, 150,  varT)]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
