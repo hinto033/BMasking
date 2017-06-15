@@ -566,8 +566,11 @@ estimateSXAMLO = NULL
 estimateVarMLO = NULL
 
 
-# modelDataCC <- trainSetCC[,c(6,141,  146,  149, 150, 151, 152, 153, 154, varT)]
-# = Interval,  density, age, bmi, race2, _menopause, _firstdeg_, biop_hist
+keepNoVar <- c('Interval',  'density', 'age', 'bmi', 'race2','X_menopause_', 'X_firstdeg_','biop_hist')
+keepNoVar <- c('Interval',  'density', 'age', 'bmi', 'X_menopause_', 'X_firstdeg_','biop_hist')
+# modelDataCC <- trainSetCC[,c(6 (Interval),  146 (density),  149 (age),
+  # 150 (bmi), 151 (race2), 152 (X_menopause_), 153 (X_firstdeg_), 154 (biop_hist))]
+
 #Prep for K-Folds
 # rbind(intDataCC,screenDataCC)
 #Randomly shuffle the data (CC)
@@ -580,9 +583,8 @@ DataMLO <-combinedDataMLO[sample(nrow(combinedDataMLO)),]
 #Create 10 equally size folds (MLO)
 MLOfolds <- cut(seq(1,nrow(DataMLO)),breaks=10,labels=FALSE)
 
-
 for (i in 8:nCols){
-  
+  keepVar<- c(keepNoVar, colnames(DataMLO[i]))
   for(j in 1:10){
     CCtestIndexes <- which(CCfolds==j,arr.ind=TRUE)
     testSetCC <- DataCC[CCtestIndexes, ]
@@ -593,18 +595,18 @@ for (i in 8:nCols){
     trainSetMLO <- DataMLO[-MLOtestIndexes, ]
     # i<-9
     varT <- i
-    modelDataCC <- trainSetCC[,c(6,  146,  149, 150,  varT)]
+    modelDataCC <- trainSetCC[keepVar]
+    nControls=ncol(modelDataCC)
     model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
     # print(summary(model))
-    if (nrow(coef(summary(model)))==5) {
+    if (nrow(coef(summary(model)))==nControls) {
       pValCCSXA[j] <- (coef(summary(model))[2,4])
-      pValCCVar[j] <- (coef(summary(model))[5,4])
+      pValCCVar[j] <- (coef(summary(model))[nControls,4])
       estimateSXACC[j] <- (coef(summary(model))[2,1])
-      estimateVarCC[j] <- (coef(summary(model))[5,1])
+      estimateVarCC[j] <- (coef(summary(model))[nControls,1])
     }
-    # else if (nrow(coef(summary(model)))==1) {pValCC <- 1}
     
-    testPredictionsData <- testSetCC[,c(6, 146,  149, 150,  varT)]
+    testPredictionsData <- testSetCC[keepVar]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -619,18 +621,17 @@ for (i in 8:nCols){
     print(colnames(allData[i]))
     auc
     
-    
-    modelDataMLO <- trainSetMLO[,c(6,  146,  149, 150, varT)]
+    modelDataMLO <- trainSetMLO[keepVar]
     model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
     # summary(model)
-    if (nrow(coef(summary(model)))==5) {
+    if (nrow(coef(summary(model)))==nControls) {
       pValMLOSXA[j] <- (coef(summary(model))[2,4])
-      pValMLOVar[j] <- (coef(summary(model))[5,4])
-      estimateVarMLO[j] <- (coef(summary(model))[3,1])
-      estimateSXAMLO[j] <- (coef(summary(model))[5,1])
+      pValMLOVar[j] <- (coef(summary(model))[nControls,4])
+      estimateSXAMLO[j] <- (coef(summary(model))[2,1])
+      estimateVarMLO[j] <- (coef(summary(model))[nControls,1])
     }
     
-    testPredictionsData <- testSetMLO[,c(6, 146,  149, 150,  varT)]
+    testPredictionsData <- testSetMLO[keepVar]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -660,43 +661,32 @@ for (i in 8:nCols){
   regResultsCtrl[(i-5),13] <- mean(estimateVarMLO)
 }
 
-#***************Make code to save the regResultdsCtrl here.
+
 write.csv(regResultsCtrl, file = paste(savePath,dateOfAnalysis,"regResultsCtrl.csv", sep=""),row.names=TRUE)
 
-regResultsBestCC <- subset(regResultsCtrl, pValCCTrainVar<0.3)
+regResultsBestCC <- regResultsCtrl
 sortedAUCCC <- regResultsBestCC[order(regResultsBestCC$AUCCC, regResultsBestCC$Variable, decreasing = TRUE) , ] 
 bestEntriesAUCCC<-sortedAUCCC[(1):(10),]
-keep <- bestEntriesAUCCC[,1]
-nEnt <- length(keep)
-keep[nEnt+1] <- 'Interval'
-bestData <- allData[keep]
 
-regResultsBestMLO <- subset(regResultsCtrl, pValMLOTrainVar<0.3)
+regResultsBestMLO <- regResultsCtrl
 sortedAUCMLO <- regResultsBestMLO[order(regResultsBestMLO$AUCMLO, regResultsBestMLO$Variable, decreasing = TRUE) , ] 
 bestEntriesAUCMLO<-sortedAUCMLO[(1):(10),]
-keep <- bestEntriesAUCMLO[,1]
-nEnt <- length(keep)
-keep[nEnt+1] <- 'Interval'
-bestData <- allData[keep]
 
 write.csv(regResultsBestCC, file = paste(savePath,dateOfAnalysis,"regResultsAUCCCControls.csv", sep=""),row.names=TRUE)
 write.csv(bestEntriesAUCCC, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCCCControls.csv", sep=""),row.names=TRUE)
-
 write.csv(regResultsBestMLO, file = paste(savePath,dateOfAnalysis,"regResultsAUCMLOControls.csv", sep=""),row.names=TRUE)
 write.csv(bestEntriesAUCMLO, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCMLOControls.csv", sep=""),row.names=TRUE)
 
-
-
 #####
-
 #Test to average out the ROC Curve (CC)
 nCols <- ncol(allData)
 CC_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (10)))
 colnames(CC_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
 
-
 for (i in 1:10){
   # i <-1
+  keepVar<- c(keepNoVar, bestEntriesAUCCC[i,1])
+  
   pSXA=NULL
   pSXALabels=NULL
   pVar=NULL
@@ -706,15 +696,13 @@ for (i in 1:10){
   png(filename=paste(savePath,dateOfAnalysis,"CCAUCwBIRADSandMeasure",i,".png", sep=""))
   plot.new()
   for(j in 1:10){
-    
-    CCtestScreenIndexes <- which(CCfoldsScreen==j,arr.ind=TRUE)
-    CCtestIntIndexes<-which(CCfoldsInt==j,arr.ind=TRUE)
-    testSetCC <- rbind(screenDataCC[CCtestScreenIndexes, ], intDataCC[CCtestIntIndexes, ])
-    trainSetCC <- rbind(screenDataCC[-CCtestScreenIndexes, ], intDataCC[-CCtestIntIndexes, ])
+    CCtestIndexes <- which(CCfolds==j,arr.ind=TRUE)
+    testSetCC <- DataCC[CCtestIndexes, ]
+    trainSetCC <- DataCC[-CCtestIndexes, ]
     varT <- i
-    #Plots BIRADS
     
-    modelDataCC <- trainSetCC[,c(6,147,152, 155, 156, 158, 160)]
+    #Plots BIRADS
+    modelDataCC <- trainSetCC[keepNoVar]
     model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
     
     setwd("W:\\Breast Studies\\Masking\\AnalysisImages\\")
@@ -722,9 +710,7 @@ for (i in 1:10){
     out <- capture.output(summary(model))
     cat(out,file="CCModelOnlyDemog.txt",sep="\n",append=TRUE)
     close(fileConn)
-    
-    # print(summary(model))
-    testPredictionsData <- testSetCC[,c(6,147,152, 155, 156, 158, 160)]
+    testPredictionsData <- testSetCC[keepNoVar]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -732,9 +718,8 @@ for (i in 1:10){
     pSXA[j] <- list(predict(model, newdata=testPredictionsData, type="response"))
     pSXALabels[j] <- list(testPredictionsData$Interval)
     
-    #Plots the relevant things 
-    keep <- c('Interval', 'SXA..Breast.Density.', 'density', 'age', 'bmi', 'X_menopause_', 'biop_hist', bestEntriesAUCCC[i,1])
-    modelDataCC <- trainSetCC[keep]
+    #Plots the relevant things with Variable 
+    modelDataCC <- trainSetCC[keepVar]
     model <- glm(modelDataCC$Interval~., family=binomial(logit), data=modelDataCC)
     
     setwd("W:\\Breast Studies\\Masking\\AnalysisImages\\")
@@ -743,10 +728,8 @@ for (i in 1:10){
     cat(out,file="CCModelAddingMasking.txt",sep="\n",append=TRUE)
     close(fileConn)
     
-    # print(summary(model))
-    # readline("Press <return to continue")
-    pValMaskingInModel[j] <- (coef(summary(model))[8,4])
-    testPredictionsData <- testSetCC[keep]
+    pValMaskingInModel[j] <- (coef(summary(model))[nControls,4])
+    testPredictionsData <- testSetCC[keepVar]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -756,22 +739,18 @@ for (i in 1:10){
     pVarLabels[j] <- list(testPredictionsData$Interval)
   }
   
-  
   pr <- prediction(pSXA, pSXALabels)
   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
   
-  plot(prf, col='blue', lwd=2, lty=1, avg="vertical",spread.estimate="stddev",add=TRUE)
+  plot(prf, col='blue', lwd=2, lty=1, avg="vertical",add=TRUE)
   auc <- performance(pr, measure = "auc")
   aucCCDemog <- auc@y.values
-  # pValCCSXA <- (coef(summary(model))[2,4])
-  
   
   pr <- prediction(pVar, pVarLabels)
   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  plot(prf, col='firebrick3', lwd=2,avg="vertical",spread.estimate="stddev",add=TRUE)
+  plot(prf, col='firebrick3', lwd=2,avg="vertical",add=TRUE)
   axis(1)
   axis(2)
-  # main = paste("AUC of BIRADS Density (Blue) and ", bestEntriesAUCCC[i,1])
   legend("bottomright", c("Only Percent Density", "Percent Density and Masking Measure"), lty = c(1,1),lwd=c(2.5,2.5),col=c("blue","red") )
   title(main = paste("AUC of BIRADS Density (Blue) and \n", bestEntriesAUCCC[i,1]))
   
@@ -784,7 +763,7 @@ for (i in 1:10){
   CC_AUCs_withWithoutMasking[(i),2] <- mean(unlist(aucCCDemog))
   CC_AUCs_withWithoutMasking[(i),3] <- mean(unlist(aucCCWMasking))
   CC_AUCs_withWithoutMasking[(i),4] <- mean(unlist(pValMaskingInModel))
-  # 
+  
 }
 
 write.csv(CC_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_CC_Aucs_WithWihtoutMasking.csv", sep=""),row.names=TRUE)
@@ -798,6 +777,7 @@ MLO_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (10)))
 colnames(MLO_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
 
 for (i in 1:10){
+  keepVar<- c(keepNoVar, bestEntriesAUCMLO[i,1])
   # i <-1
   pSXA=NULL
   pSXALabels=NULL
@@ -808,19 +788,13 @@ for (i in 1:10){
   png(filename=paste(savePath,dateOfAnalysis,"MLOAUCwBIRADSandMeasure",i,".png", sep=""))
   plot.new()
   for(j in 1:10){
-    
-    
-    MLOtestScreenIndexes <- which(MLOfoldsScreen==j,arr.ind=TRUE)
-    MLOtestIntIndexes<-which(MLOfoldsInt==j,arr.ind=TRUE)
-    testSetMLO <- rbind(screenDataMLO[MLOtestScreenIndexes, ], intDataMLO[MLOtestIntIndexes, ])
-    trainSetMLO <- rbind(screenDataMLO[-MLOtestScreenIndexes, ], intDataMLO[-MLOtestIntIndexes, ])
-    # i<-7
-    
+    MLOtestIndexes <- which(MLOfolds==j,arr.ind=TRUE)
+    testSetMLO <- DataMLO[MLOtestIndexes, ]
+    trainSetMLO <- DataMLO[-MLOtestIndexes, ]
     varT <- i
-    #Plots BIRADS
-    # png(filename=paste(savePath,dateOfAnalysis,"CCAUCwBIRADSandMeasure",i,".png", sep=""))
     
-    modelDataMLO <- trainSetMLO[,c(6,147,152, 155, 156, 158, 160)]
+    #Plots BIRADS
+    modelDataMLO <- trainSetMLO[keepNoVar]
     model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
     
     setwd("W:\\Breast Studies\\Masking\\AnalysisImages\\")
@@ -829,7 +803,7 @@ for (i in 1:10){
     cat(out,file="MLOModelOnlyDemog.txt",sep="\n",append=TRUE)
     close(fileConn)
     
-    testPredictionsData <- testSetMLO[,c(6,147,152, 155, 156, 158, 160)]
+    testPredictionsData <- testSetMLO[keepNoVar]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -837,9 +811,9 @@ for (i in 1:10){
     pSXA[j] <- list(predict(model, newdata=testPredictionsData, type="response"))
     pSXALabels[j] <- list(testPredictionsData$Interval)
     
+    
     #Plots the relevant things 
-    keep <- c('Interval', 'SXA..Breast.Density.', 'density', 'age', 'bmi', 'X_menopause_', 'biop_hist', bestEntriesAUCMLO[i,1])
-    modelDataMLO <- trainSetMLO[keep]
+    modelDataMLO <- trainSetMLO[keepVar]
     model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
     
     setwd("W:\\Breast Studies\\Masking\\AnalysisImages\\")
@@ -848,9 +822,8 @@ for (i in 1:10){
     cat(out,file="MLOModelAddingMasking.txt",sep="\n",append=TRUE)
     close(fileConn)
     
-    # print(summary(model))
-    pValMaskingInModel[j] <- (coef(summary(model))[8,4])
-    testPredictionsData <- testSetMLO[keep]
+    pValMaskingInModel[j] <- (coef(summary(model))[nControls,4])
+    testPredictionsData <- testSetMLO[keepVar]
     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
     fitted.results <- ifelse(fitted.results > 0.5,1,0)
     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
@@ -860,29 +833,25 @@ for (i in 1:10){
     pVarLabels[j] <- list(testPredictionsData$Interval)
   }
   
-  
   pr <- prediction(pSXA, pSXALabels)
   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
   
-  plot(prf, col='blue', lwd=2, lty=1, avg="vertical",spread.estimate="stddev",add=TRUE)
+  plot(prf, col='blue', lwd=2, lty=1, avg="vertical",add=TRUE)
   auc <- performance(pr, measure = "auc")
   aucMLODemog <- auc@y.values
-  # pValCCSXA <- (coef(summary(model))[2,4])
-  
   
   pr <- prediction(pVar, pVarLabels)
   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  plot(prf, col='firebrick3', lwd=2,avg="vertical",spread.estimate="stddev",add=TRUE)
+  plot(prf, col='firebrick3', lwd=2,avg="vertical",add=TRUE) #spread.estimate="stddev"
   axis(1)
   axis(2)
-  # main = paste("AUC of BIRADS Density (Blue) and ", bestEntriesAUCCC[i,1])
   legend("bottomright", c("Only Percent Density", "Percent Density and Masking Measure"), lty = c(1,1),lwd=c(2.5,2.5),col=c("blue","red") )
   title(main = paste("AUC of BIRADS Density (Blue) and \n", bestEntriesAUCCC[i,1]))
   
   auc <- performance(pr, measure = "auc")
   aucMLOMasking <- auc@y.values
   dev.off()
-  # 
+  
   MLO_AUCs_withWithoutMasking[(i),1] <- (bestEntriesAUCMLO[i,1])
   MLO_AUCs_withWithoutMasking[(i),2] <- mean(unlist(aucMLODemog))
   MLO_AUCs_withWithoutMasking[(i),3] <- mean(unlist(aucMLOMasking))
@@ -890,5 +859,3 @@ for (i in 1:10){
 }
 
 write.csv(MLO_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_MLO_Aucs_WithWihtoutMasking.csv", sep=""),row.names=TRUE)
-
-
