@@ -1,6 +1,6 @@
 
-#####
-# Installs necessary packages to do the analysis
+#Installs necessary packages to do the analysis##### 
+
 install.packages("R.matlab")
 install.packages("ROCR")
 install.packages("dplyr")
@@ -15,27 +15,24 @@ require("e1071")
 require("ICC")
 require("lattice")
 require("psych")
-#####
-#Defines the dataset that I'll analyze
-#Similar patches by mean/stdev
+#Defines the dataset that I'll analyze#####
 
 dateOfAnalysis = "6.12.17_Simulated_"
 savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\"
 
-# Similar By Statistics
-# wdInt <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\6.12.17_GenStats_Simulated\\Interval\\Comp\\"
-# wdScreen <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\6.12.17_GenStats_Simulated\\ScreenDetected\\Comp\\"
-# 
-#Similar Patches by location
+#Simulated patches
 wdInt <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\4.20.17_GenStats_Simulated\\Interval\\Comp\\"
 wdScreen <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\4.20.17_GenStats_Simulated\\ScreenDetected\\Comp\\"
 
-# #Simulated Patches
-# wdInt <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\4.21.17_GenStats_SimilarStatWeighted\\Interval\\Comp\\"
-# wdScreen <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\4.21.17_GenStats_SimilarStatWeighted\\ScreenDetected\\Comp\\"
+#Defines which variables I'll control for#####
 
-##### 
-# Imports the dataset of the interval and screen detected cancers and places them in two tables
+keepNoVar <- c('Interval',  'density', 'age', 'bmi', 'race2','X_menopause_', 'X_firstdeg_','biop_hist')
+keepNoVar <- c('Interval',  'density', 'age', 'bmi', 'X_menopause_', 'X_firstdeg_','biop_hist')
+# modelDataCC <- trainSetCC[,c(6 (Interval),  146 (density),  149 (age),
+# 150 (bmi), 151 (race2), 152 (X_menopause_), 153 (X_firstdeg_), 154 (biop_hist))]
+
+
+#Imports Interval Cancer Dataset##### 
 setwd(wdInt)
 fileNames <- list.files(wdInt)
 nRows <- length(fileNames)
@@ -193,8 +190,7 @@ for (i in 1:nRows){
 
 
 print("DONE")
-#####
-# Screen Detected Data
+#Imports Screen Detected Cancer Dataset#####
 setwd(wdScreen)
 fileNames <- list.files(wdScreen)
 nRows <- length(fileNames)
@@ -351,8 +347,8 @@ for (i in 1:nRows){
 }
 print("DONE")
 
-#####
-# Combines data
+# Combines data and merges with Demographic/Density Information#####
+
 allData <- rbind(intData, screenData)
 
 #Adds Data from Demographic Indicators
@@ -368,14 +364,12 @@ mergedData <- merge(allData, demogData, by='acquisition_id')
 mergedData<-mergedData[sample(nrow(mergedData)),]
 
 
-#####
-#Split into test/train set
+#Ensures equal Numbers of Int/Scd and Splits CC/MLO#####
 
 #Split by int/nonInt
 splitMerged <- split(mergedData, mergedData$Interval)
 dataInt <- splitMerged$`1`
 dataScreen <- splitMerged$`0`
-
 
 #Splits up data by CC andMLO
 splitInt<-split(dataInt, dataInt$view)
@@ -385,8 +379,6 @@ intDataCC <- splitInt$CC
 screenDataMLO <- splitScreen$MLO
 screenDataCC <- splitScreen$CC
 
-
-# #####
 #This section forces MLO data to have same number of INT as Screen Detected
 nIntMLO <- nrow(intDataMLO)
 nScreenMLO <- nrow(screenDataMLO)
@@ -406,9 +398,8 @@ intDataCC<-intDataCC[sample(1:sampleSizeCC),]
 screenDataCC<- screenDataCC[sample(1:sampleSizeCC),]
 combinedDataCC <-rbind(intDataCC,screenDataCC)
 
-#####
-#Prep for K-Folds
-# rbind(intDataCC,screenDataCC)
+#Generates K Folds for analysis#####
+
 #Randomly shuffle the data (CC)
 DataCC <-combinedDataCC[sample(nrow(combinedDataCC)),]
 #Create 10 equally size folds (CC)
@@ -419,26 +410,14 @@ DataMLO <-combinedDataMLO[sample(nrow(combinedDataMLO)),]
 #Create 10 equally size folds (MLO)
 MLOfolds <- cut(seq(1,nrow(DataMLO)),breaks=10,labels=FALSE)
 
-#####
-#Save train/TestSet
-sampleSetCC <- DataCC
-sampleSetMLO <- DataMLO
 
-write.csv(sampleSetCC, file = paste(savePath,dateOfAnalysis,"CCdataUsedThisRun.csv", sep=""),row.names=TRUE)
-write.csv(sampleSetMLO, file = paste(savePath,dateOfAnalysis,"MLOdataUsedThisRun.csv", sep=""),row.names=TRUE)
-
-#####
-#Testing correlation of the SXA Density Variable with the IQF Variables.
-
-# SXA..Breast.Density. vs all variabels from 8-147 in mergedData
-
+#Calculating correlation of the Interval cancer with the IQF Variables.#####
 SXACorVals <- cor(mergedData$Interval, mergedData[,c(8:141)], use="pairwise.complete.obs")
 SXACorVals <- t(SXACorVals)
 write.csv(SXACorVals, file = paste(savePath,dateOfAnalysis,"CorWithSXA.csv", sep=""),row.names=TRUE)
 
+#Logistic Regression of each masking variable (No Controls)#####
 
-#####
-#Logistic Regression of each individual variable (Not controlled for BIRADS)
 #Done with K-Folds regression
 #For Both CC and MLO
 
@@ -540,11 +519,7 @@ write.csv(bestEntriesAUCCC, file = paste(savePath,dateOfAnalysis,"bestEntriesAUC
 
 
 
-#####
-#Now do regression after controlling for BIRADS/Demographic Informaiton
-#Do Analysis after controlling for BIRADS
-#Logistic Regression of each individual variable (controlled for BIRADS)
-#For Both CC and MLO
+#Regression after controlling for BIRADS/Demographic Information#####
 
 nCols <- ncol(allData)
 regResultsCtrl <- data.frame(matrix(ncol = 13, nrow = (nCols-5)))
@@ -565,23 +540,6 @@ estimateVarCC = NULL
 estimateSXAMLO = NULL
 estimateVarMLO = NULL
 
-
-keepNoVar <- c('Interval',  'density', 'age', 'bmi', 'race2','X_menopause_', 'X_firstdeg_','biop_hist')
-keepNoVar <- c('Interval',  'density', 'age', 'bmi', 'X_menopause_', 'X_firstdeg_','biop_hist')
-# modelDataCC <- trainSetCC[,c(6 (Interval),  146 (density),  149 (age),
-  # 150 (bmi), 151 (race2), 152 (X_menopause_), 153 (X_firstdeg_), 154 (biop_hist))]
-
-#Prep for K-Folds
-# rbind(intDataCC,screenDataCC)
-#Randomly shuffle the data (CC)
-DataCC <-combinedDataCC[sample(nrow(combinedDataCC)),]
-#Create 10 equally size folds (CC)
-CCfolds <- cut(seq(1,nrow(DataCC)),breaks=10,labels=FALSE)
-
-#Randomly shuffle the data (MLO)
-DataMLO <-combinedDataMLO[sample(nrow(combinedDataMLO)),]
-#Create 10 equally size folds (MLO)
-MLOfolds <- cut(seq(1,nrow(DataMLO)),breaks=10,labels=FALSE)
 
 for (i in 8:nCols){
   keepVar<- c(keepNoVar, colnames(DataMLO[i]))
@@ -677,8 +635,8 @@ write.csv(bestEntriesAUCCC, file = paste(savePath,dateOfAnalysis,"bestEntriesAUC
 write.csv(regResultsBestMLO, file = paste(savePath,dateOfAnalysis,"regResultsAUCMLOControls.csv", sep=""),row.names=TRUE)
 write.csv(bestEntriesAUCMLO, file = paste(savePath,dateOfAnalysis,"bestEntriesAUCMLOControls.csv", sep=""),row.names=TRUE)
 
-#####
-#Test to average out the ROC Curve (CC)
+#Calculates Average ROC Curve and Saves (CC)#####
+
 nCols <- ncol(allData)
 CC_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (10)))
 colnames(CC_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
@@ -769,9 +727,9 @@ for (i in 1:10){
 write.csv(CC_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_CC_Aucs_WithWihtoutMasking.csv", sep=""),row.names=TRUE)
 
 
-#####
+#Calculates Average ROC Curve and Saves (MLO)#####
 
-#Test to average out the ROC Curve (MLO)
+
 nCols <- ncol(allData)
 MLO_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (10)))
 colnames(MLO_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
