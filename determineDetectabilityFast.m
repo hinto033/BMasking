@@ -21,6 +21,11 @@ transparency = 1 - attenuation';
 transparencyMatrix = repmat(transparency, [1,nRowPatch*nColPatch, length(diameter)]);
 %Multiplies attenuation matrix through the disk size matrix
 finalDiskMatToMult = (1 - (transparencyMatrix.*binDiskMatrix));
+%Clears to reduce RAM
+clear transparencyMatrix
+clear binDiskMatrix
+clear binDiskFlat
+
 finalDiskMatIDicomAvgAllDiams = ((IDicomAvg-50)*finalDiskMatToMult) - (IDicomAvg-50);
 
 
@@ -36,9 +41,6 @@ finalDiskMatIDicomAvg = repmat(finalDiskMatIDicomAvgAllDiams(:,:,1), [1,1,12]);
 % scatter(1:nRowPatch*nColPatch, finalDiskMatIDicomAvg(5,:,1))
 % pause
 
-%Clears to reduce RAM
-clear transparencyMatrix
-clear binDiskMatrix
 
 %Calculates NPW Lambda Value if no disk inserted in the image
 [~ , nPatches] = size(imgPatch);
@@ -58,6 +60,8 @@ for p = 1:length(diameter)
     offsetVector(:,1,p)= sum(A.*A,2);
 end
 offsetMatrix = repmat(offsetVector, [1, nPatches, 1]);
+
+clear A offsetVector
 
 %Calculates the Lambda Values with the disk lesion
 lambdaWDisk = lambdaNoDisk+offsetMatrix;

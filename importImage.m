@@ -3,20 +3,32 @@ function [IDicomOrig, DICOMData] = importImage(j, FileNameNaming, PathNameNaming
     ext = extension{j};
     FileName = FileNameNaming{j};
     
-    
 if (strcmp(ext, '') || strcmp(ext, '.dcm') || strcmp(ext, '.DCM') )
-    full_file_dicomread = [pathname,'\',FileName];
+    full_file_dicomread = strcat(pathname,'\',FileName);
+    full_file_dicomread = full_file_dicomread{1};
     info_dicom = dicominfo(full_file_dicomread);
     IDicomOrig = double(dicomread(info_dicom)); 
     DICOMData = info_dicom;
 elseif (strcmp(ext, '.png'))
     % Importing Breast Images if .png
 %****
+%     pathname
+%     FileName
+%     pause
+
 %     full_file_png = [pathname,'\',FileName]
     full_file_png = strcat(pathname,'\',FileName)
+    
     full_file_png = full_file_png{1}
+    
 %****
     IDicomOrig = imread(full_file_png); 
+    
+%     figure
+%     imshow(IDicomOrig,[])
+%     pause
+    
+%     pause
     IDicomOrig = im2double(IDicomOrig);
     pathname;
     [base,rem]=strtok(FileName,'.');

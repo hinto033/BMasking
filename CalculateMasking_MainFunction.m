@@ -89,46 +89,51 @@ global FileName_Naming NumImageAnalyze part1 part2
 global PathName_Naming extension shape
 global thickness diameter savedir analysisChoice
 %%
-imgPaths = {'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\Interval',...
-            'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\ScreenDetected',...
-            'W:\Breast Studies\Masking\PrelimAnalysis\MGH\Interval',...
-            'W:\Breast Studies\Masking\PrelimAnalysis\MGH\ScreenDetected',...
-            'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval',...
-            'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\ScreenDetected'};
-savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\CPMCInterval\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\CPMCScreen\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHInterval\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHScreen\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFInterval\', ...
-            'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFScreen\'};
+% imgPaths = {'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\Interval',...
+%             'W:\Breast Studies\Masking\PrelimAnalysis\CPMC\ScreenDetected',...
+%             'W:\Breast Studies\Masking\PrelimAnalysis\MGH\Interval',...
+%             'W:\Breast Studies\Masking\PrelimAnalysis\MGH\ScreenDetected',...
+%             'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\Interval',...
+%             'W:\Breast Studies\Masking\PrelimAnalysis\UCSF\ScreenDetected'};
+% savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\CPMCInterval\', ...
+%             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\CPMCScreen\', ...
+%             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHInterval\', ...
+%             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHScreen\', ...
+%             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFInterval\', ...
+%             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFScreen\'};
 
+imgPaths = {'W:\Breast Studies\Masking\CorrectMaskingImagesV2'};
+savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\6.20.17_CompiledMaps_SimilarLoc\'};
+        
+% demogData = xlsread('W:\Breast Studies\Masking\masking_output.csv'); 
+% template = demogData(:,4);
 
-demogData = xlsread('W:\Breast Studies\Masking\masking_output.csv'); 
-template = demogData(:,4);
-
-for instances = 1:6
+for instances = 1:1
 
 clear test1 preLim NumImageAnalyze FileName_Naming parts part1 part2 extension
 clear PathName_Naming savedir
     
 clear test1
 preLim = imgPaths{instances};
-[preLim,'\*.png'];
+% [preLim,'\*.png'];
 test1 = dir([imgPaths{instances},'\*.png'])
 [NumImageAnalyze, ~] = size(test1);
-test1(2).name;
-test1(3).name;
+% test1(2).name
+% test1(3).name
 test1.name;
 clear FileName_Naming
-
 parts=regexp(imgPaths(instances),'\','split');
 parts = fliplr(parts);
-parts{1}(4);
-parts{1}(5);
-parts{1}(6);
+% parts{1}(4);
+% parts{1}(5);
+% parts{1}(6);
+part1 = 1;
+part2 = 2;
+% NumImageAnalyze
+% pause
 for mm = 1:NumImageAnalyze
     FileName_Naming{mm} = test1(mm).name;
-    part1{mm} = parts{1}(6); part2{mm} = parts{1}(6);
+%     part1{mm} = parts{1}(6); part2{mm} = parts{1}(6);
 end
 clear extension
 extension{1} = '.png';
@@ -140,8 +145,10 @@ savedir = savePaths(instances);
 
 
 nCorrectDiscTimes=0;
-for j = 1:NumImageAnalyze %Does calculation for each image that was selected     
+for j = 424:NumImageAnalyze %Does calculation for each image that was selected     
 %% Import the image & DICOMData   
+% pause
+j
 timePerImage = .41666; %Min
 TotalTimeRemaining = timePerImage*(NumImageAnalyze - j + 1);
 str = sprintf('time remaining: %0.2f minutes', TotalTimeRemaining); disp(str)
@@ -150,42 +157,7 @@ disp('Importing the image...'); tic
 [IDicomOrig, DICOMData] = importImage(j, FileName_Naming,...
     PathName_Naming, extension);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
-AccNum = DICOMData.AccessionNumber
-%% Check if I can't analyze (Because Spot Magnification or Breast Implant)
 
-%Check if it is in the database.
-
-doesExist = any(AccNum==template)
-foundIt = ~isempty(doesExist)
-if foundIt ==0
-    continue
-end
-% pause
-% pause
-
-
-% %Check if implant exists
-% bb1 = strcmp(DICOMData.ImplantPresent, 'NO');
-% bb2 =  strcmp(DICOMData.ImplantPresent, 'No');
-% bb3 = strcmp(DICOMData.ImplantPresent, 'no');
-% bb4 = strcmp(DICOMData.ImplantPresent, '');
-% if bb1+bb2+bb3+bb4 == 0
-%     continue
-% end
-% if strcmp(DICOMData.PixelIntensityRelationship, 'LOG')==1 %NOT LIN
-%     break
-% end
-% if DICOMData.PixelIntensityRelationshipSign == -1
-%     break
-% end
-% %Check if it is a non-standard mammogram (I skip these for now)
-% %Could do image processing to remove metal portions if I want later.
-% tt = fieldnames(DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence);
-% if isempty(tt) == 0 %Means some alternative scan was done and the image has an artifact
-%     continue
-% end
-% g1 = strcmp(DICOMData.ImplantPresent, 'NO');
-% g2 = DICOMData.ViewCodeSequence.Item_1.ViewModifierCodeSequence;
 
 %% Pre-processing data
 disp('Calculating the MTF...'); tic
@@ -233,6 +205,8 @@ disp('Determining relevant image patches to analyze...');tic
 [imgInfo, imgPatch,regionnRow,regionNCol, errFlags] = findImagePatches(IDicomOrig,attenuation,...
     radius, attenDisk, pixelSpacing, binaryOutline, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f', t); disp(str)
+%% Clear unneeded variables
+clear maskingMap1 muscleMask IDicomEroded IDicomVectorNoZeros
 %% Perform 2-AFC test for detectability of those regions
 disp('Determining relevant image patches to analyze...');tic
 nPatches = 11

@@ -5,8 +5,10 @@ function [Done] = saveIQFData(aMat, bMat, aMatc, bMatc, IQF, IQFc, DICOMData,...
 % correlation, GLCM Energy, (All for full, small, med, large)
 % GLCM Homogeneity, BIRADS, VBD
 disp('Calculating the statistics of the IQF levels...'); tic
-A1 = char(part1{j});
-A2 = char(part2{j});
+% A1 = char(part1{j});
+% A2 = char(part2{j});
+A1 = '';
+A2 = '';
 A3 = char(FileName_Naming{j});
 aMatVector = aMat(:); aMatVectorNoZeros = aMatVector(aMatVector~=0);
 aVals = aMatVectorNoZeros;
@@ -90,8 +92,10 @@ stats.Data.Attenuations = attenuation;
 stats.Data.Beta = beta;
 %% Do calculations for compressed images
 disp('Calculating the statistics of the IQF levels...'); tic
-A1 = char(part1{j});
-A2 = char(part2{j});
+% A1 = char(part1{j});
+% A2 = char(part2{j});
+A1 = '';
+A2 = '';
 A3 = char(FileName_Naming{j});
 aMatVector = aMatc(:); aMatVectorNoZeros = aMatVector(aMatVector~=0);
 aVals = aMatVectorNoZeros;
