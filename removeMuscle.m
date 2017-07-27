@@ -2,6 +2,7 @@ function [imgNoWall, mask]=removeMuscle(dcmImg, dcminfo)
 % Developed by Amir Pasha M
 % Adapted by Ben Hinton 
 %% Pre-calculations
+
 pecSegNeed=strcmp(dcminfo.ViewPosition(1),'M'); %Determines if MLO View
 flipNeed=0;
 isFlipped=isfield(dcminfo,'FieldOfViewHorizontalFlip') && strcmp(dcminfo.FieldOfViewHorizontalFlip,'YES');
@@ -23,10 +24,8 @@ if flipNeed==1
 else
     img=double(dcmImg);
 end
-
 %% Finding the muscle line
 [bdrind, airThresh] = con_breast(img);
-
 %%% pectoral segmentation only really needed in MLO view
 if pecSegNeed
     [roiH] = croi(img, bdrind,1); %chooses ROI for hough tform
@@ -40,14 +39,14 @@ if pecSegNeed
 else
     peIdx=zeros(size(img,1),1);
 end
-
 [mask] = breast(img,peIdx,bdrind,airThresh);
 %Reverse the segmentations back so they align with original image
 if flipNeed
     mask=fliplr(mask); % When the image was flipped by the program previously, it has to be flipped again now.
     dcmImg = fliplr(dcmImg);
 end
-
+size(dcmImg)
+size(mask)
 imgNoWall = mask.*dcmImg;
 
 end

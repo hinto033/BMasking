@@ -55,12 +55,16 @@ elseif (strcmp(ext, '.png'))
     end
 %     pause
     
-    
-    DICOMData.PixelSpacing(1) = DICOMData.PixelSpacing(1)*(imgRows/nRows);
-    DICOMData.PixelSpacing(2) = DICOMData.PixelSpacing(2)*(imgCols/nCols);
-
-DICOMData.PixelSpacing(1);
-DICOMData.PixelSpacing(2);
+    DICOMData
+    pause
+    DICOMData.PixelSpacing(1) = DICOMData.ImagerPixelSpacing(1)*(imgRows/nRows);
+    DICOMData.PixelSpacing(2) = DICOMData.ImagerPixelSpacing(2)*(imgCols/nCols);
+% For UCSF Images
+%     DICOMData.PixelSpacing(1) = DICOMData.PixelSpacing(1)*(imgRows/nRows);
+%     DICOMData.PixelSpacing(2) = DICOMData.PixelSpacing(2)*(imgCols/nCols);
+%     
+% DICOMData.PixelSpacing(1);
+% DICOMData.PixelSpacing(2);
 
 
     IDicomOrig = IDicomOrig.*(2^16-1);
