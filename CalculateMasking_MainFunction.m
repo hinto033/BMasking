@@ -170,8 +170,13 @@ t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
 
 %% Pre-processing data
 disp('Calculating the MTF...'); tic
-[SigmaPixels, errFlags] = determineMTF(IDicomOrig, DICOMData);
+[SigmaPixels, errFlags] = determineMTF(IDicomOrig, DICOMData); %FIX*****************************%************
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
+disp('Calculating the disk attenuations based on KVP, mAs...'); tic
+%***********INSERTBD%HERE**********************************************************%*********
+t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
+
 disp('Calculating the disk attenuations based on KVP, mAs...'); tic
 [attenuation, errFlags] = getSpectraAttens(DICOMData, thickness, errFlags);
 t = toc; str = sprintf('time elapsed: %0.2f seconds', t); disp(str)
