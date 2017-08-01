@@ -101,19 +101,19 @@ global thickness diameter savedir analysisChoice
 %             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\MGHScreen\', ...
 %             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFInterval\', ...
 %             'W:\Breast Studies\Masking\BJH_MaskingMaps\6.13.17_CompiledMaps_Simulated\UCSFScreen\'};
-for q = 2:2
-% imgPaths = {'W:\Breast Studies\Masking\CorrectMaskingImagesV2'};
+% for q = 2:2
+imgPaths = {'W:\Breast Studies\Masking\CorrectMaskingImagesV2'};
 
-if q==1
-    imgPaths = {'W:\Ben_MammoImages\Images\UCSF'}; %UCSF Images
-    savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\7.20.17_CompiledMaps_Simulated_UCSFSequential\'}; 
-elseif q==2 
-    imgPaths = {'W:\Ben_MammoImages\Images\UNC'}; %UNC Images
-    savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\7.20.17_CompiledMaps_Simulated_UNCSequential\'};
-end
+% if q==1
+%     imgPaths = {'W:\Ben_MammoImages\Images\UCSF'}; %UCSF Images
+%     savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\7.20.17_CompiledMaps_Simulated_UCSFSequential\'}; 
+% elseif q==2 
+%     imgPaths = {'W:\Ben_MammoImages\Images\UNC'}; %UNC Images
+%     savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\7.20.17_CompiledMaps_Simulated_UNCSequential\'};
+% end
 
 
-% savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\6.20.17_CompiledMaps_SimilarStat\'};
+savePaths = {'W:\Breast Studies\Masking\BJH_MaskingMaps\7.31.17_CompiledMaps_Simulated_DiscShape\'};
 % demogData = xlsread('W:\Breast Studies\Masking\masking_output.csv'); 
 % template = demogData(:,4);
 
@@ -152,9 +152,9 @@ extension = repmat(extension, NumImageAnalyze, 1);
 PathName_Naming = imgPaths(instances);
 savedir = savePaths(instances);
 
-startNum = [992, 1]
+% startNum = [992, 1]
 nCorrectDiscTimes=0;
-for j = startNum(q):NumImageAnalyze %Does calculation for each image that was selected     
+for j = 1418:NumImageAnalyze %Does calculation for each image that was selected     
 %% Import the image & DICOMData   
 % pause
 j
@@ -247,7 +247,7 @@ saveIQFData(aMat, bMat, aMatc, bMatc, IQF, IQFc,DICOMData,SigmaPixels,attenuatio
 end %Going through set of images
 
 end%Going through each folder
-end %going through UNC and UCSF Images
+% end %going through UNC and UCSF Images
 guidata(hObject,handles);
 
 % --- Executes on button press in CreateCDIQF.

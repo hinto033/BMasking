@@ -55,8 +55,8 @@ elseif (strcmp(ext, '.png'))
     end
 %     pause
     
-    DICOMData
-    pause
+%     DICOMData
+%     pause
     DICOMData.PixelSpacing(1) = DICOMData.ImagerPixelSpacing(1)*(imgRows/nRows);
     DICOMData.PixelSpacing(2) = DICOMData.ImagerPixelSpacing(2)*(imgCols/nCols);
 % For UCSF Images
