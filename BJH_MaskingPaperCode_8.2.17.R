@@ -24,13 +24,15 @@ require("survival")
 #Defines the dataset that I'll analyze
 #Similar patches by mean/stdev
 
-dateOfAnalysis = "8.2.17"
+dateOfAnalysis = "8.3.17"
 # savePath = "D:\\LabData\\BreastMasking\\FinalAnalysisImages\\"
-savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\"
+# savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\8.3_Simulated\\"
+savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\8.3_Simulated_DiscShape\\"
 
 #Similar By Statistics
 # wdAll <- "D:\\LabData\\BreastMasking\\6.20.17_CompiledData_Simulated\\"
-wdAll <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\6.20.17_CompiledData_Simulated\\"
+# wdAll <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\6.20.17_CompiledData_Simulated\\"
+wdAll <- "W:\\Breast Studies\\Masking\\BJH_MaskingMaps\\7.31.17_CompiledData_Simulated_DiscShape\\"
 # wdAll <- "D:\\LabData\\BreastMasking\\6.20.17_CompiledData_SimilarStat\\"
 # wdAll <- "D:\\LabData\\BreastMasking\\6.20.17_CompiledData_SimilarLoc\\"
 
@@ -219,6 +221,9 @@ DataCC <- splitData$CC
 
 
 #Generate Data of all relevant information #####
+setwd(savePath)
+
+
 splitData<-split(mergedData, mergedData$group)
 dataInt <- splitData$FN
 dataScreen <- splitData$TP
@@ -267,12 +272,6 @@ t.test(dataInt$bmi, dataScreen$bmi)
 nCols <- ncol(allData)
 regResultsUnivariate <- data.frame(matrix(ncol = 9, nrow = nCols))
 colnames(regResultsUnivariate) <- c('Variable','pValCCTrain', 'ORCC', 'AUCCC', 'estCC', 'pValMLOTrain',  'ORMLO', 'AUCMLO', 'estMLO')
-pValCC = NULL
-AccuracyCC = NULL
-aucCC = NULL
-pValMLO = NULL
-AccuracyMLO = NULL
-aucMLO = NULL
 
 for (i in 8:nCols){
     # varT <- i
@@ -329,14 +328,11 @@ regResultsBIRADDensityOnly <- data.frame(matrix(ncol = 9, nrow = 1))
 colnames(regResultsBIRADDensityOnly) <- c('Variable','pValCCTrain', 'ORCC', 'AUCCC', 'estCC',
                               'pValMLOTrain',  'ORMLO', 'AUCMLO', 'estMLO')
                               
-
-
 modelDataCC <- DataCC[keepNoVar]
-modelCC <- clogit(Interval~.+strata(cancer_id), method="exact", data=modelDataCC)
+modelCC <- clogit(Interval~density+age+bmi+race+X_menopause_+X_firstdeg_+biop_hist+
+                                           strata(cancer_id), method="exact", data=modelDataCC)
 
 p<-modelCC$linear.predictors
-# p[p>2] <- 2 #Fix Outliers
-# p[p< -2]<- -2 #Fix Outliers
 p<- (p-min(p))/(max(p)-min(p)) #Shift the scale from 0 to 1
 pr <- prediction(p, modelDataCC$Interval) #Does this need to be on a scale of 0-1?
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
@@ -352,11 +348,10 @@ pValCC<-coef(summary(modelCC))[1,5]
 ORPerIncCC<-coef(summary(modelCC))[1,2]
 #*************************#************************#*************************#*********************
 modelDataMLO <- DataMLO[keepNoVar]
-modelMLO <- clogit(Interval~.+strata(cancer_id), method="exact", data=modelDataMLO)
+modelMLO <- clogit(Interval~density+age+bmi+race+X_menopause_+X_firstdeg_+biop_hist+
+                    strata(cancer_id), method="exact", data=modelDataMLO)
 
 p<-modelMLO$linear.predictors
-p[p>2] <- 2 #Fix Outliers
-p[p< -2]<- -2 #Fix Outliers
 p<- (p-min(p))/(max(p)-min(p)) #Shift the scale from 0 to 1
 pr <- prediction(p, modelDataMLO$Interval) #Does this need to be on a scale of 0-1?
 auc <- performance(pr, measure = "auc")
@@ -372,6 +367,8 @@ ORPerIncMLO<-coef(summary(modelMLO))[1,2]
 regResultsBIRADDensityOnly[1,] <- c('Density and BIRADS', pValCC, ORPerIncCC, unlist(aucCC[[1]]), 
                     CoeffCC,pValMLO, ORPerIncMLO, unlist(aucMLO[[1]]), CoeffMLO)
 
+#Saves the regression results
+write.csv(regResultsBIRADDensityOnly, file = paste(savePath,dateOfAnalysis,"regResultsBIRADDensityOnly.csv", sep=""),row.names=TRUE)
 
 
 fileConn<-file("regResultsONLYBIRADSDensity.txt")
@@ -384,25 +381,15 @@ cat(out,file="regResultsONLYBIRADSDensity.txt",sep="\n",append=TRUE)
 out <- unlist(aucMLO)
 cat(out,file="regResultsONLYBIRADSDensity.txt",sep="\n",append=TRUE)
 close(fileConn)
+
+
+
 #Conditional Logistic Regression after controlling for BIRADS/Demographic Information WITHOUT K-Folds (To Determine Model)#####
 
 nCols <- ncol(allData)
 regResultsDensityPlusMasking <- data.frame(matrix(ncol = 9, nrow = 1))
 colnames(regResultsDensityPlusMasking) <- c('Variable','pValCCTrain', 'ORCC', 'AUCCC', 'estCC',
                                             'pValMLOTrain',  'ORMLO', 'AUCMLO', 'estMLO')
-
-pValCCSXA = NULL
-pValCCVar = NULL
-pValMLOSXA = NULL
-pValMLOVar = NULL
-AccuracyCC = NULL
-AccuracyMLO = NULL
-aucCC = NULL
-aucMLO = NULL
-estimateSXACC = NULL
-estimateVarCC = NULL
-estimateSXAMLO = NULL
-estimateVarMLO = NULL
 
 
 fileConn<-file("regResultsDensityPlusMasking.txt")
@@ -459,6 +446,7 @@ close(fileConn)
 
 write.csv(regResultsDensityPlusMasking, file = paste(savePath,dateOfAnalysis,"regResultsDensityPlusMasking.csv", sep=""),row.names=TRUE)
 
+
 regResultsBestCC <- regResultsDensityPlusMasking
 sortedAUCCC <- regResultsBestCC[order(regResultsBestCC$AUCCC, regResultsBestCC$Variable, decreasing = TRUE) , ] 
 bestEntriesAUCCC<- subset(sortedAUCCC, pValCCTrain<0.05)
@@ -470,36 +458,35 @@ bestEntriesAUCMLO<-subset(sortedAUCMLO, pValMLOTrain<0.05)
 write.csv(bestEntriesAUCCC, file = paste(savePath,dateOfAnalysis,"BESTregResultsDensityPlusMaskingAUCCCControls.csv", sep=""),row.names=TRUE)
 write.csv(bestEntriesAUCMLO, file = paste(savePath,dateOfAnalysis,"BESTregResultsDensityPlusMaskingMLOControls.csv", sep=""),row.names=TRUE)
 
+
 #Calculates Average ROC Curve and NRI and Saves (CC)#####
 
 nCols <- ncol(allData)
 CC_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (nrow(bestEntriesAUCCC))))
-colnames(CC_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
-# predRisk1=data.frame(matrix(ncol = 1, nrow = (nrow(DataCC))))
-# predRisk2=data.frame(matrix(ncol = 1, nrow = (nrow(DataCC))))
+colnames(CC_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAdded', 'pValWithMaskingAdded')
 setwd(savePath)
 
-
+fileNRI<-file(paste("MAIN_CC_NRI_BINARY_.txt", sep=""))
+fileNRISepSections<-file(paste("MAIN_CC_NRI_4Cats_.txt", sep=""))
 for (i in 1:nrow(bestEntriesAUCCC)){
-  # i <-1
   keepVar<- c(keepNoVar, bestEntriesAUCCC[i,1])
 
-  
-  png(filename=paste(savePath,dateOfAnalysis,"CCAUCwBIRADSandMeasure",i,".png", sep=""))
+  png(filename=paste(savePath,dateOfAnalysis,"CCAUCwBIRADSandMeasure_",bestEntriesAUCCC[i,1],".png", sep=""))
   plot.new()
   
   #Doing Just the Density Model
   modelDataCC <- DataCC[keepNoVar]
-  modelCCNoMasking <- clogit(Interval~.+strata(cancer_id), method="exact", data=modelDataCC)
+  modelCCNoMasking <- clogit(Interval~density+age+bmi+race+X_menopause_+X_firstdeg_+biop_hist+
+                                            strata(cancer_id), method="exact", data=modelDataCC)
+  
   
   p<-modelCCNoMasking$linear.predictors
   p<- (p-min(p))/(max(p)-min(p)) #Shift the scale from 0 to 1
-  pr <- prediction(p, modelCCNoMasking$Interval) #Does this need to be on a scale of 0-1?
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  pr1 <- prediction(p, modelDataCC$Interval) #Does this need to be on a scale of 0-1?
+  prf <- performance(pr1, measure = "tpr", x.measure = "fpr")
   plot(prf, col='blue', lwd=2, lty=1, avg="vertical",add=TRUE)
   auc <- performance(pr, measure = "auc")
   aucCCDemog <- auc@y.values[1]
-  print(unlist(aucCC))
   
   predRisk1<-p
   cOutcome<-1
@@ -509,10 +496,10 @@ for (i in 1:nrow(bestEntriesAUCCC)){
   modelDataCC <- DataCC[keepVar]
   modelCCMasking <- clogit(Interval~.+strata(cancer_id), method="exact", data=modelDataCC)
   
-  p<-modelCCNoMasking$linear.predictors
+  p<-modelCCMasking$linear.predictors
   p<- (p-min(p))/(max(p)-min(p)) #Shift the scale from 0 to 1
-  pr <- prediction(p, modelCCNoMasking$Interval) #Does this need to be on a scale of 0-1?
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  pr2 <- prediction(p, modelDataCC$Interval) #Does this need to be on a scale of 0-1?
+  prf <- performance(pr2, measure = "tpr", x.measure = "fpr")
   plot(prf, col='firebrick3', lwd=2,avg="vertical",add=TRUE)
   axis(1)
   axis(2)
@@ -522,65 +509,82 @@ for (i in 1:nrow(bestEntriesAUCCC)){
   
   auc <- performance(pr, measure = "auc")
   aucCCWMasking <- auc@y.values[1]
+  pValMaskingInModel<-coef(summary(modelCCMasking))[17,5]
   
   predRisk2<-p
   cOutcome<-1
   
   
-  fileConn<-file("CCModelOnlyDemog.txt")
+  fileConn<-file("CCModelOnlyDemogandWithMasking.txt")
+  out <- " "
+  cat(out,file="CCModelOnlyDemogandWithMasking.txt",sep="\n",append=TRUE)
   out <- capture.output(summary(modelCCNoMasking))
-  cat(out,file="CCModelOnlyDemog.txt",sep="\n",append=TRUE)
+  cat(out,file="CCModelOnlyDemogandWithMasking.txt",sep="\n",append=TRUE)
   out <- capture.output(summary(modelCCMasking))
-  cat(out,file="CCModelOnlyDemog.txt",sep="\n",append=TRUE)
+  cat(out,file="CCModelOnlyDemogandWithMasking.txt",sep="\n",append=TRUE)
   close(fileConn)
   
   
-  fileNRI<-file(paste("MAIN_CC_NRI_BINARY_",bestEntriesAUCCC[i,1],".txt"))
+  
   cutoff <- c(0, .5,  1)
+  out <- print(bestEntriesAUCCC[i,1])
+  cat(out,file=paste("MAIN_CC_NRI_BINARY_.txt"),sep="\n",append=TRUE)
   out <- capture.output(reclassification(data=DataCC[keepVar], cOutcome=cOutcome,
-                                         predrisk1=predRisk1Bin, predrisk2=predRisk2Bin, cutoff))
-  cat(out,file=paste("MAIN_CC_NRI_BINARY_",bestEntriesAUCCC[i,1],".txt"),sep="\n",append=TRUE)
-  close(fileNRI)
+                                         predrisk1=predRisk1, predrisk2=predRisk2, cutoff))
+  cat(out,file=paste("MAIN_CC_NRI_BINARY_.txt"),sep="\n",append=TRUE)
+  
+  
+  cutoff <- c(0, 0.2,.5, 0.8,  1)
+  out <- print(bestEntriesAUCCC[i,1])
+  cat(out,file=paste("MAIN_CC_NRI_4Cats_.txt"),sep="\n",append=TRUE)
+  out <- capture.output(reclassification(data=DataCC[keepVar], cOutcome=cOutcome,
+                                         predrisk1=predRisk1, predrisk2=predRisk2, cutoff))
+  cat(out,file=paste("MAIN_CC_NRI_4Cats_.txt"),sep="\n",append=TRUE)
+  
   
   CC_AUCs_withWithoutMasking[(i),] <- c((bestEntriesAUCCC[i,1]),mean(unlist(aucCCDemog)),mean(unlist(aucCCWMasking)),
                                         mean(unlist(pValMaskingInModel)))
 
+  
+  save(pr2, file=paste(savePath,dateOfAnalysis,"predictionWithMaskingCC_",bestEntriesAUCCC[i,1],".RDATA", sep=""))
+  
+  
 }
+close(fileNRI)
+close(fileNRISepSections)
+save(pr1, file=paste(savePath,dateOfAnalysis,"predictionNoMaskingCC.RDATA", sep=""))
+write.csv(CC_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_CC_Aucs_WithWithoutMasking.csv", sep=""),row.names=TRUE)
 
-write.csv(CC_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_CC_Aucs_WithWihtoutMasking.csv", sep=""),row.names=TRUE)
 
 
-
-#TEST Calculate average ROC curve and NRI and saves (MLO) #####
+#Calculate average ROC curve and NRI and saves (MLO) #####
 
 nCols <- ncol(allData)
-MLO_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (nrow(bestEntriesAUMLOC))))
-colnames(MLO_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
-# predRisk1=data.frame(matrix(ncol = 1, nrow = (nrow(DataMLO))))
-# predRisk2=data.frame(matrix(ncol = 1, nrow = (nrow(DataMLO))))
+MLO_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (nrow(bestEntriesAUCMLO))))
+colnames(MLO_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAdded', 'pValWithMaskingAdded')
 setwd(savePath)
 
-
-for (i in 1:nrow(bestEntriesAUMLOC)){
-  # i <-1
-  keepVar<- c(keepNoVar, bestEntriesAUMLOC[i,1])
+fileNRI<-file(paste("MAIN_MLO_NRI_BINARY_.txt", sep=""))
+fileNRISepSections<-file(paste("MAIN_MLO_NRI_4Cats_.txt", sep=""))
+for (i in 1:nrow(bestEntriesAUCMLO)){
+  keepVar<- c(keepNoVar, bestEntriesAUCMLO[i,1])
   
-  
-  png(filename=paste(savePath,dateOfAnalysis,"MLOAUCwBIRADSandMeasure",i,".png", sep=""))
+  png(filename=paste(savePath,dateOfAnalysis,"MLOAUCwBIRADSandMeasure_",bestEntriesAUCMLO[i,1],".png", sep=""))
   plot.new()
   
   #Doing Just the Density Model
   modelDataMLO <- DataMLO[keepNoVar]
-  modelMLONoMasking <- clogit(Interval~.+strata(cancer_id), method="exact", data=modelDataMLO)
+  modelMLONoMasking <- clogit(Interval~density+age+bmi+race+X_menopause_+X_firstdeg_+biop_hist+
+                               strata(cancer_id), method="exact", data=modelDataMLO)
+  
   
   p<-modelMLONoMasking$linear.predictors
   p<- (p-min(p))/(max(p)-min(p)) #Shift the scale from 0 to 1
-  pr <- prediction(p, modelMLONoMasking$Interval) #Does this need to be on a scale of 0-1?
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  pr1 <- prediction(p, modelDataMLO$Interval) #Does this need to be on a scale of 0-1?
+  prf <- performance(pr1, measure = "tpr", x.measure = "fpr")
   plot(prf, col='blue', lwd=2, lty=1, avg="vertical",add=TRUE)
   auc <- performance(pr, measure = "auc")
   aucMLODemog <- auc@y.values[1]
-  print(unlist(aucMLO))
   
   predRisk1<-p
   cOutcome<-1
@@ -590,10 +594,10 @@ for (i in 1:nrow(bestEntriesAUMLOC)){
   modelDataMLO <- DataMLO[keepVar]
   modelMLOMasking <- clogit(Interval~.+strata(cancer_id), method="exact", data=modelDataMLO)
   
-  p<-modelMLONoMasking$linear.predictors
+  p<-modelMLOMasking$linear.predictors
   p<- (p-min(p))/(max(p)-min(p)) #Shift the scale from 0 to 1
-  pr <- prediction(p, modelMLONoMasking$Interval) #Does this need to be on a scale of 0-1?
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  pr2 <- prediction(p, modelDataMLO$Interval) #Does this need to be on a scale of 0-1?
+  prf <- performance(pr2, measure = "tpr", x.measure = "fpr")
   plot(prf, col='firebrick3', lwd=2,avg="vertical",add=TRUE)
   axis(1)
   axis(2)
@@ -603,162 +607,52 @@ for (i in 1:nrow(bestEntriesAUMLOC)){
   
   auc <- performance(pr, measure = "auc")
   aucMLOWMasking <- auc@y.values[1]
+  pValMaskingInModel<-coef(summary(modelMLOMasking))[17,5]
   
   predRisk2<-p
   cOutcome<-1
   
   
-  fileConn<-file("MLOModelOnlyDemog.txt")
+  fileConn<-file("MLOModelOnlyDemogandWithMasking.txt")
+  out <- " "
+  cat(out,file="MLOModelOnlyDemogandWithMasking.txt",sep="\n",append=TRUE)
   out <- capture.output(summary(modelMLONoMasking))
-  cat(out,file="MLOModelOnlyDemog.txt",sep="\n",append=TRUE)
+  cat(out,file="MLOModelOnlyDemogandWithMasking.txt",sep="\n",append=TRUE)
   out <- capture.output(summary(modelMLOMasking))
-  cat(out,file="MLOModelOnlyDemog.txt",sep="\n",append=TRUE)
+  cat(out,file="MLOModelOnlyDemogandWithMasking.txt",sep="\n",append=TRUE)
   close(fileConn)
   
   
-  fileNRI<-file(paste("MAIN_MLO_NRI_BINARY_",bestEntriesAUCMLO[i,1],".txt"))
+  
   cutoff <- c(0, .5,  1)
+  out <- print(bestEntriesAUCMLO[i,1])
+  cat(out,file=paste("MAIN_MLO_NRI_BINARY_.txt"),sep="\n",append=TRUE)
   out <- capture.output(reclassification(data=DataMLO[keepVar], cOutcome=cOutcome,
-                                         predrisk1=predRisk1Bin, predrisk2=predRisk2Bin, cutoff))
-  cat(out,file=paste("MAIN_MLO_NRI_BINARY_",bestEntriesAUCMLO[i,1],".txt"),sep="\n",append=TRUE)
-  close(fileNRI)
+                                         predrisk1=predRisk1, predrisk2=predRisk2, cutoff))
+  cat(out,file=paste("MAIN_MLO_NRI_BINARY_.txt"),sep="\n",append=TRUE)
+  
+  
+  cutoff <- c(0, 0.2,.5, 0.8,  1)
+  out <- print(bestEntriesAUCCC[i,1])
+  cat(out,file=paste("MAIN_MLO_NRI_4Cats_.txt"),sep="\n",append=TRUE)
+  out <- capture.output(reclassification(data=DataMLO[keepVar], cOutcome=cOutcome,
+                                         predrisk1=predRisk1, predrisk2=predRisk2, cutoff))
+  cat(out,file=paste("MAIN_MLO_NRI_4Cats_.txt"),sep="\n",append=TRUE)
+  
+  
   
   MLO_AUCs_withWithoutMasking[(i),] <- c((bestEntriesAUCMLO[i,1]),mean(unlist(aucMLODemog)),mean(unlist(aucMLOWMasking)),
                                         mean(unlist(pValMaskingInModel)))
   
+  
+  save(pr2, file=paste(savePath,dateOfAnalysis,"predictionWithMaskingMLO_",bestEntriesAUCMLO[i,1],".RDATA", sep=""))
+  
+  
 }
-
-write.csv(MLO_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_MLO_Aucs_WithWihtoutMasking.csv", sep=""),row.names=TRUE)
-
-
-
-# #Calculates Average ROC Curve and Saves (MLO)#####
-# 
-# 
-# nCols <- ncol(allData)
-# MLO_AUCs_withWithoutMasking <- data.frame(matrix(ncol = 4, nrow = (nrow(bestEntriesAUCMLO))))
-# colnames(MLO_AUCs_withWithoutMasking) <- c('Variable','AUCDemogsOnly','AUCWithMaskingAddedOnly', 'pValWithMaskingAdded')
-# 
-# for (i in 1:nrow(bestEntriesAUCMLO)){
-#   keepVar<- c(keepNoVar, bestEntriesAUCMLO[i,1])
-#   # i <-1
-#   pSXA=NULL
-#   pSXALabels=NULL
-#   pVar=NULL
-#   pVarLabels=NULL
-#   pValMaskingInModel = NULL
-#   predRisk1=NULL
-#   predRisk2=NULL
-#   predRisk1Bin=NULL
-#   predRisk2Bin=NULL
-#   
-#   png(filename=paste(savePath,dateOfAnalysis,"MLOAUCwBIRADSandMeasure",i,".png", sep=""))
-#   plot.new()
-#   for(j in 1:10){
-#     MLOtestIndexes <- which(MLOfolds==j,arr.ind=TRUE)
-#     testSetMLO <- DataMLO[MLOtestIndexes, ]
-#     trainSetMLO <- DataMLO[-MLOtestIndexes, ]
-#     varT <- i
-#     
-#     #Plots BIRADS
-#     modelDataMLO <- trainSetMLO[keepNoVar]
-#     model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
-#     riskModel1 <- model
-#     nControls <- length((rownames(coef(summary(model)))))
-#     setwd(savePath)
-#     fileConn<-file("MLOModelOnlyDemog.txt")
-#     out <- capture.output(summary(model))
-#     cat(out,file="MLOModelOnlyDemog.txt",sep="\n",append=TRUE)
-#     close(fileConn)
-#     
-#     testPredictionsData <- testSetMLO[keepNoVar]
-#     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-#     predRisk1<-c(predRisk1, fitted.results)
-#     fitted.results <- ifelse(fitted.results > 0.5,1,0)
-#     predRisk1Bin<-c(predRisk1Bin, fitted.results)
-#     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-#     AccuracyMLO<- 1-misClasificError
-#     pSXA[j] <- list(predict(model, newdata=testPredictionsData, type="response"))
-#     pSXALabels[j] <- list(testPredictionsData$Interval)
-#     
-#     
-#     #Plots the relevant things 
-#     modelDataMLO <- trainSetMLO[keepVar]
-#     model <- glm(modelDataMLO$Interval~., family=binomial(logit), data=modelDataMLO)
-#     riskModel2 <- model
-#     nControls <- length((rownames(coef(summary(model)))))
-#     setwd(savePath)
-#     fileConn<-file("MLOModelAddingMasking.txt")
-#     out <- capture.output(summary(model))
-#     cat(out,file="MLOModelAddingMasking.txt",sep="\n",append=TRUE)
-#     close(fileConn)
-#     
-#     pValMaskingInModel[j] <- (coef(summary(model))[nControls,4])
-#     testPredictionsData <- testSetMLO[keepVar]
-#     fitted.results <- predict(model,newdata=testPredictionsData,type='response')
-#     predRisk2<-c(predRisk2, fitted.results)
-#     fitted.results <- ifelse(fitted.results > 0.5,1,0)
-#     predRisk2Bin<-c(predRisk2Bin, fitted.results)
-#     misClasificError <- mean(fitted.results != testPredictionsData$Interval)
-#     # print(paste('Accuracy',1-misClasificError))
-#     AccuracyMLO<- 1-misClasificError
-#     pVar[j] <- list(predict(model, newdata=testPredictionsData, type="response"))
-#     pVarLabels[j] <- list(testPredictionsData$Interval)
-#   }
-#   cOutcome<-1
-#   
-#   setwd(savePath)
-#   fileConn<-file(paste("MAIN_MLO_NRI_",bestEntriesAUCMLO[i,1],".txt"))
-#   cutoff <- c(0,.3, .5, .7, 1)
-#   out <- capture.output(reclassification(data=DataMLO[keepVar], cOutcome=cOutcome,
-#                                          predrisk1=predRisk1, predrisk2=predRisk2, cutoff))
-#   cat(out,file=paste("MAIN_MLO_NRI_",bestEntriesAUCMLO[i,1],".txt"),sep="\n",append=TRUE)
-#   close(fileConn)
-#   fileConn<-file(paste("MAIN_MLO_NRI_BINARY_",bestEntriesAUCMLO[i,1],".txt"))
-#   cutoff <- c(0, .5,  1)
-#   out <- capture.output(reclassification(data=DataMLO[keepVar], cOutcome=cOutcome,
-#                                          predrisk1=predRisk1Bin, predrisk2=predRisk2Bin, cutoff))
-#   cat(out,file=paste("MAIN_MLO_NRI_BINARY_",bestEntriesAUCMLO[i,1],".txt"),sep="\n",append=TRUE)
-#   close(fileConn)
-#   
-#   pr <- prediction(pSXA, pSXALabels)
-#   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-#   
-#   plot(prf, col='blue', lwd=2, lty=1, avg="vertical",add=TRUE)
-#   auc <- performance(pr, measure = "auc")
-#   aucMLODemog <- auc@y.values
-#   
-#   pr <- prediction(pVar, pVarLabels)
-#   prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-#   plot(prf, col='firebrick3', lwd=2,avg="vertical",add=TRUE) #spread.estimate="stddev"
-#   axis(1)
-#   axis(2)
-#   legend("bottomright", c("Only Percent Density", "Percent Density and Masking Measure"), lty = c(1,1),lwd=c(2.5,2.5),col=c("blue","red") )
-#   title(main = paste("AUC of BIRADS Density (Blue) and \n", bestEntriesAUCCC[i,1]))
-#   
-#   auc <- performance(pr, measure = "auc")
-#   aucMLOMasking <- auc@y.values
-#   dev.off()
-#   
-#   MLO_AUCs_withWithoutMasking[(i),1] <- (bestEntriesAUCMLO[i,1])
-#   MLO_AUCs_withWithoutMasking[(i),2] <- mean(unlist(aucMLODemog))
-#   MLO_AUCs_withWithoutMasking[(i),3] <- mean(unlist(aucMLOMasking))
-#   MLO_AUCs_withWithoutMasking[(i),4] <- mean(unlist(pValMaskingInModel))
-# }
-# 
-# write.csv(MLO_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_MLO_Aucs_WithWihtoutMasking.csv", sep=""),row.names=TRUE)
-# 
-# 
-
-
-
-
-
-
-
-
-
-
+close(fileNRI)
+close(fileNRISepSections)
+save(pr1, file=paste(savePath,dateOfAnalysis,"predictionNoMaskingMLO.RDATA", sep=""))
+write.csv(MLO_AUCs_withWithoutMasking, file = paste(savePath,dateOfAnalysis,"MAIN_MLO_Aucs_WithWithoutMasking.csv", sep=""),row.names=TRUE)
 
 
 
