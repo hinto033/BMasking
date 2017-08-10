@@ -26,8 +26,8 @@ require("survival")
 
 dateOfAnalysis = "8.3.17"
 # savePath = "D:\\LabData\\BreastMasking\\FinalAnalysisImages\\"
-# savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\8.3_Simulated\\"
-savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\8.3_Simulated_DiscShape\\"
+savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\8.3_Simulated\\"
+# savePath = "W:\\Breast Studies\\Masking\\AnalysisImages\\8.3_Simulated_DiscShape\\"
 
 #Similar By Statistics
 # wdAll <- "D:\\LabData\\BreastMasking\\6.20.17_CompiledData_Simulated\\"
@@ -223,10 +223,54 @@ DataCC <- splitData$CC
 #Generate Data of all relevant information #####
 setwd(savePath)
 
-
 splitData<-split(mergedData, mergedData$group)
 dataInt <- splitData$FN
 dataScreen <- splitData$TP
+
+
+
+#Paired Ttest of age (CC)
+keep <- c('Interval', 'cancer_id', 'age')
+Data1<-dataInt[keep]
+Data2<-dataScreen[keep]
+
+pairedData <- merge(Data1,Data2, by='cancer_id')
+pairedData <- pairedData[firstobs(pairedData[,1]),]
+
+t.test(pairedData$age.x, pairedData$age.y,
+       paired = TRUE,
+       conf.level = 0.95)
+
+
+#Paired TTest of BMI (CC)
+
+keep <- c('Interval', 'cancer_id', 'bmi')
+Data1<-dataInt[keep]
+Data2<-dataScreen[keep]
+
+pairedData <- merge(Data1,Data2, by='cancer_id')
+pairedData <- pairedData[firstobs(pairedData[,1]),]
+
+t.test(pairedData$bmi.x, pairedData$bmi.y,
+       paired = TRUE,
+       conf.level = 0.95)
+
+
+# #Paired TTest of Race (CC)
+# keep <- c('Interval', 'cancer_id', 'age', 'bmi', 'race')
+# 
+# keep <- c('Interval', 'cancer_id', 'race')
+# Data1<-dataInt[keep]
+# Data2<-dataScreen[keep]
+# 
+# pairedData <- merge(Data1,Data2, by='cancer_id')
+# pairedData <- pairedData[firstobs(pairedData[,1]),]
+# 
+# t.test(pairedData$race.x, pairedData$race.y,
+#        paired = TRUE,
+#        conf.level = 0.95)
+
+
 
 table(dataInt$race)
 table(dataScreen$race)
